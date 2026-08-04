@@ -1,0 +1,120 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
+
+    <!-- ═══ SEO — Primary ═══════════════════════════════════════════════ -->
+    <title>Quidesk — Live Market Intelligence Terminal | Crypto, Stocks, Metals & Energy</title>
+    <meta name="description" content="Quidesk is a free real-time market intelligence terminal tracking Bitcoin, Ethereum, S&P 500, gold, crude oil and 20+ assets. Live price maps, OSINT news signals, portfolio tracker and multi-currency conversion." />
+    <meta name="keywords" content="live market tracker, bitcoin price live, gold price today, stock market live, crypto market map, market intelligence, portfolio tracker, WTI crude oil price, ethereum price, S&P 500 live, market heatmap, OSINT financial news" />
+    <meta name="author" content="Quidesk" />
+    <link rel="canonical" href="https://quidesk.github.io/" />
+
+    <!-- ═══ SEO — Open Graph (Facebook, LinkedIn, WhatsApp) ════════════ -->
+    <meta property="og:type" content="website" />
+    <meta property="og:url" content="https://quidesk.github.io/" />
+    <meta property="og:title" content="Quidesk — Live Market Intelligence Terminal" />
+    <meta property="og:description" content="Track Bitcoin, S&P 500, gold and oil in real time. Free market intelligence terminal with live price maps, OSINT news signals, correlation lines and multi-currency conversion." />
+    <meta property="og:image" content="https://quidesk.github.io/og-image.png" />
+    <meta property="og:image:width" content="1200" />
+    <meta property="og:image:height" content="630" />
+    <meta property="og:site_name" content="Quidesk" />
+    <meta property="og:locale" content="en_US" />
+
+    <!-- ═══ SEO — Twitter / X Card ═════════════════════════════════════ -->
+    <meta name="twitter:card" content="summary_large_image" />
+    <meta name="twitter:site" content="@quidesk" />
+    <meta name="twitter:title" content="Quidesk — Live Market Intelligence Terminal" />
+    <meta name="twitter:description" content="Free real-time market terminal. Bitcoin, S&P 500, gold, oil and 20+ assets live. OSINT news signals. Multi-currency. No signup." />
+    <meta name="twitter:image" content="https://quidesk.github.io/og-image.png" />
+
+    <!-- ═══ SEO — Structured Data (JSON-LD) ════════════════════════════ -->
+    <script type="application/ld+json">
+    {
+      "@context": "https://schema.org",
+      "@type": "WebApplication",
+      "name": "Quidesk",
+      "url": "https://quidesk.github.io/",
+      "description": "Free real-time market intelligence terminal tracking cryptocurrency, stocks, metals and energy with live price maps, OSINT news signals and portfolio tracking.",
+      "applicationCategory": "FinanceApplication",
+      "operatingSystem": "Any",
+      "offers": {
+        "@type": "Offer",
+        "price": "0",
+        "priceCurrency": "USD"
+      },
+      "featureList": [
+        "Live cryptocurrency prices",
+        "Stock market tracking",
+        "Gold and silver spot prices",
+        "Crude oil price tracking",
+        "Market correlation map",
+        "OSINT news signals",
+        "Portfolio tracker",
+        "Multi-currency conversion",
+        "Price alerts"
+      ],
+      "screenshot": "https://quidesk.github.io/og-image.png",
+      "creator": {
+        "@type": "Organization",
+        "name": "Quidesk"
+      }
+    }
+    </script>
+
+    <!-- ═══ SEO — Allow crawlers, allow screenshots ══════════════════════ -->
+    <meta name="robots" content="index, follow, max-image-preview:large, max-snippet:-1, max-video-preview:-1" />
+    <meta name="googlebot" content="index, follow" />
+
+    <!-- ═══ Security headers (non-intrusive) ═══════════════════════════ -->
+    <meta http-equiv="X-Content-Type-Options" content="nosniff" />
+    <meta http-equiv="Referrer-Policy" content="strict-origin-when-cross-origin" />
+    <meta http-equiv="Permissions-Policy" content="camera=(), microphone=(), geolocation=()" />
+
+    <!-- ═══ Fonts ════════════════════════════════════════════════════════ -->
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link href="https://fonts.googleapis.com/css2?family=DM+Mono:ital,wght@0,300;0,400;0,500;1,300&family=Syne:wght@400;500;600;700;800&family=Inter:wght@300;400;500;600&display=swap" rel="stylesheet" />
+
+    <meta name="theme-color" content="#0d1117" />
+
+    <!-- Google Analytics -->
+    <script async src="https://www.googletagmanager.com/gtag/js?id=G-XCWSQWP735"></script>
+    <script>
+      window.dataLayer = window.dataLayer || [];
+      function gtag(){dataLayer.push(arguments);}
+      gtag('js', new Date());
+      gtag('config', 'G-XCWSQWP735', {
+        page_title: 'Quidesk Market Terminal',
+        page_location: window.location.href,
+        send_page_view: true
+      });
+    </script>
+
+    <!-- Bot protection (headless only, screenshots allowed) -->
+    <script>
+      (function() {
+        const isHeadless =
+          navigator.webdriver ||
+          /HeadlessChrome|PhantomJS|Nightmare|Selenium/.test(navigator.userAgent) ||
+          window.callPhantom || window._phantom || window.__nightmare;
+        if (isHeadless) {
+          document.documentElement.innerHTML = '<h1 style="font-family:sans-serif;padding:40px">Access denied.</h1>';
+        }
+        // Block keyboard scraping shortcuts only
+        document.addEventListener('keydown', function(e) {
+          if (
+            (e.ctrlKey && e.shiftKey && e.key === 'J') ||
+            (e.ctrlKey && e.key === 'U')
+          ) { e.preventDefault(); }
+        });
+      })();
+    </script>
+  </head>
+  <body>
+    <div id="root"></div>
+    <script type="module" src="/src/main.jsx"></script>
+  </body>
+</html>
