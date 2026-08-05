@@ -1,0 +1,266 @@
+import React, { useState, useEffect } from 'react'
+import { Sun, Moon, RefreshCw } from 'lucide-react'
+import Logo from './Logo'
+import SearchBar from './SearchBar'
+
+const NAV_TABS = [
+  { id:'map',       label:'Market Map',  short:'Map'  },
+  { id:'equities',  label:'Equities',    short:'EQ'   },
+  { id:'crypto',    label:'Crypto',      short:'₿'    },
+  { id:'metals',    label:'Metals',      short:'Au'   },
+  { id:'energy',    label:'Energy',      short:'Oil'  },
+  { id:'forex',     label:'Forex',       short:'FX'   },
+  { id:'compare',   label:'Compare',     short:'Cmp'  },
+  { id:'watchlist', label:'Watchlist',   short:'★'    },
+  { id:'portfolio', label:'Portfolio',   short:'P&L'  },
+]
+
+export default function Navbar({ active, setActive, isLive, setIsLive, hotspotCount, alertCount, theme, onToggleTheme, allAssets }) {
+  const [clock, setClock] = useState(new Date())
+
+  useEffect(() => {
+    const t = setInterval(() => setClock(new Date()), 1000)
+    return () => clearInterval(t)
+  }, [])
+
+  return (
+    <>
+      {/* ── Desktop navbar ── */}
+      <nav style={s.nav} className="desktop-only">
+        <div style={s.inner}>
+
+          {/* Brand — logo + wordmark */}
+          <button style={s.brand} onClick={() => setActive('map')}>
+            <Logo size={38} theme={theme} />
+            <div style={s.brandText}>
+              <div style={s.brandName}>QUIDESK</div>
+              <div style={s.brandTag}>the trader's desk</div>
+            </div>
+          </button>
+
+          {/* Divider */}
+          <div style={s.divider} />
+
+          {/* Tabs */}
+          <div style={s.tabs}>
+            {NAV_TABS.map(t => (
+              <button
+                key={t.id}
+                style={{ ...s.tab, ...(active === t.id ? s.tabOn : {}) }}
+                onClick={() => setActive(t.id)}
+              >
+                {t.label}
+                {t.id === 'map' && hotspotCount > 0 && (
+                  <span style={s.hotBadge}>{hotspotCount}</span>
+                )}
+                {active === t.id && <div style={s.tabBar}/>}
+              </button>
+            ))}
+          </div>
+
+          {/* Right controls */}
+          <div style={s.right}>
+            <SearchBar allAssets={allAssets || []} onSelect={() => setActive('map')} />
+
+            {alertCount > 0 && (
+              <button style={s.alertPill} onClick={() => setActive('watchlist')}>
+                {alertCount} alert{alertCount > 1 ? 's' : ''}
+              </button>
+            )}
+
+            <button style={s.iconBtn} onClick={() => window.location.reload()} title="Refresh page">
+              <RefreshCw size={14} color="var(--text-secondary)"/>
+            </button>
+
+            <button style={s.iconBtn} onClick={onToggleTheme} title="Toggle theme">
+              {theme === 'dark'
+                ? <Sun size={14} color="var(--text-secondary)"/>
+                : <Moon size={14} color="var(--text-secondary)"/>
+              }
+            </button>
+
+            <button
+              style={{ ...s.liveBtn, ...(isLive ? s.liveBtnOn : s.liveBtnOff) }}
+              onClick={() => setIsLive(v => !v)}
+            >
+              <span style={{
+                ...s.liveDot,
+                background: isLive ? 'var(--bull)' : 'var(--bear)',
+                boxShadow: isLive ? '0 0 6px var(--bull)' : 'none',
+                animation: isLive ? 'pulseDot 1.6s ease-in-out infinite' : 'none',
+              }}/>
+              {isLive ? 'Live' : 'Paused'}
+            </button>
+
+            <div style={s.clock}>
+              <div style={s.clockTime}>
+                {clock.toLocaleTimeString('en-US', { hour:'2-digit', minute:'2-digit', second:'2-digit' })}
+              </div>
+              <div style={s.clockDate}>
+                {clock.toLocaleDateString('en-US', { month:'short', day:'numeric', year:'numeric' })}
+              </div>
+            </div>
+          </div>
+        </div>
+      </nav>
+
+      {/* ── Mobile top bar ── */}
+      <nav style={s.mobileTop} className="mobile-only">
+        <button style={s.brand} onClick={() => setActive('map')}>
+          <Logo size={30} theme={theme}/>
+          <div style={s.brandName}>QUIDESK</div>
+        </button>
+        <div style={{ display:'flex', alignItems:'center', gap:'8px' }}>
+          <SearchBar allAssets={allAssets || []} onSelect={() => setActive('map')}/>
+          <button style={s.iconBtn} onClick={() => window.location.reload()} title="Refresh">
+            <RefreshCw size={13} color="var(--text-secondary)"/>
+          </button>
+          <button style={s.iconBtn} onClick={onToggleTheme}>
+            {theme === 'dark'
+              ? <Sun size={14} color="var(--text-secondary)"/>
+              : <Moon size={14} color="var(--text-secondary)"/>
+            }
+          </button>
+          <button
+            style={{ ...s.liveBtn, ...(isLive ? s.liveBtnOn : s.liveBtnOff), padding:'4px 8px' }}
+            onClick={() => setIsLive(v => !v)}
+          >
+            <span style={{
+              ...s.liveDot,
+              background: isLive ? 'var(--bull)' : 'var(--bear)',
+              animation: isLive ? 'pulseDot 1.6s ease-in-out infinite' : 'none',
+            }}/>
+          </button>
+        </div>
+      </nav>
+
+      {/* ── Mobile bottom nav ── */}
+      <div className="mobile-nav mobile-only">
+        {NAV_TABS.map(t => (
+          <button
+            key={t.id}
+            className={'mobile-nav-btn' + (active === t.id ? ' active' : '')}
+            onClick={() => setActive(t.id)}
+          >
+            <span style={{ fontSize:'15px', lineHeight:1 }}>
+              {t.id==='map'?'◉':t.id==='equities'?'📈':t.id==='crypto'?'₿':t.id==='metals'?'◎':t.id==='energy'?'⚡':t.id==='compare'?'⇄':t.id==='watchlist'?'★':t.id==='forex'?'⇄':'◈'}
+            </span>
+            {t.short}
+          </button>
+        ))}
+      </div>
+    </>
+  )
+}
+
+const s = {
+  nav: {
+    position:'sticky', top:0, zIndex:100,
+    background:'var(--bg-overlay)',
+    backdropFilter:'blur(24px)',
+    borderBottom:'1px solid var(--border-subtle)',
+    boxShadow:'0 1px 0 rgba(240,165,0,0.06)',
+  },
+  inner: {
+    display:'flex', alignItems:'center', gap:'0',
+    padding:'0 24px', height:'64px',
+    maxWidth:'1700px', margin:'0 auto',
+  },
+  brand: {
+    display:'flex', alignItems:'center', gap:'12px',
+    background:'none', border:'none', cursor:'pointer',
+    flexShrink:0, padding:'0 4px',
+  },
+  brandText: { display:'flex', flexDirection:'column', gap:'1px' },
+  brandName: {
+    fontFamily:'var(--font-display)', fontSize:'15px', fontWeight:800,
+    color:'var(--text-primary)', letterSpacing:'0.12em', textAlign:'left',
+  },
+  brandTag: {
+    fontFamily:'var(--font-mono)', fontSize:'9px',
+    color:'var(--text-dim)', letterSpacing:'0.08em',
+  },
+  divider: {
+    width:'1px', height:'32px',
+    background:'var(--border-mid)',
+    margin:'0 20px', flexShrink:0,
+  },
+  tabs: {
+    display:'flex', gap:'2px', flex:1,
+    overflowX:'auto', scrollbarWidth:'none',
+  },
+  tab: {
+    position:'relative', background:'none', border:'none',
+    color:'var(--text-dim)', fontFamily:'var(--font-body)',
+    fontSize:'12px', fontWeight:500,
+    padding:'6px 11px', cursor:'pointer',
+    transition:'color 0.15s', borderRadius:'6px',
+    whiteSpace:'nowrap', display:'flex', alignItems:'center', gap:'5px',
+  },
+  tabOn: {
+    color:'var(--text-primary)',
+    background:'rgba(128,128,128,0.08)',
+  },
+  tabBar: {
+    position:'absolute', bottom:0, left:'50%',
+    transform:'translateX(-50%)',
+    width:'50%', height:'2px',
+    background:'var(--accent)', borderRadius:'1px',
+  },
+  hotBadge: {
+    fontFamily:'var(--font-mono)', fontSize:'9px',
+    background:'var(--accent-dim)', color:'var(--accent)',
+    border:'1px solid var(--border-accent)',
+    borderRadius:'3px', padding:'0 5px', lineHeight:'16px',
+  },
+  right: {
+    display:'flex', alignItems:'center', gap:'10px',
+    marginLeft:'auto', flexShrink:0,
+  },
+  alertPill: {
+    fontFamily:'var(--font-mono)', fontSize:'10px',
+    color:'var(--bear)', background:'var(--bear-dim)',
+    border:'1px solid rgba(240,64,96,0.25)',
+    borderRadius:'4px', padding:'3px 8px', cursor:'pointer',
+  },
+  iconBtn: {
+    background:'none', border:'1px solid var(--border-subtle)',
+    borderRadius:'6px', padding:'6px 8px',
+    cursor:'pointer', display:'flex', alignItems:'center',
+    transition:'border-color 0.15s',
+  },
+  liveBtn: {
+    display:'flex', alignItems:'center', gap:'6px',
+    border:'1px solid', borderRadius:'6px',
+    fontFamily:'var(--font-mono)', fontSize:'11px', fontWeight:500,
+    padding:'5px 12px', cursor:'pointer', transition:'all 0.15s',
+  },
+  liveBtnOn: {
+    background:'rgba(34,212,122,0.07)',
+    borderColor:'rgba(34,212,122,0.2)', color:'var(--bull)',
+  },
+  liveBtnOff: {
+    background:'rgba(240,64,96,0.07)',
+    borderColor:'rgba(240,64,96,0.2)', color:'var(--bear)',
+  },
+  liveDot: {
+    width:'6px', height:'6px', borderRadius:'50%', flexShrink:0,
+  },
+  clock: { textAlign:'right' },
+  clockTime: {
+    fontFamily:'var(--font-mono)', fontSize:'13px',
+    color:'var(--text-primary)', letterSpacing:'0.05em',
+  },
+  clockDate: {
+    fontFamily:'var(--font-mono)', fontSize:'9px',
+    color:'var(--text-dim)', letterSpacing:'0.04em',
+  },
+  mobileTop: {
+    position:'sticky', top:0, zIndex:100,
+    background:'var(--bg-overlay)', backdropFilter:'blur(20px)',
+    borderBottom:'1px solid var(--border-subtle)',
+    display:'flex', alignItems:'center',
+    justifyContent:'space-between',
+    padding:'10px 16px', gap:'10px',
+  },
+}
