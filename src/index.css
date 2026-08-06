@@ -161,3 +161,45 @@ body::before {
   .sector-cards-grid,.asset-grid { grid-template-columns:1fr !important; }
 }
 @media (min-width:769px) { .mobile-only { display:none !important; } }
+/* ----------------------------------------- */
+/* Dashboard Layout & Mobile Responsiveness  */
+/* ----------------------------------------- */
+
+.dashboard-layout {
+  display: grid;
+  grid-template-columns: 1fr 320px; /* Main canvas + Right Sidebar */
+  gap: 20px;
+  align-items: start;
+  width: 100%;
+}
+
+.dashboard-main {
+  display: flex;
+  flex-direction: column;
+  gap: 16px; /* ⬅️ REDUCED GAP: Controls the space between the Map and Asset Cards */
+  min-width: 0; /* Prevents content from overflowing the screen */
+}
+
+.asset-category-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+  gap: 12px;
+}
+
+/* Tablet Breakpoint: Stack sidebar underneath */
+@media (max-width: 1024px) {
+  .dashboard-layout {
+    grid-template-columns: 1fr; 
+  }
+}
+
+/* Mobile Breakpoint: Adjust card sizes */
+@media (max-width: 600px) {
+  .asset-category-grid {
+    /* Fits ~2 cards per row on mobile phones */
+    grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); 
+  }
+  .dashboard-main {
+    gap: 12px; /* Even tighter gap for mobile */
+  }
+}
