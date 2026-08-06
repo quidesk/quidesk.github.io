@@ -1,139 +1,108 @@
-import React, { useState, useEffect, useRef } from 'react'
-import { Star } from 'lucide-react'
-import { formatPrice, formatChange, SECTOR_META } from '../data/markets'
-import MiniChart from './MiniChart'
-import CurrencyTooltip from './CurrencyTooltip'
+import React from 'react';
+import { TrendingUp, TrendingDown } from 'lucide-react';
 
-export default function AssetCard({ asset, onClick, isWatched, onToggleWatch, compact, convertPrice }) {
-  const [flash, setFlash]           = useState(null)
-  const [prev, setPrev]             = useState(asset.price)
-  const [tooltip, setTooltip]       = useState({ visible:false, x:0, y:0 })
-  const [conversions, setConversions] = useState([])
-  const cardRef    = useRef(null)
-  const timerRef   = useRef(null)
+export default function AssetCard({ asset, category, onClick }) {
+  if (!asset) return null;
 
-  useEffect(() => {
-    if (asset.price !== prev) {
-      setFlash(asset.price > prev ? 'up' : 'down')
-      setPrev(asset.price)
-      const t = setTimeout(() => setFlash(null), 500)
-      return () => clearTimeout(t)
+  let displayName = asset.name;
+  const nameLower = displayName.toLowerCase();
+  
+  if (nameLower.includes('s&p 500')) displayName = 'S&P 500 (SPY)';
+  if (nameLower.includes('nasdaq')) displayName = 'NASDAQ (QQQ)';
+
+  const isPositive = asset.change >= 0;
+  const symbol = (asset.symbol || '').toUpperCase();
+  
+  const isMetals = category === 'metals' || symbol.includes('XAU') || symbol.includes('XAG') || symbol.includes('XPT') || symbol.includes('COPPER');
+  const isForex = category === 'forex' || (symbol.includes('/') && !isMetals);
+  const isCrypto = category === 'crypto' || ['BTC', 'ETH', 'SOL', 'BNB', 'XRP', 'ADA'].includes(symbol);
+  const isEnergy = category === 'energy' || ['WTI', 'BRENT', 'NAT GAS', 'RBOB'].includes(symbol);
+  
+  const formatPrice = (price) => {
+    if (isMetals) {
+      return new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD' }).format(price) + ' /oz';
     }
-  }, [asset.price])
-
-  const isUp = asset.change >= 0
-  const meta = SECTOR_META[asset.sector] || {}
-
-  function showTooltip() {
-    if (convertPrice) {
-      setConversions(convertPrice(asset.price))
+    if (isForex) {
+      // Fixes the Forex issue by strictly enforcing 4 decimal places
+      return price.toFixed(4);
     }
-    timerRef.current = setTimeout(() => {
-      const rect = cardRef.current && cardRef.current.getBoundingClientRect()
-      if (!rect) return
-      const tipX = (rect.right + 8 > window.innerWidth - 300)
-        ? rect.left - 296
-        : rect.right + 8
-      const tipY = Math.min(rect.top, window.innerHeight - 340)
-      setTooltip({ visible:true, x:tipX, y:tipY })
-    }, 400)
-  }
+    return new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD' }).format(price);
+  };
 
-  function hideTooltip() {
-    clearTimeout(timerRef.current)
-    setTooltip({ visible:false, x:0, y:0 })
-  }
+  // --- SUBTLE MATTE FINISH (True to your original design) ---
+  let cardBg = '#162224'; // Subtle Dark Slate Teal (Equities)
+  let textColor = '#f8fafc';
+  let dimTextColor = '#94a3b8';
 
-  const bg = flash === 'up'
-    ? 'rgba(34,212,122,0.08)'
-    : flash === 'down'
-    ? 'rgba(240,64,96,0.08)'
-    : 'var(--bg-card)'
+  if (isCrypto) {
+    cardBg = '#12281e'; // Subtle Dark Forest Mint
+  } else if (isForex) {
+    cardBg = '#171a2e'; // Subtle Dark Midnight Indigo
+  } else if (isMetals) {
+    cardBg = '#292110'; // Subtle Dark Bronze
+  } else if (isEnergy) {
+    cardBg = '#2b1a1a'; // Subtle Dark Maroon
+  }
 
   return (
-    <div style={{ position:'relative' }}>
-      <div
-        ref={cardRef}
-        className="card"
-        style={{
-          padding: compact ? '12px' : '16px',
-          cursor: 'pointer',
-          background: bg,
-          transition: 'background 0.4s ease, border-color 0.15s, transform 0.15s, box-shadow 0.15s',
-        }}
-        onClick={function() { if (onClick) onClick(asset) }}
-        onMouseEnter={showTooltip}
-        onMouseLeave={hideTooltip}
-      >
-        <div style={{ display:'flex', justifyContent:'space-between', alignItems:'flex-start', marginBottom: compact ? '6px' : '10px' }}>
-          <div>
-            <div style={{ display:'flex', alignItems:'center', gap:'6px' }}>
-              <span style={{ fontFamily:'var(--font-display)', fontSize:'12px', fontWeight:700, color: meta.color || 'var(--text-primary)', letterSpacing:'0.04em' }}>
-                {asset.symbol}
-              </span>
-              {!compact && (
-                <span style={{ fontFamily:'var(--font-mono)', fontSize:'8px', color: meta.color || 'var(--accent)', background: (meta.color || '#f0a500') + '14', border: '1px solid ' + (meta.color || '#f0a500') + '30', borderRadius:'3px', padding:'0 5px', lineHeight:'14px' }}>
-                  {meta.label}
-                </span>
-              )}
-            </div>
-            {!compact && (
-              <div style={{ fontFamily:'var(--font-body)', fontSize:'10px', color:'var(--text-dim)', marginTop:'1px' }}>
-                {asset.name}
-              </div>
-            )}
-          </div>
-          <div style={{ display:'flex', alignItems:'center', gap:'6px' }}>
-            <span className={isUp ? 'badge badge-bull' : 'badge badge-bear'}>
-              {isUp ? '▲' : '▼'} {formatChange(asset.change)}
-            </span>
-            {onToggleWatch && (
-              <button
-                style={{ background:'none', border:'none', cursor:'pointer', padding:'2px', display:'flex', alignItems:'center', lineHeight:1 }}
-                onClick={function(e) { e.stopPropagation(); onToggleWatch(asset.id) }}
-              >
-                <Star size={12} color={isWatched ? 'var(--accent)' : 'var(--text-dim)'} fill={isWatched ? 'var(--accent)' : 'none'} />
-              </button>
-            )}
-          </div>
-        </div>
-
-        <div style={{ fontFamily:'var(--font-mono)', fontSize: compact ? '16px' : '20px', fontWeight:500, color: isUp ? 'var(--bull)' : 'var(--bear)', marginBottom: compact ? '6px' : '10px', letterSpacing:'0.02em' }}>
-          {formatPrice(asset.price)}
-          {asset.unit && (
-            <span style={{ fontSize:'11px', color:'var(--text-dim)', marginLeft:'3px' }}>
-              /{asset.unit}
-            </span>
-          )}
-        </div>
-
-        <MiniChart data={asset.chartData} positive={isUp} height={compact ? 36 : 48} />
-
-        {!compact && (
-          <div style={{ display:'flex', gap:'14px', marginTop:'8px', paddingTop:'8px', borderTop:'1px solid var(--border-subtle)' }}>
-            <div>
-              <div style={{ fontFamily:'var(--font-mono)', fontSize:'8px', color:'var(--text-dim)', letterSpacing:'0.08em' }}>VOL</div>
-              <div style={{ fontFamily:'var(--font-mono)', fontSize:'11px', color:'var(--text-secondary)' }}>{asset.volume}</div>
-            </div>
-            {asset.marketCap && asset.marketCap !== '—' && (
-              <div>
-                <div style={{ fontFamily:'var(--font-mono)', fontSize:'8px', color:'var(--text-dim)', letterSpacing:'0.08em' }}>MCAP</div>
-                <div style={{ fontFamily:'var(--font-mono)', fontSize:'11px', color:'var(--text-secondary)' }}>{asset.marketCap}</div>
-              </div>
-            )}
-            <div style={{ marginLeft:'auto', display:'flex', alignItems:'center' }}>
-              <div style={{ width:'6px', height:'6px', borderRadius:'50%', background: isUp ? 'var(--bull)' : 'var(--bear)', boxShadow: isUp ? '0 0 5px var(--bull)' : '0 0 5px var(--bear)' }} />
-            </div>
-          </div>
-        )}
+    <div 
+      onClick={() => onClick && onClick(asset)}
+      style={{
+        background: cardBg,
+        border: '1px solid rgba(255, 255, 255, 0.05)',
+        borderRadius: '8px',
+        padding: '16px',
+        cursor: 'pointer',
+        transition: 'all 0.2s ease',
+        position: 'relative',
+        overflow: 'hidden',
+        display: 'flex',
+        flexDirection: 'column',
+        gap: '12px',
+      }}
+      onMouseOver={(e) => {
+        e.currentTarget.style.transform = 'translateY(-2px)';
+        e.currentTarget.style.borderColor = 'rgba(255, 255, 255, 0.15)';
+      }}
+      onMouseOut={(e) => {
+        e.currentTarget.style.transform = 'translateY(0)';
+        e.currentTarget.style.borderColor = 'rgba(255, 255, 255, 0.05)';
+      }}
+    >
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+        <h3 style={{ fontSize: '13px', margin: 0, color: textColor, fontWeight: 600 }}>
+          {displayName}
+        </h3>
+        
+        <span style={{ 
+          fontSize: '10px', 
+          fontFamily: 'var(--font-mono, monospace)', 
+          color: dimTextColor, 
+          background: 'rgba(0, 0, 0, 0.4)',
+          padding: '3px 6px',
+          borderRadius: '4px',
+          fontWeight: 600,
+          letterSpacing: '0.5px',
+        }}>
+          {symbol}
+        </span>
+      </div>
+      
+      <div style={{ fontSize: '20px', fontWeight: 700, color: textColor, letterSpacing: '-0.5px' }}>
+        {formatPrice(asset.price)}
       </div>
 
-      <CurrencyTooltip
-        conversions={conversions}
-        visible={tooltip.visible}
-        x={tooltip.x}
-        y={tooltip.y}
-      />
+      <div>
+        <div style={{ 
+          display: 'inline-flex', alignItems: 'center', gap: '4px',
+          color: isPositive ? '#10b981' : '#f43f5e', 
+          fontSize: '12px', 
+          fontWeight: 600,
+        }}>
+          {isPositive ? <TrendingUp size={14} /> : <TrendingDown size={14} />}
+          <span>{isPositive ? '+' : ''}{asset.change}%</span>
+        </div>
+      </div>
     </div>
-  )
+  );
 }

@@ -1,238 +1,124 @@
-import React, { useState } from 'react'
-import { RefreshCw, ExternalLink, Radio } from 'lucide-react'
+import React from 'react';
+import { AlertTriangle, Activity, Radio } from 'lucide-react';
 
-const SECTOR_LABELS = {
-  crypto:   { label:'Crypto',    color:'#a78bfa' },
-  equities: { label:'Equities',  color:'#4d9eff' },
-  metals:   { label:'Metals',    color:'#f0a500' },
-  energy:   { label:'Energy',    color:'#f97316' },
-  forex:    { label:'Forex',     color:'#22d3ee' },
-}
-
-function timeAgo(date) {
-  if (!date) return ''
-  const diff = (Date.now() - date.getTime()) / 1000
-  if (diff < 60)   return `${Math.floor(diff)}s ago`
-  if (diff < 3600) return `${Math.floor(diff/60)}m ago`
-  return `${Math.floor(diff/3600)}h ago`
-}
-
-export default function NewsSignals({ news, loading, lastFetch, onRefresh }) {
-  const [filter, setFilter] = useState('all')
-
-  const filtered = filter === 'all'
-    ? news
-    : news.filter(n => n.sector === filter)
+export default function NewsSignals({ signals = [] }) {
+  // Fallback dummy data just in case no real signals are passed in yet
+  const displaySignals = signals.length > 0 ? signals : [
+    {
+      id: 1,
+      type: 'GLOBAL_MACRO',
+      time: '2m ago',
+      message: 'Central bank divergence flagged in recent policy minutes.',
+      color: '#eab308', // Amber
+      icon: AlertTriangle
+    },
+    {
+      id: 2,
+      type: 'SEC_NODE',
+      time: '1h ago',
+      message: 'Unusual filing activity detected in micro-cap tech sector.',
+      color: '#10b981', // Emerald
+      icon: Activity
+    },
+    {
+      id: 3,
+      type: 'GEO_POL',
+      time: '3h ago',
+      message: 'Energy supply chain disruptions reported in Eastern Europe.',
+      color: '#f43f5e', // Rose
+      icon: Radio
+    }
+  ];
 
   return (
-    <div style={s.wrap}>
+    <div style={{
+      background: '#11131a', // Deep terminal background
+      border: '1px solid rgba(255, 255, 255, 0.05)',
+      borderRadius: '8px',
+      padding: '16px',
+      display: 'flex',
+      flexDirection: 'column',
+      gap: '12px',
+      height: '100%',
+    }}>
       {/* Header */}
-      <div style={s.header}>
-        <div style={s.headerLeft}>
-          <Radio size={12} color="var(--bull)" style={{ flexShrink:0 }}/>
-          <span style={s.title}>OSINT SIGNALS</span>
-          <span style={s.subtitle}>OSINT · updates every 30s</span>
-        </div>
-        <div style={s.headerRight}>
-          {lastFetch && (
-            <span style={s.lastFetch}>
-              {timeAgo(lastFetch)}
-            </span>
-          )}
-          <button style={s.refreshBtn} onClick={onRefresh} title="Refresh now">
-            <RefreshCw
-              size={11}
-              color="var(--text-dim)"
-              style={{ animation: loading ? 'spin 1s linear infinite' : 'none' }}
-            />
-          </button>
-        </div>
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', paddingBottom: '4px' }}>
+        <span style={{ color: '#f8fafc', fontSize: '14px', fontWeight: 700, letterSpacing: '0.5px' }}>
+          OSINT SIGNALS
+        </span>
+        <span style={{ color: '#64748b', fontSize: '10px', fontWeight: 600, letterSpacing: '0.5px', background: 'rgba(255,255,255,0.05)', padding: '3px 8px', borderRadius: '4px' }}>
+          UPDATES EVERY 30S
+        </span>
       </div>
 
-      {/* Filter pills */}
-      <div style={s.filters}>
-        {['all', 'crypto', 'equities', 'metals', 'energy', 'forex'].map(f => {
-          const meta = SECTOR_LABELS[f] || { label:'All', color:'var(--accent)' }
-          const isOn = filter === f
+      {/* Feed Container */}
+      <div style={{ display: 'flex', flexDirection: 'column', gap: '10px', flex: 1, overflowY: 'auto' }}>
+        {displaySignals.map((signal, index) => {
+          // If real data doesn't have an icon component, default to Radio
+          const Icon = signal.icon || Radio;
+          const signalColor = signal.color || '#38bdf8'; // Default Sky Blue
+
           return (
-            <button
-              key={f}
-              style={{
-                ...s.filterBtn,
-                ...(isOn ? {
-                  borderColor: f === 'all' ? 'var(--accent)' : meta.color,
-                  color:       f === 'all' ? 'var(--accent)' : meta.color,
-                  background:  f === 'all' ? 'var(--accent-dim)' : meta.color + '15',
-                } : {}),
-              }}
-              onClick={() => setFilter(f)}
-            >
-              {f === 'all' ? 'All' : meta.label}
-            </button>
-          )
+            <div key={signal.id || index} style={{
+              background: 'rgba(255, 255, 255, 0.02)',
+              border: '1px solid rgba(255, 255, 255, 0.03)',
+              borderRadius: '6px',
+              padding: '12px',
+              display: 'flex',
+              flexDirection: 'column',
+              gap: '8px',
+              transition: 'all 0.2s ease',
+            }}
+            onMouseOver={(e) => {
+              e.currentTarget.style.background = 'rgba(255, 255, 255, 0.04)';
+              e.currentTarget.style.borderColor = 'rgba(255, 255, 255, 0.08)';
+            }}
+            onMouseOut={(e) => {
+              e.currentTarget.style.background = 'rgba(255, 255, 255, 0.02)';
+              e.currentTarget.style.borderColor = 'rgba(255, 255, 255, 0.03)';
+            }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '6px', color: signalColor }}>
+                  <Icon size={14} />
+                  <span style={{ fontSize: '11px', fontWeight: 700, letterSpacing: '0.5px' }}>
+                    {signal.type || 'SYS_ALERT'}
+                  </span>
+                </div>
+                <span style={{ fontSize: '10px', color: '#64748b' }}>{signal.time || 'Just now'}</span>
+              </div>
+              <p style={{ fontSize: '12px', color: '#cbd5e1', margin: 0, lineHeight: '1.4' }}>
+                {signal.message || signal.title}
+              </p>
+            </div>
+          );
         })}
       </div>
 
-      {/* News list */}
-      <div style={s.list}>
-        {loading && news.length === 0 ? (
-          <div style={s.loading}>
-            <div style={s.loadingDot}/>
-            <span style={s.loadingText}>Scanning feeds...</span>
-          </div>
-        ) : filtered.length === 0 ? (
-          <div style={s.loading}>
-            <span style={s.loadingText}>No signals in this sector</span>
-          </div>
-        ) : (
-          filtered.map(item => {
-            const meta = SECTOR_LABELS[item.sector] || {}
-            return (
-              <a
-                key={item.id}
-                href={item.link}
-                target="_blank"
-                rel="noopener noreferrer"
-                style={s.item}
-                onMouseEnter={e => e.currentTarget.style.background = 'var(--bg-card-hover)'}
-                onMouseLeave={e => e.currentTarget.style.background = 'transparent'}
-              >
-                <div style={s.itemLeft}>
-                  <span style={{ ...s.dot, background: meta.color || 'var(--accent)' }}/>
-                </div>
-                <div style={s.itemBody}>
-                  <div style={s.itemTitle}>{item.title}</div>
-                  <div style={s.itemMeta}>
-                    <span style={{ ...s.itemSource, color: meta.color || 'var(--accent)' }}>
-                      {item.source}
-                    </span>
-                    <span style={s.itemDot}>·</span>
-                    <span style={s.itemTime}>{timeAgo(item.published)}</span>
-                    {item.mentionedAssets.length > 0 && (
-                      <>
-                        <span style={s.itemDot}>·</span>
-                        <span style={s.itemAssets}>
-                          {item.mentionedAssets.slice(0,3).map(a => a.toUpperCase()).join(' ')}
-                        </span>
-                      </>
-                    )}
-                  </div>
-                </div>
-                <ExternalLink size={10} color="var(--text-dim)" style={{ flexShrink:0, marginTop:'2px' }}/>
-              </a>
-            )
-          })
-        )}
-      </div>
-
-      <style>{`@keyframes spin { to { transform: rotate(360deg); } }`}</style>
+      {/* Action Button */}
+      <button style={{
+        marginTop: '8px',
+        width: '100%',
+        background: 'transparent',
+        border: '1px solid rgba(234, 179, 8, 0.5)', 
+        color: '#eab308',
+        padding: '10px',
+        borderRadius: '6px',
+        fontSize: '11px',
+        fontWeight: 700,
+        cursor: 'pointer',
+        letterSpacing: '0.5px',
+        transition: 'all 0.2s'
+      }}
+      onMouseOver={(e) => {
+        e.target.style.background = 'rgba(234, 179, 8, 0.1)';
+        e.target.style.borderColor = '#eab308';
+      }}
+      onMouseOut={(e) => {
+        e.target.style.background = 'transparent';
+        e.target.style.borderColor = 'rgba(234, 179, 8, 0.5)';
+      }}>
+        VIEW FULL OSINT FEED
+      </button>
     </div>
-  )
-}
-
-const s = {
-  wrap: {
-    background: 'var(--bg-card)',
-    border: '1px solid var(--border-subtle)',
-    borderRadius: '10px',
-    overflow: 'hidden',
-    display: 'flex',
-    flexDirection: 'column',
-  },
-  header: {
-    display: 'flex',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    padding: '10px 14px',
-    borderBottom: '1px solid var(--border-subtle)',
-    background: 'var(--bg-surface)',
-  },
-  headerLeft: {
-    display: 'flex', alignItems: 'center', gap: '7px',
-  },
-  title: {
-    fontFamily: 'var(--font-mono)',
-    fontSize: '10px', fontWeight: 500,
-    color: 'var(--text-primary)', letterSpacing: '0.12em',
-  },
-  subtitle: {
-    fontFamily: 'var(--font-mono)',
-    fontSize: '9px', color: 'var(--text-dim)', letterSpacing: '0.06em',
-  },
-  headerRight: {
-    display: 'flex', alignItems: 'center', gap: '8px',
-  },
-  lastFetch: {
-    fontFamily: 'var(--font-mono)', fontSize: '9px', color: 'var(--text-dim)',
-  },
-  refreshBtn: {
-    background: 'none', border: 'none', cursor: 'pointer',
-    padding: '2px', display: 'flex', alignItems: 'center',
-  },
-  filters: {
-    display: 'flex', gap: '5px', padding: '8px 14px',
-    borderBottom: '1px solid var(--border-subtle)',
-    flexWrap: 'wrap',
-  },
-  filterBtn: {
-    background: 'none',
-    border: '1px solid var(--border-subtle)',
-    borderRadius: '4px',
-    color: 'var(--text-dim)',
-    fontFamily: 'var(--font-mono)', fontSize: '9px', letterSpacing: '0.06em',
-    padding: '2px 8px', cursor: 'pointer', transition: 'all 0.12s',
-  },
-  list: {
-    overflowY: 'auto',
-    maxHeight: '340px',
-    scrollbarWidth: 'thin',
-  },
-  loading: {
-    display: 'flex', alignItems: 'center', gap: '8px',
-    padding: '20px 14px',
-  },
-  loadingDot: {
-    width: '6px', height: '6px', borderRadius: '50%',
-    background: 'var(--bull)',
-    animation: 'pulseDot 1.2s ease-in-out infinite',
-  },
-  loadingText: {
-    fontFamily: 'var(--font-mono)', fontSize: '11px', color: 'var(--text-dim)',
-  },
-  item: {
-    display: 'flex', alignItems: 'flex-start', gap: '10px',
-    padding: '9px 14px',
-    borderBottom: '1px solid var(--border-subtle)',
-    textDecoration: 'none',
-    cursor: 'pointer',
-    transition: 'background 0.1s',
-  },
-  itemLeft: {
-    paddingTop: '4px', flexShrink: 0,
-  },
-  dot: {
-    display: 'block', width: '5px', height: '5px', borderRadius: '50%',
-  },
-  itemBody: { flex: 1, minWidth: 0 },
-  itemTitle: {
-    fontFamily: 'var(--font-body)', fontSize: '12px', fontWeight: 500,
-    color: 'var(--text-primary)', lineHeight: 1.4,
-    whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis',
-  },
-  itemMeta: {
-    display: 'flex', alignItems: 'center', gap: '4px', marginTop: '3px', flexWrap: 'wrap',
-  },
-  itemSource: {
-    fontFamily: 'var(--font-mono)', fontSize: '9px', letterSpacing: '0.04em',
-  },
-  itemDot: {
-    color: 'var(--text-dim)', fontSize: '10px',
-  },
-  itemTime: {
-    fontFamily: 'var(--font-mono)', fontSize: '9px', color: 'var(--text-dim)',
-  },
-  itemAssets: {
-    fontFamily: 'var(--font-mono)', fontSize: '9px',
-    color: 'var(--accent)', letterSpacing: '0.04em',
-  },
+  );
 }
