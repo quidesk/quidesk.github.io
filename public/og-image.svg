@@ -1,0 +1,105 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="630" viewBox="0 0 1200 630">
+  <rect width="1200" height="630" fill="#0d1117"/>
+  <!-- dot grid -->
+  <defs>
+    <pattern id="dots" x="0" y="0" width="30" height="30" patternUnits="userSpaceOnUse">
+      <circle cx="15" cy="15" r="0.8" fill="rgba(91,156,246,0.08)"/>
+    </pattern>
+  </defs>
+  <rect width="1200" height="630" fill="url(#dots)"/>
+
+  <!-- Logo mark -->
+  <g transform="translate(80,80)">
+    <rect width="72" height="72" rx="14" fill="rgba(240,165,0,0.12)" stroke="rgba(240,165,0,0.3)" stroke-width="1.5"/>
+    <circle cx="36" cy="35" r="19" fill="none" stroke="#f0a500" stroke-width="4"/>
+    <rect x="13" y="32" width="46" height="6" fill="#0d1117"/>
+    <polyline points="16,35 19,35 21,28 23,42 25,31 27,35 30,35 32,29 34,35 37,35" fill="none" stroke="#f0a500" stroke-width="1.1" stroke-linecap="round" stroke-linejoin="round"/>
+    <circle cx="37" cy="35" r="1.8" fill="#f0a500"/>
+    <path d="M50,48 Q57,56 63,62" fill="none" stroke="#f0a500" stroke-width="4" stroke-linecap="round"/>
+    <circle cx="64" cy="63" r="3.5" fill="#f0a500"/>
+    <circle cx="64" cy="63" r="1.8" fill="#0d1117"/>
+  </g>
+
+  <!-- Wordmark -->
+  <text x="174" y="128" font-family="Georgia, serif" font-size="52" font-weight="700" fill="#dce6f0" letter-spacing="6">QUIDESK</text>
+  <text x="176" y="155" font-family="monospace" font-size="16" fill="#3d5470" letter-spacing="4">THE TRADER'S DESK</text>
+
+  <!-- Tagline -->
+  <text x="80" y="260" font-family="Georgia, serif" font-size="42" font-weight="400" fill="#dce6f0">All markets.</text>
+  <text x="80" y="316" font-family="Georgia, serif" font-size="42" font-weight="400" fill="#dce6f0">One desk.</text>
+  <text x="80" y="372" font-family="Georgia, serif" font-size="42" font-weight="700" fill="#00c6b8">Live.</text>
+
+  <!-- Feature pills -->
+  <g transform="translate(80,430)">
+    <rect width="130" height="32" rx="4" fill="rgba(0,198,184,0.10)" stroke="rgba(0,198,184,0.25)" stroke-width="1"/>
+    <text x="65" y="21" text-anchor="middle" font-family="monospace" font-size="13" fill="#00c6b8" letter-spacing="1">CRYPTO</text>
+  </g>
+  <g transform="translate(224,430)">
+    <rect width="130" height="32" rx="4" fill="rgba(91,156,246,0.10)" stroke="rgba(91,156,246,0.25)" stroke-width="1"/>
+    <text x="65" y="21" text-anchor="middle" font-family="monospace" font-size="13" fill="#5b9cf6" letter-spacing="1">EQUITIES</text>
+  </g>
+  <g transform="translate(368,430)">
+    <rect width="110" height="32" rx="4" fill="rgba(240,165,0,0.10)" stroke="rgba(240,165,0,0.25)" stroke-width="1"/>
+    <text x="55" y="21" text-anchor="middle" font-family="monospace" font-size="13" fill="#f0a500" letter-spacing="1">METALS</text>
+  </g>
+  <g transform="translate(492,430)">
+    <rect width="110" height="32" rx="4" fill="rgba(246,133,74,0.10)" stroke="rgba(246,133,74,0.25)" stroke-width="1"/>
+    <text x="55" y="21" text-anchor="middle" font-family="monospace" font-size="13" fill="#f6854a" letter-spacing="1">ENERGY</text>
+  </g>
+  <g transform="translate(616,430)">
+    <rect width="110" height="32" rx="4" fill="rgba(31,214,131,0.10)" stroke="rgba(31,214,131,0.25)" stroke-width="1"/>
+    <text x="55" y="21" text-anchor="middle" font-family="monospace" font-size="13" fill="#1fd683" letter-spacing="1">FREE</text>
+  </g>
+
+  <!-- Right side — mini market map preview -->
+  <g transform="translate(700,60)">
+    <!-- Zone blobs -->
+    <ellipse cx="120" cy="130" rx="100" ry="90" fill="rgba(31,214,131,0.05)" stroke="rgba(31,214,131,0.15)" stroke-width="1" stroke-dasharray="5 4"/>
+    <ellipse cx="360" cy="130" rx="100" ry="90" fill="rgba(31,214,131,0.05)" stroke="rgba(31,214,131,0.15)" stroke-width="1" stroke-dasharray="5 4"/>
+    <ellipse cx="120" cy="330" rx="85" ry="55" fill="rgba(240,82,106,0.05)" stroke="rgba(240,82,106,0.14)" stroke-width="1" stroke-dasharray="5 4"/>
+    <ellipse cx="360" cy="330" rx="100" ry="55" fill="rgba(240,82,106,0.05)" stroke="rgba(240,82,106,0.14)" stroke-width="1" stroke-dasharray="5 4"/>
+    <!-- Lines -->
+    <line x1="110" y1="110" x2="348" y2="114" stroke="rgba(31,214,131,0.25)" stroke-width="1"/>
+    <line x1="348" y1="114" x2="116" y2="318" stroke="rgba(240,165,0,0.3)" stroke-width="1.2" stroke-dasharray="5 4"/>
+    <!-- Nodes equities -->
+    <g transform="translate(88,100) rotate(4)">
+      <circle r="22" fill="rgba(31,214,131,0.13)" stroke="rgba(31,214,131,0.55)" stroke-width="1.2"/>
+      <text text-anchor="middle" dominant-baseline="central" font-size="10" font-family="monospace" font-weight="500" fill="#dce6f0">SPX</text>
+      <text y="30" text-anchor="middle" font-size="8" font-family="monospace" fill="rgba(31,214,131,0.9)">+0.31%</text>
+    </g>
+    <g transform="translate(156,75) rotate(5)">
+      <circle r="18" fill="rgba(31,214,131,0.10)" stroke="rgba(31,214,131,0.48)" stroke-width="1"/>
+      <text text-anchor="middle" dominant-baseline="central" font-size="9" font-family="monospace" font-weight="500" fill="#dce6f0">NVDA</text>
+      <text y="25" text-anchor="middle" font-size="7" font-family="monospace" fill="rgba(31,214,131,0.9)">+1.84%</text>
+    </g>
+    <!-- Nodes crypto -->
+    <g transform="translate(338,100) rotate(6)">
+      <circle r="26" fill="rgba(31,214,131,0.15)" stroke="rgba(31,214,131,0.65)" stroke-width="1.5"/>
+      <text text-anchor="middle" dominant-baseline="central" font-size="12" font-family="monospace" font-weight="500" fill="#dce6f0">BTC</text>
+      <text y="34" text-anchor="middle" font-size="8" font-family="monospace" fill="rgba(31,214,131,0.9)">+2.14%</text>
+    </g>
+    <g transform="translate(406,120) rotate(3)">
+      <circle r="20" fill="rgba(240,82,106,0.12)" stroke="rgba(240,82,106,0.5)" stroke-width="1"/>
+      <text text-anchor="middle" dominant-baseline="central" font-size="10" font-family="monospace" font-weight="500" fill="#dce6f0">ETH</text>
+      <text y="28" text-anchor="middle" font-size="7" font-family="monospace" fill="rgba(240,82,106,0.9)">-0.88%</text>
+    </g>
+    <!-- Metals -->
+    <g transform="translate(106,322) rotate(-3)">
+      <circle r="22" fill="rgba(31,214,131,0.12)" stroke="rgba(31,214,131,0.52)" stroke-width="1.2"/>
+      <text text-anchor="middle" dominant-baseline="central" font-size="9" font-family="monospace" font-weight="500" fill="#dce6f0">GOLD</text>
+      <text y="30" text-anchor="middle" font-size="8" font-family="monospace" fill="rgba(31,214,131,0.9)">+0.42%</text>
+    </g>
+    <!-- Energy -->
+    <g transform="translate(350,326) rotate(-5)">
+      <circle r="20" fill="rgba(240,82,106,0.13)" stroke="rgba(240,82,106,0.52)" stroke-width="1.2"/>
+      <text text-anchor="middle" dominant-baseline="central" font-size="9" font-family="monospace" font-weight="500" fill="#dce6f0">WTI</text>
+      <text y="28" text-anchor="middle" font-size="8" font-family="monospace" fill="rgba(240,82,106,0.9)">-1.22%</text>
+    </g>
+  </g>
+
+  <!-- Bottom strip -->
+  <rect x="0" y="590" width="1200" height="40" fill="rgba(0,198,184,0.04)"/>
+  <line x1="0" y1="590" x2="1200" y2="590" stroke="rgba(0,198,184,0.15)" stroke-width="1"/>
+  <text x="80" y="613" font-family="monospace" font-size="13" fill="#3d5470" letter-spacing="2">quidesk.github.io</text>
+  <text x="1120" y="613" text-anchor="end" font-family="monospace" font-size="13" fill="#3d5470" letter-spacing="1">FREE · NO SIGNUP</text>
+</svg>
