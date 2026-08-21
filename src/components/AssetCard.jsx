@@ -97,11 +97,31 @@ export default function AssetCard({ asset, onClick, isWatched, onToggleWatch, co
               {isUp ? '▲' : '▼'} {formatChange(asset.change)}
             </span>
             <button
-              style={{ background:'none', border:'none', cursor:'pointer', padding:'2px', display:'flex', alignItems:'center', lineHeight:1 }}
+              style={{
+                background: 'var(--bg-surface)', 
+                border: '1px solid var(--border-subtle)', 
+                borderRadius: '4px',
+                cursor: 'pointer', 
+                padding: '3px 6px', 
+                display: 'flex', 
+                alignItems: 'center', 
+                color: 'var(--text-secondary)',
+                transition: 'all 0.15s ease'
+              }}
+              onMouseEnter={e => {
+                e.currentTarget.style.borderColor = 'var(--accent)'
+                e.currentTarget.style.color = 'var(--accent)'
+                e.currentTarget.style.background = 'var(--accent-dim)'
+              }}
+              onMouseLeave={e => {
+                e.currentTarget.style.borderColor = 'var(--border-subtle)'
+                e.currentTarget.style.color = 'var(--text-secondary)'
+                e.currentTarget.style.background = 'var(--bg-surface)'
+              }}
               onClick={handleShareClick}
               title="Share insight card"
             >
-              <Share2 size={12} color="var(--text-dim)" />
+              <Share2 size={13} style={{ color: 'inherit' }} />
             </button>
             {onToggleWatch && (
               <button
