@@ -40,7 +40,7 @@ export async function fetchBinancePrices() {
 
 // ─── CRYPTO: Binance WebSocket real-time ─────────────────────────────────────
 export function connectBinanceWS(symbols, onUpdate) {
-  const streams = symbols.map(s => `${s.toLowerCase()}usdt@miniTicker`).join('/')
+  const streams = symbols.map(s => `${s.toLowerCase()}usdt@ticker`).join('/')
   const ws = new WebSocket(`wss://stream.binance.com:9443/stream?streams=${streams}`)
   ws.onmessage = (e) => {
     try {
