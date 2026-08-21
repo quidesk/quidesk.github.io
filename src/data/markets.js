@@ -1,4 +1,4 @@
-function randomWalk(base, vol, points) {
+function randomWalk(base, vol, points, intervalMs = 5 * 60 * 1000) {
   const data = [];
   let cur = base;
   const now = Date.now();
@@ -9,8 +9,13 @@ function randomWalk(base, vol, points) {
   }
   for (let i = points; i >= 0; i--) {
     const val = rawValues[points - i];
+    const d = new Date(now - i * intervalMs);
+    const timeStr = intervalMs >= 24 * 60 * 60 * 1000 
+      ? d.toLocaleDateString('en-US', { month:'short', day:'numeric' })
+      : d.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' });
+    
     data.push({
-      time: new Date(now - i * 5 * 60 * 1000).toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' }),
+      time: timeStr,
       value: parseFloat(val.toFixed(val < 1 ? 4 : 2))
     });
   }
@@ -18,51 +23,65 @@ function randomWalk(base, vol, points) {
 }
 function rp(r=5) { return parseFloat(((Math.random()-0.48)*r).toFixed(2)); }
 
+function genHistory(base, vol) {
+  return {
+    '1H': randomWalk(base, vol * 0.2, 60, 60 * 1000),             // 1 min intervals
+    '24H': randomWalk(base, vol, 48, 30 * 60 * 1000),             // 30 min intervals
+    '1M': randomWalk(base, vol * 3, 30, 24 * 60 * 60 * 1000),     // 1 day intervals
+    '1Y': randomWalk(base, vol * 8, 52, 7 * 24 * 60 * 60 * 1000), // 1 week intervals
+  }
+}
+
+function withHistory(asset, vol) {
+  const history = genHistory(asset.price, vol);
+  return { ...asset, history, chartData: history['24H'] };
+}
+
 export const SECTOR_META = {
-  equities:    { label:'Equities',    color:'#4d9eff', icon:'◈', cssVar:'--sector-equities' },
-  crypto:      { label:'Crypto',      color:'#a78bfa', icon:'◆', cssVar:'--sector-crypto' },
-  metals:      { label:'Metals',      color:'#f0a500', icon:'◎', cssVar:'--sector-metals' },
-  energy:      { label:'Energy',      color:'#f97316', icon:'◉', cssVar:'--sector-energy' },
-  forex:       { label:'Forex',       color:'#22d3ee', icon:'⇄', cssVar:'--sector-forex' },
+  equities:    { label:'Equities',    color:'#4d9eff', icon:'-^', cssVar:'--sector-equities' },
+  crypto:      { label:'Crypto',      color:'#a78bfa', icon:'-+', cssVar:'--sector-crypto' },
+  metals:      { label:'Metals',      color:'#f0a500', icon:'-Z', cssVar:'--sector-metals' },
+  energy:      { label:'Energy',      color:'#f97316', icon:'-%', cssVar:'--sector-energy' },
+  forex:       { label:'Forex',       color:'#22d3ee', icon:',', cssVar:'--sector-forex' },
 };
 
 export const MARKET_DATA = {
   equities: [
-    { id:'spx',  symbol:'S&P 500',  name:'S&P 500 Index',      price:7650.12, change:rp(2),  volume:'3.2B', marketCap:'48.5T', sector:'equities', chartData:randomWalk(7650.12,32,72) },
-    { id:'ndx',  symbol:'NASDAQ',   name:'NASDAQ Composite',   price:26185.77,change:rp(2.5),volume:'8.7B', marketCap:'32.1T', sector:'equities', chartData:randomWalk(26185.77,98,72) },
-    { id:'dow',  symbol:'DOW',      name:'Dow Jones Ind.',     price:53188.10,change:rp(1.5),volume:'2.1B', marketCap:'14.2T', sector:'equities', chartData:randomWalk(53188.10,210,72) },
-    { id:'aapl', symbol:'AAPL',     name:'Apple Inc.',         price:312.65,  change:rp(3),  volume:'58M',  marketCap:'4.54T',  sector:'equities', chartData:randomWalk(312.65,3.2,72) },
-    { id:'nvda', symbol:'NVDA',     name:'NVIDIA Corp.',       price:216.33,  change:rp(5),  volume:'42M',  marketCap:'5.3T',  sector:'equities', chartData:randomWalk(216.33,4.2,72) },
-    { id:'tsla', symbol:'TSLA',     name:'Tesla Inc.',         price:363.84,  change:rp(6),  volume:'98M',  marketCap:'1.15T', sector:'equities', chartData:randomWalk(363.84,9.5,72) },
+    withHistory({ id:'spx',  symbol:'S&P 500',  name:'S&P 500 Index',      price:7650.12, change:rp(2),  volume:'3.2B', marketCap:'48.5T', sector:'equities' }, 32),
+    withHistory({ id:'ndx',  symbol:'NASDAQ',   name:'NASDAQ Composite',   price:26185.77,change:rp(2.5),volume:'8.7B', marketCap:'32.1T', sector:'equities' }, 98),
+    withHistory({ id:'dow',  symbol:'DOW',      name:'Dow Jones Ind.',     price:53188.10,change:rp(1.5),volume:'2.1B', marketCap:'14.2T', sector:'equities' }, 210),
+    withHistory({ id:'aapl', symbol:'AAPL',     name:'Apple Inc.',         price:312.65,  change:rp(3),  volume:'58M',  marketCap:'4.54T', sector:'equities' }, 3.2),
+    withHistory({ id:'nvda', symbol:'NVDA',     name:'NVIDIA Corp.',       price:216.33,  change:rp(5),  volume:'42M',  marketCap:'5.3T',  sector:'equities' }, 4.2),
+    withHistory({ id:'tsla', symbol:'TSLA',     name:'Tesla Inc.',         price:363.84,  change:rp(6),  volume:'98M',  marketCap:'1.15T', sector:'equities' }, 9.5),
   ],
   crypto: [
-    { id:'btc',  symbol:'BTC',      name:'Bitcoin',            price:77553.99,change:rp(4),  volume:'28.4B',marketCap:'1.44T', sector:'crypto',   chartData:randomWalk(77554,850,72) },
-    { id:'eth',  symbol:'ETH',      name:'Ethereum',           price:2415.38, change:rp(5),  volume:'14.2B',marketCap:'282B',  sector:'crypto',   chartData:randomWalk(2415,52,72) },
-    { id:'sol',  symbol:'SOL',      name:'Solana',             price:91.52,   change:rp(7),  volume:'3.8B', marketCap:'88B',   sector:'crypto',   chartData:randomWalk(91.5,6.2,72) },
-    { id:'bnb',  symbol:'BNB',      name:'BNB',                price:678.44,  change:rp(4),  volume:'1.9B', marketCap:'94B',   sector:'crypto',   chartData:randomWalk(678,12,72) },
-    { id:'xrp',  symbol:'XRP',      name:'XRP',                price:1.3911,  change:rp(6),  volume:'2.1B', marketCap:'138B',  sector:'crypto',   chartData:randomWalk(1.3911,0.07,72) },
-    { id:'ada',  symbol:'ADA',      name:'Cardano',            price:0.2179,  change:rp(5),  volume:'820M', marketCap:'28B',   sector:'crypto',   chartData:randomWalk(0.2179,0.024,72) },
+    withHistory({ id:'btc',  symbol:'BTC',      name:'Bitcoin',            price:76752.75,change:rp(4),  volume:'28.4B',marketCap:'1.44T', sector:'crypto' }, 850),
+    withHistory({ id:'eth',  symbol:'ETH',      name:'Ethereum',           price:2415.38, change:rp(5),  volume:'14.2B',marketCap:'282B',  sector:'crypto' }, 52),
+    withHistory({ id:'sol',  symbol:'SOL',      name:'Solana',             price:91.52,   change:rp(7),  volume:'3.8B', marketCap:'88B',   sector:'crypto' }, 6.2),
+    withHistory({ id:'bnb',  symbol:'BNB',      name:'BNB',                price:678.44,  change:rp(4),  volume:'1.9B', marketCap:'94B',   sector:'crypto' }, 12),
+    withHistory({ id:'xrp',  symbol:'XRP',      name:'XRP',                price:1.3911,  change:rp(6),  volume:'2.1B', marketCap:'138B',  sector:'crypto' }, 0.07),
+    withHistory({ id:'ada',  symbol:'ADA',      name:'Cardano',            price:0.2179,  change:rp(5),  volume:'820M', marketCap:'28B',   sector:'crypto' }, 0.024),
   ],
   metals: [
-    { id:'gold',     symbol:'XAU/USD', name:'Gold Spot',       price:4623.70, change:rp(1.5),volume:'142B', marketCap:'14.6T', sector:'metals',  unit:'oz',    chartData:randomWalk(4623,24,72) },
-    { id:'silver',   symbol:'XAG/USD', name:'Silver Spot',     price:69.71,   change:rp(2.5),volume:'18B',  marketCap:'1.7T',  sector:'metals',  unit:'oz',    chartData:randomWalk(69.71,1.1,72) },
-    { id:'platinum', symbol:'XPT/USD', name:'Platinum',        price:1887.00, change:rp(2),  volume:'4.2B', marketCap:'—',     sector:'metals',  unit:'oz',    chartData:randomWalk(1887,16,72) },
-    ],
+    withHistory({ id:'gold',     symbol:'XAU/USD', name:'Gold Spot',       price:4623.70, change:rp(1.5),volume:'142B', marketCap:'14.6T', sector:'metals', unit:'oz' }, 24),
+    withHistory({ id:'silver',   symbol:'XAG/USD', name:'Silver Spot',     price:69.71,   change:rp(2.5),volume:'18B',  marketCap:'1.7T',  sector:'metals', unit:'oz' }, 1.1),
+    withHistory({ id:'platinum', symbol:'XPT/USD', name:'Platinum',        price:1887.00, change:rp(2),  volume:'4.2B', marketCap:'—',     sector:'metals', unit:'oz' }, 16),
+  ],
   forex: [
-    { id:'eurusd', symbol:'EUR/USD', name:'Euro / US Dollar',  unit:'USD', pricePrefix:'$', price:1.1690, change:0.12,  volume:'580B', marketCap:'—', sector:'forex', chartData:randomWalk(1.1690,0.003,72) },
-    { id:'gbpusd', symbol:'GBP/USD', name:'British Pound / US Dollar', unit:'USD', pricePrefix:'$', price:1.3646, change:-0.08, volume:'310B', marketCap:'—', sector:'forex', chartData:randomWalk(1.3646,0.004,72) },
-    { id:'usdjpy', symbol:'USD/JPY', name:'US Dollar / Japanese Yen',  unit:'JPY', pricePrefix:'¥', price:158.95, change:0.22,  volume:'430B', marketCap:'—', sector:'forex', chartData:randomWalk(158.95,0.45,72) },
-    { id:'audusd', symbol:'AUD/USD', name:'Australian Dollar / USD',   unit:'USD', pricePrefix:'$', price:0.7129, change:-0.15, volume:'170B', marketCap:'—', sector:'forex', chartData:randomWalk(0.7129,0.002,72) },
-    { id:'usdcad', symbol:'USD/CAD', name:'US Dollar / Canadian Dollar', unit:'CAD', pricePrefix:'C$', price:1.3773, change:0.09,  volume:'160B', marketCap:'—', sector:'forex', chartData:randomWalk(1.3773,0.003,72) },
-    { id:'usdchf', symbol:'USD/CHF', name:'US Dollar / Swiss Franc',   unit:'CHF', pricePrefix:'Fr', price:0.7993, change:-0.06, volume:'130B', marketCap:'—', sector:'forex', chartData:randomWalk(0.7993,0.002,72) },
-    { id:'eurgbp', symbol:'EUR/GBP', name:'Euro / British Pound',      unit:'GBP', pricePrefix:'£', price:0.8560, change:0.04,  volume:'90B',  marketCap:'—', sector:'forex', chartData:randomWalk(0.8560,0.002,72) },
-    { id:'usdinr', symbol:'USD/INR', name:'US Dollar / Indian Rupee',  unit:'INR', pricePrefix:'₹', price:95.73,  change:0.08,  volume:'40B',  marketCap:'—', sector:'forex', chartData:randomWalk(95.73,0.18,72) },
+    withHistory({ id:'eurusd', symbol:'EUR/USD', name:'Euro / US Dollar',  unit:'USD', pricePrefix:'$', price:1.1690, change:0.12,  volume:'580B', marketCap:'—', sector:'forex' }, 0.003),
+    withHistory({ id:'gbpusd', symbol:'GBP/USD', name:'British Pound / USD', unit:'USD', pricePrefix:'$', price:1.3646, change:-0.08, volume:'310B', marketCap:'—', sector:'forex' }, 0.004),
+    withHistory({ id:'usdjpy', symbol:'USD/JPY', name:'US Dollar / Yen',   unit:'JPY', pricePrefix:'¥', price:158.95, change:0.22,  volume:'430B', marketCap:'—', sector:'forex' }, 0.45),
+    withHistory({ id:'audusd', symbol:'AUD/USD', name:'Australian Dollar / USD', unit:'USD', pricePrefix:'$', price:0.7129, change:-0.15, volume:'170B', marketCap:'—', sector:'forex' }, 0.002),
+    withHistory({ id:'usdcad', symbol:'USD/CAD', name:'US Dollar / CAD',   unit:'CAD', pricePrefix:'C$', price:1.3773, change:0.09,  volume:'160B', marketCap:'—', sector:'forex' }, 0.003),
+    withHistory({ id:'usdchf', symbol:'USD/CHF', name:'US Dollar / CHF',   unit:'CHF', pricePrefix:'Fr', price:0.7993, change:-0.06, volume:'130B', marketCap:'—', sector:'forex' }, 0.002),
+    withHistory({ id:'eurgbp', symbol:'EUR/GBP', name:'Euro / GBP',        unit:'GBP', pricePrefix:'£', price:0.8560, change:0.04,  volume:'90B',  marketCap:'—', sector:'forex' }, 0.002),
+    withHistory({ id:'usdinr', symbol:'USD/INR', name:'US Dollar / INR',   unit:'INR', pricePrefix:'₹', price:95.73,  change:0.08,  volume:'40B',  marketCap:'—', sector:'forex' }, 0.18),
   ],
   energy: [
-    { id:'wti',   symbol:'WTI',      name:'Crude Oil WTI',     price:87.25,   change:rp(3),  volume:'820M', marketCap:'—',     sector:'energy',  unit:'bbl',   chartData:randomWalk(87.25,1.2,72) },
-    { id:'brent', symbol:'BRENT',    name:'Brent Crude',       price:94.68,   change:rp(3),  volume:'940M', marketCap:'—',     sector:'energy',  unit:'bbl',   chartData:randomWalk(94.68,1.3,72) },
-    { id:'ng',    symbol:'NAT GAS',  name:'Natural Gas',       price:2.79,    change:rp(4),  volume:'210M', marketCap:'—',     sector:'energy',  unit:'MMBtu', chartData:randomWalk(2.79,0.08,72) },
-    { id:'rbob',  symbol:'RBOB',     name:'RBOB Gasoline',     price:3.34,    change:rp(3),  volume:'180M', marketCap:'—',     sector:'energy',  unit:'gal',   chartData:randomWalk(3.34,0.05,72) },
+    withHistory({ id:'wti',   symbol:'WTI',      name:'Crude Oil WTI',     price:87.25,   change:rp(3),  volume:'820M', marketCap:'—', sector:'energy', unit:'bbl' }, 1.2),
+    withHistory({ id:'brent', symbol:'BRENT',    name:'Brent Crude',       price:94.68,   change:rp(3),  volume:'940M', marketCap:'—', sector:'energy', unit:'bbl' }, 1.3),
+    withHistory({ id:'ng',    symbol:'NAT GAS',  name:'Natural Gas',       price:2.79,    change:rp(4),  volume:'210M', marketCap:'—', sector:'energy', unit:'MMBtu' }, 0.08),
+    withHistory({ id:'rbob',  symbol:'RBOB',     name:'RBOB Gasoline',     price:3.34,    change:rp(3),  volume:'180M', marketCap:'—', sector:'energy', unit:'gal' }, 0.05),
   ],
 };
 

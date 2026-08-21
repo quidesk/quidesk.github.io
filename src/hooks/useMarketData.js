@@ -11,15 +11,24 @@ import {
 } from '../utils/api'
 
 function appendChartPoint(asset) {
+  const now = new Date();
+  const h24 = now.toLocaleTimeString('en-US', { hour:'2-digit', minute:'2-digit' });
+  const day = now.toLocaleDateString('en-US', { month:'short', day:'numeric' });
+  const val = asset.price;
+
+  const h = asset.history || {};
+  
+  const history = {
+    '1H': [...(h['1H'] || []).slice(-59), { time: h24, value: val }],
+    '24H': [...(h['24H'] || []).slice(-47), { time: h24, value: val }],
+    '1M': [...(h['1M'] || []).slice(-29), { time: day, value: val }],
+    '1Y': [...(h['1Y'] || []).slice(-51), { time: day, value: val }]
+  };
+
   return {
     ...asset,
-    chartData: [
-      ...(asset.chartData || []).slice(-79),
-      {
-        time:  new Date().toLocaleTimeString('en-US', { hour:'2-digit', minute:'2-digit' }),
-        value: asset.price,
-      }
-    ]
+    history,
+    chartData: history['24H']
   }
 }
 

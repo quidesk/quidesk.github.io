@@ -6,6 +6,7 @@ import CurrencyTooltip from './CurrencyTooltip'
 import ShareModal from './ShareModal'
 
 export default function AssetCard({ asset, onClick, isWatched, onToggleWatch, compact, convertPrice }) {
+  const [tf, setTf]                 = useState('24H')
   const [flash, setFlash]           = useState(null)
   const [prev, setPrev]             = useState(asset.price)
   const [tooltip, setTooltip]       = useState({ visible:false, x:0, y:0 })
@@ -143,7 +144,30 @@ export default function AssetCard({ asset, onClick, isWatched, onToggleWatch, co
           )}
         </div>
 
-        <MiniChart data={asset.chartData} positive={isUp} height={compact ? 36 : 48} />
+        <div style={{ display:'flex', gap:'4px', marginBottom: compact ? '2px' : '6px', justifyContent:'flex-end' }}>
+          {['1H','24H','1M','1Y'].map(t => (
+            <span
+              key={t}
+              onClick={(e) => { e.stopPropagation(); setTf(t); }}
+              style={{
+                fontSize:'9px', fontFamily:'var(--font-mono)', cursor:'pointer',
+                color: tf === t ? 'var(--text-primary)' : 'var(--text-dim)',
+                background: tf === t ? 'var(--bg-surface)' : 'transparent',
+                padding: '2px 5px', borderRadius: '4px',
+                transition: 'all 0.15s ease'
+              }}
+              onMouseEnter={e => {
+                if (tf !== t) e.currentTarget.style.color = 'var(--text-primary)'
+              }}
+              onMouseLeave={e => {
+                if (tf !== t) e.currentTarget.style.color = 'var(--text-dim)'
+              }}
+            >
+              {t}
+            </span>
+          ))}
+        </div>
+        <MiniChart data={asset.history ? asset.history[tf] : asset.chartData} positive={isUp} height={compact ? 36 : 48} />
 
         {!compact && (
           <div style={{ display:'flex', gap:'14px', marginTop:'8px', paddingTop:'8px', borderTop:'1px solid var(--border-subtle)' }}>
@@ -173,7 +197,7 @@ export default function AssetCard({ asset, onClick, isWatched, onToggleWatch, co
       <ShareModal 
         isOpen={shareOpen} 
         onClose={() => setShareOpen(false)} 
-        data={{ type: 'asset', asset }} 
+        data={{ type: 'asset', asset: { ...asset, chartData: asset.history ? asset.history[tf] : asset.chartData } }} 
       />
     </div>
   )
