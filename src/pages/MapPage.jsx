@@ -212,55 +212,57 @@ export default function MapPage({ data, allAssets, hotspots, watchlistProps, con
 
 const s = {
   page: { padding:'24px 28px', maxWidth:'1700px', margin:'0 auto' },
-  layout: { display:'grid', gridTemplateColumns:'1fr 300px', gap:'16px', alignItems:'start', marginBottom:'24px' },
+  layout: { display:'grid', gridTemplateColumns:'1fr 300px', gap:'24px', alignItems:'start', marginBottom:'32px' },
   mapCol: { display:'flex', flexDirection:'column', gap:'0' },
   mapHeader: {
     display:'flex', justifyContent:'space-between', alignItems:'flex-start',
-    marginBottom:'12px', flexWrap:'wrap', gap:'10px',
+    marginBottom:'16px', flexWrap:'wrap', gap:'12px',
   },
   mapTitle: {
-    fontFamily:'var(--font-display)', fontSize:'16px', fontWeight:700,
+    fontFamily:'var(--font-display)', fontSize:'18px', fontWeight:700,
     color:'var(--text-primary)', letterSpacing:'0.04em',
   },
   mapSub: {
-    fontFamily:'var(--font-body)', fontSize:'11px', color:'var(--text-dim)', marginTop:'2px',
+    fontFamily:'var(--font-body)', fontSize:'12px', color:'var(--text-dim)', marginTop:'2px',
   },
   sectorPill: {
     display:'flex', alignItems:'center', gap:'5px',
     background:'var(--bg-surface)', border:'1px solid var(--border-subtle)',
-    borderRadius:'5px', padding:'4px 10px',
+    borderRadius:'6px', padding:'4px 12px',
   },
-  sidebar: { display:'flex', flexDirection:'column', gap:'12px' },
+  sidebar: { display:'flex', flexDirection:'column', gap:'16px' },
   sideCard: {
-    background:'var(--bg-card)', border:'1px solid var(--border-subtle)', borderRadius:'10px',
+    background:'var(--bg-card)', border:'1px solid var(--border-subtle)', borderRadius:'12px',
     overflow:'hidden',
+    backdropFilter: 'blur(16px)',
+    boxShadow: '0 4px 20px rgba(0,0,0,0.04)'
   },
   sideHeader: {
     display:'flex', justifyContent:'space-between', alignItems:'center',
-    padding:'12px 14px', borderBottom:'1px solid var(--border-subtle)',
+    padding:'14px 16px', borderBottom:'1px solid var(--border-subtle)',
     background:'var(--bg-surface)',
   },
   sideTitle: {
-    fontFamily:'var(--font-display)', fontSize:'11px', fontWeight:600,
-    color:'var(--text-primary)', letterSpacing:'0.05em',
+    fontFamily:'var(--font-display)', fontSize:'12px', fontWeight:600,
+    color:'var(--text-primary)', letterSpacing:'0.06em',
   },
   moversSection: {},
   moverRow: {
     display:'flex', alignItems:'center', gap:'8px',
-    padding:'7px 14px', cursor:'pointer', transition:'background 0.1s',
+    padding:'9px 16px', cursor:'pointer', transition:'background 0.15s',
     borderBottom:'1px solid var(--border-subtle)',
   },
-  moverSym: { fontFamily:'var(--font-mono)', fontSize:'11px', color:'var(--text-primary)', flex:1, fontWeight:500 },
-  moverPrice: { fontFamily:'var(--font-mono)', fontSize:'10px', color:'var(--text-secondary)' },
-  moverChg: { fontFamily:'var(--font-mono)', fontSize:'10px', minWidth:'52px', textAlign:'right' },
-  sectorsStrip: { display:'flex', flexDirection:'column', gap:'20px' },
+  moverSym: { fontFamily:'var(--font-mono)', fontSize:'12px', color:'var(--text-primary)', flex:1, fontWeight:500 },
+  moverPrice: { fontFamily:'var(--font-mono)', fontSize:'11px', color:'var(--text-secondary)' },
+  moverChg: { fontFamily:'var(--font-mono)', fontSize:'11px', minWidth:'52px', textAlign:'right' },
+  sectorsStrip: { display:'flex', flexDirection:'column', gap:'24px' },
   sectorBlock: {},
   sectorBlockHeader: {
-    display:'flex', alignItems:'center', gap:'6px', marginBottom:'10px',
+    display:'flex', alignItems:'center', gap:'8px', marginBottom:'12px',
   },
   sectorCards: {
     display:'grid',
     gridTemplateColumns:'repeat(auto-fill, minmax(160px, 1fr))',
-    gap:'10px',
+    gap:'12px',
   },
 };

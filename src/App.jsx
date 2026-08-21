@@ -109,35 +109,35 @@ export default function App() {
 
 const fS = {
   disclaimer: {
-    background:'rgba(240,165,0,0.04)',
-    borderTop:'1px solid rgba(240,165,0,0.12)',
-    borderBottom:'1px solid rgba(240,165,0,0.12)',
-    marginTop:'40px',
+    background: 'rgba(244, 176, 17, 0.03)',
+    borderTop: '1px solid rgba(244, 176, 17, 0.08)',
+    borderBottom: '1px solid rgba(244, 176, 17, 0.08)',
+    marginTop: '60px',
   },
   disclaimerInner: {
-    display:'flex', alignItems:'flex-start', gap:'10px',
-    padding:'12px 28px', maxWidth:'1700px', margin:'0 auto',
+    display: 'flex', alignItems: 'flex-start', gap: '12px',
+    padding: '16px 28px', maxWidth: '1700px', margin: '0 auto',
   },
   disclaimerIcon: {
-    fontSize:'13px', color:'var(--accent)', flexShrink:0, marginTop:'1px',
+    fontSize: '14px', color: 'var(--amber)', flexShrink: 0, marginTop: '2px',
   },
   disclaimerText: {
-    fontFamily:'var(--font-body)', fontSize:'11px',
-    color:'var(--text-dim)', lineHeight:1.6,
+    fontFamily: 'var(--font-body)', fontSize: '12px',
+    color: 'var(--text-dim)', lineHeight: 1.6,
   },
   footer: {
-    borderTop:'1px solid var(--border-subtle)',
-    background:'var(--bg-surface)',
+    borderTop: '1px solid var(--border-subtle)',
+    background: 'var(--bg-surface)',
   },
   inner: {
-    display:'flex', justifyContent:'space-between', alignItems:'center',
-    padding:'14px 28px', maxWidth:'1700px', margin:'0 auto',
-    flexWrap:'wrap', gap:'8px',
+    display: 'flex', justifyContent: 'space-between', alignItems: 'center',
+    padding: '20px 28px', maxWidth: '1700px', margin: '0 auto',
+    flexWrap: 'wrap', gap: '12px',
   },
   brand: {
-    display:'flex', alignItems:'center',
-    fontFamily:'var(--font-display)', fontSize:'11px',
-    color:'var(--amber)', letterSpacing:'0.1em', opacity:0.7,
+    display: 'flex', alignItems: 'center',
+    fontFamily: 'var(--font-display)', fontSize: '12px',
+    color: 'var(--text-secondary)', letterSpacing: '0.1em', opacity: 0.8,
   },
   text: {
     fontFamily:'var(--font-mono)', fontSize:'10px', color:'var(--text-dim)',
