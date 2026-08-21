@@ -20,13 +20,15 @@ const Tip = ({ active, payload, label }) => {
 };
 
 export default function DetailChart({ asset, onClose }) {
-  const [range, setRange] = useState('1D');
+  const [range, setRange] = useState('24H');
   if (!asset) return null;
   const meta = SECTOR_META[asset.sector] || {};
   const isUp = asset.change >= 0;
   const color = isUp ? 'var(--bull)' : 'var(--bear)';
   const gid = `dc-${asset.id}`;
-  const data = asset.chartData;
+  
+  // Actually hook up the range to the history object
+  const data = asset.history && asset.history[range] ? asset.history[range] : asset.chartData;
   const min = Math.min(...data.map(d=>d.value));
   const max = Math.max(...data.map(d=>d.value));
 
@@ -52,7 +54,7 @@ export default function DetailChart({ asset, onClose }) {
 
       {/* Range pills */}
       <div style={s.ranges}>
-        {['1H','1D','1W','1M','3M','YTD','1Y'].map(r => (
+        {['1H','24H','1M','1Y'].map(r => (
           <button
             key={r}
             style={{ ...s.range, ...(range===r ? { ...s.rangeOn, color: meta.color || 'var(--accent)', borderColor: meta.color || 'var(--accent)', background:`${meta.color||'#f0a500'}12` } : {}) }}
