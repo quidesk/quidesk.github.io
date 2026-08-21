@@ -1,0 +1,1 @@
+const syms = ['^GSPC', '^IXIC', '^DJI', 'AAPL', 'NVDA', 'TSLA']; fetch(\"https://query1.finance.yahoo.com/v7/finance/quote?symbols=\" + syms.join(',')).then(r => r.json()).then(j => console.log(JSON.stringify(j.quoteResponse.result.map(q => ({ sym: q.symbol, price: q.regularMarketPrice })), null, 2))).catch(console.error);

@@ -1,0 +1,1 @@
+fetch('https://api.allorigins.win/get?url=' + encodeURIComponent('https://query2.finance.yahoo.com/v7/finance/quote?symbols=AAPL,NVDA,TSLA,^GSPC,^IXIC,^DJI')).then(r=>r.json()).then(j=>{ const data = JSON.parse(j.contents); console.log(data.quoteResponse.result.map(q=>({sym:q.symbol,p:q.regularMarketPrice}))) }).catch(console.error)

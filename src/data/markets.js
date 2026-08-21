@@ -21,12 +21,12 @@ export const SECTOR_META = {
 
 export const MARKET_DATA = {
   equities: [
-    { id:'spx',  symbol:'S&P 500',  name:'S&P 500 Index',      price:6102.50, change:rp(2),  volume:'3.2B', marketCap:'48.5T', sector:'equities', chartData:randomWalk(6102,32,72) },
-    { id:'ndx',  symbol:'NASDAQ',   name:'NASDAQ Composite',   price:20245.80,change:rp(2.5),volume:'8.7B', marketCap:'32.1T', sector:'equities', chartData:randomWalk(20245,98,72) },
-    { id:'dow',  symbol:'DOW',      name:'Dow Jones Ind.',     price:43580.40,change:rp(1.5),volume:'2.1B', marketCap:'14.2T', sector:'equities', chartData:randomWalk(43580,210,72) },
-    { id:'aapl', symbol:'AAPL',     name:'Apple Inc.',         price:248.30,  change:rp(3),  volume:'58M',  marketCap:'3.8T',  sector:'equities', chartData:randomWalk(248,3.2,72) },
-    { id:'nvda', symbol:'NVDA',     name:'NVIDIA Corp.',       price:142.80,  change:rp(5),  volume:'42M',  marketCap:'3.5T',  sector:'equities', chartData:randomWalk(142,4.2,72) },
-    { id:'tsla', symbol:'TSLA',     name:'Tesla Inc.',         price:328.50,  change:rp(6),  volume:'98M',  marketCap:'1.05T', sector:'equities', chartData:randomWalk(328,9.5,72) },
+    { id:'spx',  symbol:'S&P 500',  name:'S&P 500 Index',      price:7650.12, change:rp(2),  volume:'3.2B', marketCap:'48.5T', sector:'equities', chartData:randomWalk(7650.12,32,72) },
+    { id:'ndx',  symbol:'NASDAQ',   name:'NASDAQ Composite',   price:26185.77,change:rp(2.5),volume:'8.7B', marketCap:'32.1T', sector:'equities', chartData:randomWalk(26185.77,98,72) },
+    { id:'dow',  symbol:'DOW',      name:'Dow Jones Ind.',     price:53188.10,change:rp(1.5),volume:'2.1B', marketCap:'14.2T', sector:'equities', chartData:randomWalk(53188.10,210,72) },
+    { id:'aapl', symbol:'AAPL',     name:'Apple Inc.',         price:312.65,  change:rp(3),  volume:'58M',  marketCap:'4.54T',  sector:'equities', chartData:randomWalk(312.65,3.2,72) },
+    { id:'nvda', symbol:'NVDA',     name:'NVIDIA Corp.',       price:216.33,  change:rp(5),  volume:'42M',  marketCap:'5.3T',  sector:'equities', chartData:randomWalk(216.33,4.2,72) },
+    { id:'tsla', symbol:'TSLA',     name:'Tesla Inc.',         price:363.84,  change:rp(6),  volume:'98M',  marketCap:'1.15T', sector:'equities', chartData:randomWalk(363.84,9.5,72) },
   ],
   crypto: [
     { id:'btc',  symbol:'BTC',      name:'Bitcoin',            price:77553.99,change:rp(4),  volume:'28.4B',marketCap:'1.44T', sector:'crypto',   chartData:randomWalk(77554,850,72) },
@@ -52,10 +52,10 @@ export const MARKET_DATA = {
     { id:'usdinr', symbol:'USD/INR', name:'US Dollar / Indian Rupee',  unit:'INR', pricePrefix:'₹', price:95.73,  change:0.08,  volume:'40B',  marketCap:'—', sector:'forex', chartData:randomWalk(95.73,0.18,72) },
   ],
   energy: [
-    { id:'wti',   symbol:'WTI',      name:'Crude Oil WTI',     price:68.50,   change:rp(3),  volume:'820M', marketCap:'—',     sector:'energy',  unit:'bbl',   chartData:randomWalk(68.50,1.2,72) },
-    { id:'brent', symbol:'BRENT',    name:'Brent Crude',       price:72.30,   change:rp(3),  volume:'940M', marketCap:'—',     sector:'energy',  unit:'bbl',   chartData:randomWalk(72.30,1.3,72) },
-    { id:'ng',    symbol:'NAT GAS',  name:'Natural Gas',       price:3.42,    change:rp(4),  volume:'210M', marketCap:'—',     sector:'energy',  unit:'MMBtu', chartData:randomWalk(3.42,0.08,72) },
-    { id:'rbob',  symbol:'RBOB',     name:'RBOB Gasoline',     price:2.18,    change:rp(3),  volume:'180M', marketCap:'—',     sector:'energy',  unit:'gal',   chartData:randomWalk(2.18,0.05,72) },
+    { id:'wti',   symbol:'WTI',      name:'Crude Oil WTI',     price:87.25,   change:rp(3),  volume:'820M', marketCap:'—',     sector:'energy',  unit:'bbl',   chartData:randomWalk(87.25,1.2,72) },
+    { id:'brent', symbol:'BRENT',    name:'Brent Crude',       price:94.68,   change:rp(3),  volume:'940M', marketCap:'—',     sector:'energy',  unit:'bbl',   chartData:randomWalk(94.68,1.3,72) },
+    { id:'ng',    symbol:'NAT GAS',  name:'Natural Gas',       price:2.79,    change:rp(4),  volume:'210M', marketCap:'—',     sector:'energy',  unit:'MMBtu', chartData:randomWalk(2.79,0.08,72) },
+    { id:'rbob',  symbol:'RBOB',     name:'RBOB Gasoline',     price:3.34,    change:rp(3),  volume:'180M', marketCap:'—',     sector:'energy',  unit:'gal',   chartData:randomWalk(3.34,0.05,72) },
   ],
 };
 
