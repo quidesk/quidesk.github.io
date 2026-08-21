@@ -133,16 +133,6 @@ export default function MapPage({ data, allAssets, hotspots, watchlistProps, con
             />
           </div>
 
-          {/* News Signals */}
-          <div className="fade-up-3" style={s.sideCard}>
-            <NewsSignals
-              news={news}
-              loading={loading}
-              lastFetch={lastFetch}
-              onRefresh={refresh}
-            />
-          </div>
-
           {/* Movers */}
           <div className="fade-up-3" style={s.sideCard}>
             <div style={s.sideHeader}>
@@ -174,6 +164,17 @@ export default function MapPage({ data, allAssets, hotspots, watchlistProps, con
             </div>
           </div>
         </div>
+      </div>
+
+      {/* OSINT Box / News Signals */}
+      <div className="fade-up-3" style={{ marginBottom: '20px' }}>
+        <NewsSignals
+          news={news}
+          loading={loading}
+          lastFetch={lastFetch}
+          onRefresh={refresh}
+          layout="horizontal"
+        />
       </div>
 
       {/* All sectors strip */}

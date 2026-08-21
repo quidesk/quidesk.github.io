@@ -13,12 +13,19 @@ export const CURRENCIES = [
   { code:'BTC', symbol:'₿',    name:'Bitcoin',          flag:'🟡', isCrypto:true },
 ]
 
+const INITIAL_RATES = {
+  USD: 1,
+  INR: 95.73,
+  EUR: 0.855,
+  GBP: 0.733,
+  JPY: 158.95,
+  AED: 3.67,
+  SGD: 1.34,
+}
+
 export function useCurrencyRates() {
-  const [rates, setRates] = useState({
-    usd:1, inr:95.6, eur:0.856, gbp:0.745,
-    jpy:142.4, aed:3.67, sgd:1.31,
-  })
-  const [btcPrice, setBtcPrice] = useState(72796)
+  const [rates, setRates] = useState(INITIAL_RATES)
+  const [btcPrice, setBtcPrice] = useState(77553.99)
   const [loaded, setLoaded] = useState(false)
 
   useEffect(() => {
@@ -29,13 +36,13 @@ export function useCurrencyRates() {
         const json = await res.json()
         const r = json.usd
         setRates({
-          usd:1,
-          inr: r.inr  ?? 95.6,
-          eur: r.eur  ?? 0.856,
-          gbp: r.gbp  ?? 0.745,
-          jpy: r.jpy  ?? 142.4,
-          aed: r.aed  ?? 3.67,
-          sgd: r.sgd  ?? 1.31,
+          USD: 1,
+          INR: r.inr ?? 95.73,
+          EUR: r.eur ?? 0.855,
+          GBP: r.gbp ?? 0.733,
+          JPY: r.jpy ?? 158.95,
+          AED: r.aed ?? 3.67,
+          SGD: r.sgd ?? 1.34,
         })
         setLoaded(true)
       } catch(e) {
@@ -46,11 +53,13 @@ export function useCurrencyRates() {
 
     async function fetchBTC() {
       try {
-        const res = await fetch('https://api.coingecko.com/api/v3/simple/price?ids=bitcoin&vs_currencies=usd')
+        const res = await fetch('https://data-api.binance.vision/api/v3/ticker/24hr?symbol=BTCUSDT')
         if (!res.ok) return
-        const json = await res.json()
-        if (json.bitcoin?.usd) setBtcPrice(json.bitcoin.usd)
-      } catch {}
+        const data = await res.json()
+        setBtcPrice(parseFloat(data.lastPrice) || 77553.99)
+      } catch (err) {
+        console.warn('BTC fetch failed, using fallback')
+      }
     }
 
     fetchRates()
@@ -66,7 +75,7 @@ export function useCurrencyRates() {
         const display = `₿${btcVal < 0.001 ? btcVal.toFixed(6) : btcVal.toFixed(5)}`
         return { ...c, value: btcVal, display }
       }
-      const rate = rates[c.code.toLowerCase()] ?? 1
+      const rate = rates[c.code] ?? 1
       const converted = usdPrice * rate
       const formatted = c.code === 'JPY'
         ? converted.toLocaleString('en-US', { maximumFractionDigits:0 })

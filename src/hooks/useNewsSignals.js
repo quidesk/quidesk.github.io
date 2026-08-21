@@ -6,20 +6,26 @@ const CORS = 'https://api.allorigins.win/get?url='
 
 const FEEDS = [
   {
-    url: 'https://feeds.feedburner.com/CoinDesk',
-    source: 'CoinDesk',
+    url: 'https://decrypt.co/feed',
+    source: 'Decrypt',
     sector: 'crypto',
     color: '#a78bfa',
   },
   {
-    url: 'https://cointelegraph.com/rss',
-    source: 'CoinTelegraph',
+    url: 'https://cryptoslate.com/feed/',
+    source: 'CryptoSlate',
     sector: 'crypto',
     color: '#a78bfa',
   },
   {
     url: 'https://feeds.content.dowjones.io/public/rss/mw_realtimeheadlines',
     source: 'MarketWatch',
+    sector: 'equities',
+    color: '#4d9eff',
+  },
+  {
+    url: 'https://search.cnbc.com/rs/search/combinedcms/view.xml?partnerId=wrss01&id=10000664',
+    source: 'CNBC Finance',
     sector: 'equities',
     color: '#4d9eff',
   },
@@ -41,6 +47,12 @@ const FEEDS = [
     sector: 'forex',
     color: '#22d3ee',
   },
+  {
+    url: 'https://www.investing.com/rss/news_1.rss',
+    source: 'Investing.com',
+    sector: 'forex',
+    color: '#22d3ee',
+  }
 ]
 
 // Asset keyword map — used to draw canvas correlation lines

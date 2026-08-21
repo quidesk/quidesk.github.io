@@ -17,15 +17,16 @@ function timeAgo(date) {
   return `${Math.floor(diff/3600)}h ago`
 }
 
-export default function NewsSignals({ news, loading, lastFetch, onRefresh }) {
+export default function NewsSignals({ news, loading, lastFetch, onRefresh, layout = 'vertical' }) {
   const [filter, setFilter] = useState('all')
 
+  const isHorz = layout === 'horizontal'
   const filtered = filter === 'all'
     ? news
     : news.filter(n => n.sector === filter)
 
   return (
-    <div style={s.wrap}>
+    <div style={{...s.wrap, ...(isHorz ? { border: 'none', background: 'transparent' } : {})}}>
       {/* Header */}
       <div style={s.header}>
         <div style={s.headerLeft}>
@@ -74,7 +75,17 @@ export default function NewsSignals({ news, loading, lastFetch, onRefresh }) {
       </div>
 
       {/* News list */}
-      <div style={s.list}>
+      <div style={{
+        ...s.list,
+        ...(isHorz ? {
+          display: 'flex',
+          overflowX: 'auto',
+          overflowY: 'hidden',
+          maxHeight: 'none',
+          padding: '10px 0',
+          gap: '12px'
+        } : {})
+      }}>
         {loading && news.length === 0 ? (
           <div style={s.loading}>
             <div style={s.loadingDot}/>
@@ -93,9 +104,20 @@ export default function NewsSignals({ news, loading, lastFetch, onRefresh }) {
                 href={item.link}
                 target="_blank"
                 rel="noopener noreferrer"
-                style={s.item}
+                style={{
+                  ...s.item,
+                  ...(isHorz ? {
+                    border: '1px solid var(--border-subtle)',
+                    borderRadius: '8px',
+                    minWidth: '280px',
+                    maxWidth: '280px',
+                    background: 'var(--bg-card)',
+                    padding: '12px',
+                    borderBottom: '1px solid var(--border-subtle)'
+                  } : {})
+                }}
                 onMouseEnter={e => e.currentTarget.style.background = 'var(--bg-card-hover)'}
-                onMouseLeave={e => e.currentTarget.style.background = 'transparent'}
+                onMouseLeave={e => e.currentTarget.style.background = isHorz ? 'var(--bg-card)' : 'transparent'}
               >
                 <div style={s.itemLeft}>
                   <span style={{ ...s.dot, background: meta.color || 'var(--accent)' }}/>
