@@ -80,7 +80,10 @@ export default function NewsSignals({ news, loading, lastFetch, onRefresh, layou
       <div style={{
         ...s.list,
         ...(isHorz ? {
-          display: 'flex',
+          display: 'grid',
+          gridTemplateRows: `repeat(${Math.min(3, filtered.length || 1)}, min-content)`,
+          gridAutoColumns: '280px',
+          gridAutoFlow: 'column',
           overflowX: 'auto',
           overflowY: 'hidden',
           maxHeight: 'none',
