@@ -1,5 +1,6 @@
 import React, { useState } from 'react'
-import { RefreshCw, ExternalLink, Radio } from 'lucide-react'
+import { RefreshCw, ExternalLink, Radio, Share2 } from 'lucide-react'
+import ShareModal from './ShareModal'
 
 const SECTOR_LABELS = {
   crypto:   { label:'Crypto',    color:'#a78bfa' },
@@ -19,6 +20,7 @@ function timeAgo(date) {
 
 export default function NewsSignals({ news, loading, lastFetch, onRefresh, layout = 'vertical' }) {
   const [filter, setFilter] = useState('all')
+  const [shareItem, setShareItem] = useState(null)
 
   const isHorz = layout === 'horizontal'
   const filtered = filter === 'all'
@@ -99,11 +101,8 @@ export default function NewsSignals({ news, loading, lastFetch, onRefresh, layou
           filtered.map(item => {
             const meta = SECTOR_LABELS[item.sector] || {}
             return (
-              <a
+              <div
                 key={item.id}
-                href={item.link}
-                target="_blank"
-                rel="noopener noreferrer"
                 style={{
                   ...s.item,
                   ...(isHorz ? {
@@ -119,33 +118,56 @@ export default function NewsSignals({ news, loading, lastFetch, onRefresh, layou
                 onMouseEnter={e => e.currentTarget.style.background = 'var(--bg-card-hover)'}
                 onMouseLeave={e => e.currentTarget.style.background = isHorz ? 'var(--bg-card)' : 'transparent'}
               >
-                <div style={s.itemLeft}>
-                  <span style={{ ...s.dot, background: meta.color || 'var(--accent)' }}/>
-                </div>
-                <div style={s.itemBody}>
-                  <div style={s.itemTitle}>{item.title}</div>
-                  <div style={s.itemMeta}>
-                    <span style={{ ...s.itemSource, color: meta.color || 'var(--accent)' }}>
-                      {item.source}
-                    </span>
-                    <span style={s.itemDot}>·</span>
-                    <span style={s.itemTime}>{timeAgo(item.published)}</span>
-                    {item.mentionedAssets.length > 0 && (
-                      <>
-                        <span style={s.itemDot}>·</span>
-                        <span style={s.itemAssets}>
-                          {item.mentionedAssets.slice(0,3).map(a => a.toUpperCase()).join(' ')}
-                        </span>
-                      </>
-                    )}
+                <a
+                  href={item.link}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  style={{ display: 'flex', flex: 1, textDecoration: 'none', minWidth: 0, gap: '10px' }}
+                >
+                  <div style={s.itemLeft}>
+                    <span style={{ ...s.dot, background: meta.color || 'var(--accent)' }}/>
                   </div>
-                </div>
-                <ExternalLink size={10} color="var(--text-dim)" style={{ flexShrink:0, marginTop:'2px' }}/>
-              </a>
+                  <div style={s.itemBody}>
+                    <div style={s.itemTitle}>{item.title}</div>
+                    <div style={s.itemMeta}>
+                      <span style={{ ...s.itemSource, color: meta.color || 'var(--accent)' }}>
+                        {item.source}
+                      </span>
+                      <span style={s.itemDot}>•</span>
+                      <span style={s.itemTime}>{timeAgo(item.published)}</span>
+                      {item.mentionedAssets.length > 0 && (
+                        <>
+                          <span style={s.itemDot}>•</span>
+                          <span style={s.itemAssets}>
+                            {item.mentionedAssets.slice(0,3).map(a => a.toUpperCase()).join(' ')}
+                          </span>
+                        </>
+                      )}
+                    </div>
+                  </div>
+                </a>
+                <button
+                  style={{ background: 'none', border: 'none', cursor: 'pointer', padding: '4px', color: 'var(--text-dim)' }}
+                  onClick={(e) => {
+                    e.preventDefault()
+                    e.stopPropagation()
+                    setShareItem(item)
+                  }}
+                  title="Share Insight"
+                >
+                  <Share2 size={12} />
+                </button>
+              </div>
             )
           })
         )}
       </div>
+
+      <ShareModal 
+        isOpen={!!shareItem} 
+        onClose={() => setShareItem(null)} 
+        data={shareItem ? { type: 'news', news: shareItem } : null} 
+      />
 
       <style>{`@keyframes spin { to { transform: rotate(360deg); } }`}</style>
     </div>

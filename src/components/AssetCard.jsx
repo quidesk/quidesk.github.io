@@ -1,14 +1,16 @@
 import React, { useState, useEffect, useRef } from 'react'
-import { Star } from 'lucide-react'
+import { Star, Share2 } from 'lucide-react'
 import { formatPrice, formatChange, SECTOR_META } from '../data/markets'
 import MiniChart from './MiniChart'
 import CurrencyTooltip from './CurrencyTooltip'
+import ShareModal from './ShareModal'
 
 export default function AssetCard({ asset, onClick, isWatched, onToggleWatch, compact, convertPrice }) {
   const [flash, setFlash]           = useState(null)
   const [prev, setPrev]             = useState(asset.price)
   const [tooltip, setTooltip]       = useState({ visible:false, x:0, y:0 })
   const [conversions, setConversions] = useState([])
+  const [shareOpen, setShareOpen]     = useState(false)
   const cardRef    = useRef(null)
   const timerRef   = useRef(null)
 
@@ -25,6 +27,7 @@ export default function AssetCard({ asset, onClick, isWatched, onToggleWatch, co
   const meta = SECTOR_META[asset.sector] || {}
 
   function showTooltip() {
+    if (shareOpen) return // Don't show tooltip while sharing
     if (convertPrice) {
       setConversions(convertPrice(asset.price))
     }
@@ -42,6 +45,12 @@ export default function AssetCard({ asset, onClick, isWatched, onToggleWatch, co
   function hideTooltip() {
     clearTimeout(timerRef.current)
     setTooltip({ visible:false, x:0, y:0 })
+  }
+
+  const handleShareClick = (e) => {
+    e.stopPropagation()
+    hideTooltip()
+    setShareOpen(true)
   }
 
   const bg = flash === 'up'
@@ -87,6 +96,13 @@ export default function AssetCard({ asset, onClick, isWatched, onToggleWatch, co
             <span className={isUp ? 'badge badge-bull' : 'badge badge-bear'}>
               {isUp ? '▲' : '▼'} {formatChange(asset.change)}
             </span>
+            <button
+              style={{ background:'none', border:'none', cursor:'pointer', padding:'2px', display:'flex', alignItems:'center', lineHeight:1 }}
+              onClick={handleShareClick}
+              title="Share insight card"
+            >
+              <Share2 size={12} color="var(--text-dim)" />
+            </button>
             {onToggleWatch && (
               <button
                 style={{ background:'none', border:'none', cursor:'pointer', padding:'2px', display:'flex', alignItems:'center', lineHeight:1 }}
@@ -133,6 +149,11 @@ export default function AssetCard({ asset, onClick, isWatched, onToggleWatch, co
         visible={tooltip.visible}
         x={tooltip.x}
         y={tooltip.y}
+      />
+      <ShareModal 
+        isOpen={shareOpen} 
+        onClose={() => setShareOpen(false)} 
+        data={{ type: 'asset', asset }} 
       />
     </div>
   )
