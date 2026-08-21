@@ -1,10 +1,17 @@
 function randomWalk(base, vol, points) {
-  const data = []; let cur = base; const now = Date.now();
-  for (let i = points; i >= 0; i--) {
+  const data = [];
+  let cur = base;
+  const now = Date.now();
+  const rawValues = [base];
+  for (let i = 1; i <= points; i++) {
     cur = Math.max(cur * 0.5, cur + (Math.random() - 0.49) * vol);
+    rawValues.unshift(cur);
+  }
+  for (let i = points; i >= 0; i--) {
+    const val = rawValues[points - i];
     data.push({
       time: new Date(now - i * 5 * 60 * 1000).toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' }),
-      value: parseFloat(cur.toFixed(cur < 1 ? 4 : 2))
+      value: parseFloat(val.toFixed(val < 1 ? 4 : 2))
     });
   }
   return data;

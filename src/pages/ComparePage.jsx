@@ -154,6 +154,7 @@ export default function ComparePage({ data }) {
                         interval={Math.floor(overlayData.length/5)}
                       />
                       <YAxis
+                        domain={['auto', 'auto']}
                         tick={{ fill:'var(--text-dim)', fontSize:9, fontFamily:'var(--font-mono)' }}
                         axisLine={false} tickLine={false}
                         tickFormatter={v => `${v > 0 ? '+' : ''}${v.toFixed(1)}%`}

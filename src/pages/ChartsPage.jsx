@@ -73,6 +73,7 @@ export default function ChartsPage({ data }) {
                   interval={Math.floor(compareData.length / 6)}
                 />
                 <YAxis
+                  domain={['dataMin', 'dataMax']}
                   tick={{ fill: 'var(--text-dim)', fontSize: 9, fontFamily: 'var(--font-mono)' }}
                   axisLine={false}
                   tickLine={false}
@@ -131,6 +132,7 @@ export default function ChartsPage({ data }) {
                   textAnchor="end"
                 />
                 <YAxis
+                  domain={['dataMin', 'dataMax']}
                   tick={{ fill: 'var(--text-dim)', fontSize: 9, fontFamily: 'var(--font-mono)' }}
                   axisLine={false}
                   tickLine={false}
