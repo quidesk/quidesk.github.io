@@ -109,7 +109,7 @@ export default function MapPage({ data, allAssets, hotspots, watchlistProps, con
           {selectedAsset && (
             <div className="fade-up" style={{ marginTop:'16px' }}>
               <DetailChart
-                asset={selectedAsset}
+                asset={allAssets.find(a => a.id === selectedAsset.id) || selectedAsset}
                 onClose={() => setSelectedAsset(null)}
               />
             </div>

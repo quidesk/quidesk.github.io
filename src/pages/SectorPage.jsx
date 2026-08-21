@@ -60,10 +60,10 @@ export default function SectorPage({ sector, assets, watchlistProps, convertPric
         ))}
       </div>
 
-      {/* Detail chart */}
+      {/* Selected detail chart */}
       {selected && (
-        <div className="fade-up" style={{ marginBottom:'16px' }}>
-          <DetailChart asset={selected} onClose={() => setSelected(null)} />
+        <div className="fade-up" style={{ marginBottom:'24px' }}>
+          <DetailChart asset={assets.find(a => a.id === selected.id) || selected} onClose={() => setSelected(null)} />
         </div>
       )}
 

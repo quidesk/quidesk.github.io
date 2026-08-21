@@ -61,7 +61,7 @@ export default function WatchlistPage({ data, watchlist, onToggleWatch, alerts, 
         <>
           {selected && (
             <div className="fade-up" style={{ marginBottom:16 }}>
-              <DetailChart asset={selected} onClose={() => setSelected(null)} />
+              <DetailChart asset={watched.find(a => a.id === selected.id) || selected} onClose={() => setSelected(null)} />
             </div>
           )}
           <div className="fade-up-2" style={s.grid}>

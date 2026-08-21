@@ -8,10 +8,14 @@ export default function Dashboard({ data, setActiveTab, watchlistProps }) {
   const [selectedAsset, setSelectedAsset] = useState(null)
 
   const allAssets = [
-    ...data.stocks,
-    ...data.crypto,
-    ...data.commodities,
+    ...(data.equities || []),
+    ...(data.crypto || []),
+    ...(data.metals || []),
+    ...(data.energy || []),
+    ...(data.forex || [])
   ]
+
+  const activeAsset = selectedAsset ? allAssets.find(a => a.id === selectedAsset.id) || selectedAsset : null;
 
   const gainers = [...allAssets].sort((a, b) => b.change - a.change).slice(0, 3)
   const losers = [...allAssets].sort((a, b) => a.change - b.change).slice(0, 3)
@@ -106,7 +110,7 @@ export default function Dashboard({ data, setActiveTab, watchlistProps }) {
           <div style={styles.detailHeader}>
             <span style={styles.detailClose} onClick={() => setSelectedAsset(null)}>✕ CLOSE</span>
           </div>
-          <DetailChart asset={selectedAsset} />
+          <DetailChart asset={activeAsset} />
         </div>
       )}
 
