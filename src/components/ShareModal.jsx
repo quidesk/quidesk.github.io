@@ -12,9 +12,13 @@ export default function ShareModal({ isOpen, onClose, data }) {
     if (isOpen && data && nodeRef.current) {
       setLoading(true)
       setImgUrl(null)
-      // Allow DOM to update and chart to render
-      setTimeout(() => {
-        toPng(nodeRef.current, { cacheBust: true, pixelRatio: 2, backgroundColor: '#0a0a0a' })
+      // Generate image immediately on next frame
+      requestAnimationFrame(() => {
+        toPng(nodeRef.current, { 
+          pixelRatio: 2, 
+          backgroundColor: '#0a0a0a',
+          skipFonts: true, // drastically speeds up generation
+        })
           .then((dataUrl) => {
             setImgUrl(dataUrl)
             setLoading(false)
@@ -23,7 +27,7 @@ export default function ShareModal({ isOpen, onClose, data }) {
             console.error('Failed to generate image', err)
             setLoading(false)
           })
-      }, 500)
+      })
     }
   }, [isOpen, data])
 
