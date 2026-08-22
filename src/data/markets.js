@@ -47,12 +47,12 @@ export const SECTOR_META = {
 
 export const MARKET_DATA = {
   equities: [
-    withHistory({ id:'spx',  symbol:'S&P 500',  name:'S&P 500 Index',      price:7650.12, change:rp(2),  volume:'3.2B', marketCap:'48.5T', sector:'equities' }, 32),
-    withHistory({ id:'ndx',  symbol:'NASDAQ',   name:'NASDAQ Composite',   price:26185.77,change:rp(2.5),volume:'8.7B', marketCap:'32.1T', sector:'equities' }, 98),
-    withHistory({ id:'dow',  symbol:'DOW',      name:'Dow Jones Ind.',     price:53188.10,change:rp(1.5),volume:'2.1B', marketCap:'14.2T', sector:'equities' }, 210),
-    withHistory({ id:'aapl', symbol:'AAPL',     name:'Apple Inc.',         price:312.65,  change:rp(3),  volume:'58M',  marketCap:'4.54T', sector:'equities' }, 3.2),
-    withHistory({ id:'nvda', symbol:'NVDA',     name:'NVIDIA Corp.',       price:216.33,  change:rp(5),  volume:'42M',  marketCap:'5.3T',  sector:'equities' }, 4.2),
-    withHistory({ id:'tsla', symbol:'TSLA',     name:'Tesla Inc.',         price:363.84,  change:rp(6),  volume:'98M',  marketCap:'1.15T', sector:'equities' }, 9.5),
+    withHistory({ id:'spx',  symbol:'SPY',      name:'S&P 500 (SPY)',      price:595.00,  change:rp(2),  volume:'60M', marketCap:'540B', sector:'equities' }, 3.2),
+    withHistory({ id:'ndx',  symbol:'QQQ',      name:'NASDAQ (QQQ)',       price:510.00,  change:rp(2.5),volume:'40M', marketCap:'300B', sector:'equities' }, 4.1),
+    withHistory({ id:'dow',  symbol:'DIA',      name:'Dow Jones (DIA)',    price:430.00,  change:rp(1.5),volume:'5M',  marketCap:'35B',  sector:'equities' }, 1.5),
+    withHistory({ id:'aapl', symbol:'AAPL',     name:'Apple Inc.',         price:228.65,  change:rp(3),  volume:'58M',  marketCap:'3.5T', sector:'equities' }, 3.2),
+    withHistory({ id:'nvda', symbol:'NVDA',     name:'NVIDIA Corp.',       price:142.33,  change:rp(5),  volume:'42M',  marketCap:'3.4T',  sector:'equities' }, 4.2),
+    withHistory({ id:'tsla', symbol:'TSLA',     name:'Tesla Inc.',         price:338.84,  change:rp(6),  volume:'98M',  marketCap:'1.1T',  sector:'equities' }, 9.5),
   ],
   crypto: [
     withHistory({ id:'btc',  symbol:'BTC',      name:'Bitcoin',            price:76752.75,change:rp(4),  volume:'28.4B',marketCap:'1.44T', sector:'crypto' }, 850),
@@ -78,10 +78,10 @@ export const MARKET_DATA = {
     withHistory({ id:'usdinr', symbol:'USD/INR', name:'US Dollar / INR',   unit:'INR', pricePrefix:'₹', price:95.73,  change:0.08,  volume:'40B',  marketCap:'—', sector:'forex' }, 0.18),
   ],
   energy: [
-    withHistory({ id:'wti',   symbol:'WTI',      name:'Crude Oil WTI',     price:87.25,   change:rp(3),  volume:'820M', marketCap:'—', sector:'energy', unit:'bbl' }, 1.2),
-    withHistory({ id:'brent', symbol:'BRENT',    name:'Brent Crude',       price:94.68,   change:rp(3),  volume:'940M', marketCap:'—', sector:'energy', unit:'bbl' }, 1.3),
-    withHistory({ id:'ng',    symbol:'NAT GAS',  name:'Natural Gas',       price:2.79,    change:rp(4),  volume:'210M', marketCap:'—', sector:'energy', unit:'MMBtu' }, 0.08),
-    withHistory({ id:'rbob',  symbol:'RBOB',     name:'RBOB Gasoline',     price:3.34,    change:rp(3),  volume:'180M', marketCap:'—', sector:'energy', unit:'gal' }, 0.05),
+    withHistory({ id:'wti',   symbol:'USO',      name:'Crude Oil (USO)',   price:75.25,   change:rp(3),  volume:'820M', marketCap:'—', sector:'energy' }, 1.2),
+    withHistory({ id:'brent', symbol:'BNO',      name:'Brent Crude (BNO)', price:30.68,   change:rp(3),  volume:'940M', marketCap:'—', sector:'energy' }, 1.3),
+    withHistory({ id:'ng',    symbol:'UNG',      name:'Natural Gas (UNG)', price:14.79,   change:rp(4),  volume:'210M', marketCap:'—', sector:'energy' }, 0.08),
+    withHistory({ id:'rbob',  symbol:'UGA',      name:'Gasoline (UGA)',    price:68.34,   change:rp(3),  volume:'180M', marketCap:'—', sector:'energy' }, 0.05),
   ],
 };
 

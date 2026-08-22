@@ -112,127 +112,69 @@ export async function fetchAllMetals() {
   return results.filter(r => r.status === 'fulfilled').map(r => r.value)
 }
 
-// ─── STOCKS: Financial Modeling Prep (FMP) ───────────────────────────────────
-// FMP is natively CORS-safe — no proxy needed
-// Free tier: 250 req/day. Batch: all 6 stocks in ONE request = very efficient
-// Get free key at: https://financialmodelingprep.com/developer/docs
-//
-// FMP returns actual index values for ^GSPC, ^IXIC, ^DJI
-// Endpoint: https://financialmodelingprep.com/api/v3/quote/AAPL,^GSPC?apikey=KEY
-
-// ─── STOCKS: Stooq for indices + FMP for individual stocks ──────────────────
-// Stooq is free, no key, CORS-safe, returns live index values
-// FMP free tier /quotes/index returns stale 2024 data — do not use
-
-const STOOQ_INDICES = {
-  spx: '%5Espx',   // ^SPX = S&P 500
-  ndx: '%5Eixic',  // ^IXIC = NASDAQ Composite
-  dow: '%5Edji',   // ^DJI = Dow Jones
-}
-
-const STOCK_FMP_EQUITIES = { aapl:'AAPL', nvda:'NVDA', tsla:'TSLA' }
-
+// Using Finnhub for Equities (ETFs as proxies for indices)
 export async function fetchFMPStocks() {
-  if (!FMP_KEY) throw new Error('VITE_FMP_KEY not set')
-  const results = {}
-
-  // Fetch S&P 500, NASDAQ, DOW from Stooq (real-time, free, no key)
-  await Promise.allSettled(Object.entries(STOOQ_INDICES).map(async ([id, sym]) => {
-    try {
-      const res = await fetch(`https://stooq.com/q/l/?s=${sym}&f=sd2t2ohlcv&e=json`)
-      if (!res.ok) throw new Error(`Stooq ${res.status}`)
-      const json = await res.json()
-      const quote = json?.symbols?.[0]
-      if (!quote?.close || quote.close <= 0) throw new Error('No close price')
-      const price  = parseFloat(quote.close)
-      const open   = parseFloat(quote.open || price)
-      const change = parseFloat((((price - open) / open) * 100).toFixed(2))
-      results[id]  = { price: parseFloat(price.toFixed(2)), change }
-    } catch(e) {
-      console.warn(`Stooq ${id}:`, e.message)
-    }
-  }))
-
-  // Fetch AAPL, NVDA, TSLA from FMP (works fine for individual stocks)
-  try {
-    const syms = Object.values(STOCK_FMP_EQUITIES).join(',')
-    const res  = await fetch(`https://financialmodelingprep.com/api/v3/quote/${syms}?apikey=${FMP_KEY}`)
-    if (res.ok) {
-      const json = await res.json()
-      if (Array.isArray(json)) {
-        const rev = { AAPL:'aapl', NVDA:'nvda', TSLA:'tsla' }
-        json.forEach(q => {
-          const id = rev[q.symbol]
-          if (!id || !q.price || q.price <= 0) return
-          results[id] = {
-            price:  parseFloat(parseFloat(q.price).toFixed(2)),
-            change: parseFloat((q.changesPercentage ?? 0).toFixed(2)),
-            volume: formatLargeNumber(q.volume),
-          }
-        })
-      }
-    }
-  } catch(e) {
-    console.warn('FMP equities:', e.message)
+  if (!FINNHUB_KEY) {
+    console.warn('VITE_FINNHUB_KEY not set');
+    return {};
   }
+  
+  const mapping = {
+    spx: 'SPY',
+    ndx: 'QQQ',
+    dow: 'DIA',
+    aapl: 'AAPL',
+    nvda: 'NVDA',
+    tsla: 'TSLA'
+  };
 
-  return results
+  const results = {};
+  await Promise.allSettled(Object.entries(mapping).map(async ([id, sym]) => {
+    try {
+      const res = await fetch(`https://finnhub.io/api/v1/quote?symbol=${sym}&token=${FINNHUB_KEY}`);
+      if (!res.ok) throw new Error(`Finnhub ${res.status}`);
+      const json = await res.json();
+      if (json && json.c && json.c > 0) {
+        results[id] = {
+          price: parseFloat(parseFloat(json.c).toFixed(2)),
+          change: parseFloat(parseFloat(json.dp ?? 0).toFixed(2))
+        };
+      }
+    } catch (e) {
+      console.warn(`Finnhub equity ${id}:`, e.message);
+    }
+  }));
+  return results;
 }
 
-// ─── ENERGY: Financial Modeling Prep (FMP) ───────────────────────────────────
-// FMP commodity CFD symbols — free tier supports these
-// CLUSD = WTI Crude, BZUSD = Brent, NGUSD = Natural Gas, RBUSD = RBOB Gasoline
-
-const ENERGY_FMP = {
-  wti:   'CLUSD',
-  brent: 'BZUSD',
-  ng:    'NGUSD',
-  rbob:  'RBUSD',
-}
-
+// Using Finnhub for Energy (ETFs as proxies for commodities)
 export async function fetchFMPEnergy() {
-  const results = {}
-  // Stooq commodity symbols — free, no key, real-time futures prices
-  const stooqEnergy = {
-    wti:   'cl.f',   // WTI Crude futures
-    brent: 'bz.f',   // Brent Crude futures
-    ng:    'ng.f',   // Natural Gas futures
-    rbob:  'rb.f',   // RBOB Gasoline futures
-  }
+  if (!FINNHUB_KEY) return {};
+  
+  const mapping = {
+    wti: 'USO',
+    brent: 'BNO',
+    ng: 'UNG',
+    rbob: 'UGA'
+  };
 
-  await Promise.allSettled(Object.entries(stooqEnergy).map(async ([id, sym]) => {
+  const results = {};
+  await Promise.allSettled(Object.entries(mapping).map(async ([id, sym]) => {
     try {
-      const res = await fetch(`https://stooq.com/q/l/?s=${sym}&f=sd2t2ohlcv&e=json`)
-      if (!res.ok) throw new Error(`Stooq energy ${res.status}`)
-      const json  = await res.json()
-      const quote = json?.symbols?.[0]
-      if (!quote?.close || quote.close <= 0) throw new Error('No close')
-      const price  = parseFloat(quote.close)
-      const open   = parseFloat(quote.open || price)
-      const change = parseFloat((((price - open) / open) * 100).toFixed(2))
-      results[id]  = { price: parseFloat(price.toFixed(2)), change }
-    } catch(e) {
-      console.warn(`Stooq energy ${id}:`, e.message)
-    }
-  }))
-
-  // Fallback to FMP commodity endpoint if Stooq fails
-  if (Object.keys(results).length === 0 && FMP_KEY) {
-    try {
-      const res  = await fetch(`https://financialmodelingprep.com/api/v3/quotes/commodity?apikey=${FMP_KEY}`)
-      if (res.ok) {
-        const json = await res.json()
-        const nameMap = { 'Crude Oil WTI':'wti','WTI':'wti','Brent':'brent','Crude Oil Brent':'brent','Natural Gas':'ng','RBOB Gasoline':'rbob' }
-        json.forEach(q => {
-          const id = nameMap[q.name]
-          if (!id || results[id] || !q.price || q.price <= 0) return
-          results[id] = { price: parseFloat(parseFloat(q.price).toFixed(2)), change: parseFloat((q.changesPercentage ?? 0).toFixed(2)) }
-        })
+      const res = await fetch(`https://finnhub.io/api/v1/quote?symbol=${sym}&token=${FINNHUB_KEY}`);
+      if (!res.ok) throw new Error(`Finnhub ${res.status}`);
+      const json = await res.json();
+      if (json && json.c && json.c > 0) {
+        results[id] = {
+          price: parseFloat(parseFloat(json.c).toFixed(2)),
+          change: parseFloat(parseFloat(json.dp ?? 0).toFixed(2))
+        };
       }
-    } catch(e) { console.warn('FMP energy fallback:', e.message) }
-  }
-
-  return results
+    } catch (e) {
+      console.warn(`Finnhub energy ${id}:`, e.message);
+    }
+  }));
+  return results;
 }
 
 // ─── FOREX: fawazahmed0 (free, no key, proven CORS-safe) ─────────────────────
