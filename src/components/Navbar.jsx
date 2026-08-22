@@ -30,8 +30,11 @@ export default function Navbar({ active, setActive, isLive, setIsLive, hotspotCo
         <div style={s.inner}>
 
           {/* Brand — logo + wordmark */}
-          <button style={s.brand} onClick={() => setActive('map')}>
+          <button style={{ ...s.brand, flexDirection: 'column', alignItems: 'flex-start', gap: '4px' }} onClick={() => setActive('map')}>
             <Logo size={220} />
+            <span style={{ fontSize: '11px', color: 'var(--text-secondary)', fontWeight: 500, letterSpacing: '0.02em', paddingLeft: '4px' }}>
+              Live Market Intelligence, served neat and easy
+            </span>
           </button>
 
           {/* Divider */}
@@ -102,8 +105,11 @@ export default function Navbar({ active, setActive, isLive, setIsLive, hotspotCo
 
       {/* ── Mobile top bar ── */}
       <nav style={s.mobileTop} className="mobile-only">
-        <button style={s.brand} onClick={() => setActive('map')}>
+        <button style={{ ...s.brand, flexDirection: 'column', alignItems: 'flex-start', gap: '2px' }} onClick={() => setActive('map')}>
           <Logo size={180} />
+          <span style={{ fontSize: '9px', color: 'var(--text-secondary)', fontWeight: 500, letterSpacing: '0.01em', paddingLeft: '4px' }}>
+            Live Market Intelligence, served neat and easy
+          </span>
         </button>
         <div style={{ display:'flex', alignItems:'center', gap:'8px' }}>
           <SearchBar allAssets={allAssets || []} onSelect={() => setActive('map')}/>
