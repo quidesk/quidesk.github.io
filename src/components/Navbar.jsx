@@ -31,7 +31,7 @@ export default function Navbar({ active, setActive, isLive, setIsLive, hotspotCo
 
           {/* Brand — logo + wordmark */}
           <button style={s.brand} onClick={() => setActive('map')}>
-            <Logo size={160} />
+            <Logo size={220} />
           </button>
 
           {/* Divider */}
@@ -103,7 +103,7 @@ export default function Navbar({ active, setActive, isLive, setIsLive, hotspotCo
       {/* ── Mobile top bar ── */}
       <nav style={s.mobileTop} className="mobile-only">
         <button style={s.brand} onClick={() => setActive('map')}>
-          <Logo size={140} />
+          <Logo size={180} />
         </button>
         <div style={{ display:'flex', alignItems:'center', gap:'8px' }}>
           <SearchBar allAssets={allAssets || []} onSelect={() => setActive('map')}/>
@@ -158,7 +158,7 @@ const s = {
   },
   inner: {
     display:'flex', alignItems:'center', gap:'0',
-    padding:'0 24px', height:'74px',
+    padding:'0 24px', minHeight:'84px',
     maxWidth:'1700px', margin:'0 auto',
   },
   brand: {
@@ -256,6 +256,6 @@ const s = {
     borderBottom:'1px solid var(--border-subtle)',
     display:'flex', alignItems:'center',
     justifyContent:'space-between',
-    padding:'10px 16px', gap:'10px',
+    padding:'12px 16px', gap:'10px', minHeight:'72px'
   },
 }

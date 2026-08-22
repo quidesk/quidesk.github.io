@@ -10,7 +10,6 @@ export default function Logo({ size = 140, className = '', style = {} }) {
       style={{
         width: size,
         height: 'auto',
-        maxHeight: '100%',
         objectFit: 'contain',
         display: 'block',
         filter: 'drop-shadow(0px 4px 12px rgba(0,0,0,0.35))',
