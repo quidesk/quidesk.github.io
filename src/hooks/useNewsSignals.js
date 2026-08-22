@@ -1,58 +1,18 @@
 import { useState, useEffect, useRef } from 'react'
 
-// Free RSS/news APIs — no key needed
-// Using AllOrigins CORS proxy to fetch RSS feeds
-const CORS = 'https://api.allorigins.win/get?url='
+// Free RSS to JSON API (highly reliable, returns native JSON)
+// Bypassing cache by appending a timestamp to the feed URL if needed
+const RSS_API = 'https://api.rss2json.com/v1/api.json?rss_url='
 
 const FEEDS = [
-  {
-    url: 'https://decrypt.co/feed',
-    source: 'Decrypt',
-    sector: 'crypto',
-    color: '#a78bfa',
-  },
-  {
-    url: 'https://cryptoslate.com/feed/',
-    source: 'CryptoSlate',
-    sector: 'crypto',
-    color: '#a78bfa',
-  },
-  {
-    url: 'https://feeds.content.dowjones.io/public/rss/mw_realtimeheadlines',
-    source: 'MarketWatch',
-    sector: 'equities',
-    color: '#4d9eff',
-  },
-  {
-    url: 'https://search.cnbc.com/rs/search/combinedcms/view.xml?partnerId=wrss01&id=10000664',
-    source: 'CNBC Finance',
-    sector: 'equities',
-    color: '#4d9eff',
-  },
-  {
-    url: 'https://www.mining.com/feed/',
-    source: 'Mining.com',
-    sector: 'metals',
-    color: '#f0a500',
-  },
-  {
-    url: 'https://oilprice.com/rss/main',
-    source: 'OilPrice',
-    sector: 'energy',
-    color: '#f97316',
-  },
-  {
-    url: 'https://www.forexlive.com/feed/news',
-    source: 'ForexLive',
-    sector: 'forex',
-    color: '#22d3ee',
-  },
-  {
-    url: 'https://www.investing.com/rss/news_1.rss',
-    source: 'Investing.com',
-    sector: 'forex',
-    color: '#22d3ee',
-  }
+  { url: 'https://decrypt.co/feed', source: 'Decrypt', sector: 'crypto', color: '#a78bfa' },
+  { url: 'https://cryptoslate.com/feed/', source: 'CryptoSlate', sector: 'crypto', color: '#a78bfa' },
+  { url: 'https://feeds.content.dowjones.io/public/rss/mw_realtimeheadlines', source: 'MarketWatch', sector: 'equities', color: '#4d9eff' },
+  { url: 'https://search.cnbc.com/rs/search/combinedcms/view.xml?partnerId=wrss01&id=10000664', source: 'CNBC Finance', sector: 'equities', color: '#4d9eff' },
+  { url: 'https://www.mining.com/feed/', source: 'Mining.com', sector: 'metals', color: '#f0a500' },
+  { url: 'https://oilprice.com/rss/main', source: 'OilPrice', sector: 'energy', color: '#f97316' },
+  { url: 'https://www.forexlive.com/feed/news', source: 'ForexLive', sector: 'forex', color: '#22d3ee' },
+  { url: 'https://www.investing.com/rss/news_1.rss', source: 'Investing.com', sector: 'forex', color: '#22d3ee' }
 ]
 
 // Asset keyword map — used to draw canvas correlation lines
@@ -86,42 +46,6 @@ export const ASSET_KEYWORDS = {
   usdinr: ['usd/inr','usdinr','indian rupee','rbi'],
 }
 
-function parseRSS(xml, source, sector, color) {
-  const items = []
-  const parser = new DOMParser()
-  const doc = parser.parseFromString(xml, 'text/xml')
-  const nodes = doc.querySelectorAll('item')
-  nodes.forEach((node, i) => {
-    if (i >= 6) return
-    const title = node.querySelector('title')?.textContent?.trim() || ''
-    const link  = node.querySelector('link')?.textContent?.trim() ||
-                  node.querySelector('guid')?.textContent?.trim() || '#'
-    const pub   = node.querySelector('pubDate')?.textContent?.trim() || ''
-    const desc  = node.querySelector('description')?.textContent?.replace(/<[^>]*>/g,'').trim().slice(0,120) || ''
-
-    // Find mentioned assets
-    const lower = (title + ' ' + desc).toLowerCase()
-    const mentioned = Object.entries(ASSET_KEYWORDS)
-      .filter(([,kws]) => kws.some(kw => lower.includes(kw)))
-      .map(([id]) => id)
-
-    if (title) {
-      items.push({
-        id: `${source}-${i}`,
-        title,
-        link,
-        desc,
-        source,
-        sector,
-        color,
-        published: pub ? new Date(pub) : new Date(),
-        mentionedAssets: mentioned,
-      })
-    }
-  })
-  return items
-}
-
 async function fetchWithTimeout(url, ms = 10000) {
   const controller = new AbortController()
   const timer = setTimeout(() => controller.abort(), ms)
@@ -135,18 +59,44 @@ async function fetchWithTimeout(url, ms = 10000) {
   }
 }
 
-async function fetchFeed(feed, retries = 2) {
+async function fetchFeed(feed, retries = 1) {
   for (let attempt = 0; attempt <= retries; attempt++) {
     try {
-      const encoded = encodeURIComponent(feed.url)
-      const res = await fetchWithTimeout(`${CORS}${encoded}`, 10000)
+      // Append cache buster to force real-time 30s updates from rss2json
+      const cacheBust = feed.url.includes('?') ? `&t=${Date.now()}` : `?t=${Date.now()}`
+      const encoded = encodeURIComponent(feed.url + cacheBust)
+      const res = await fetchWithTimeout(`${RSS_API}${encoded}`, 10000)
+      
       if (!res.ok) throw new Error(`HTTP ${res.status}`)
       const json = await res.json()
-      if (!json.contents) throw new Error('Empty contents')
-      return parseRSS(json.contents, feed.source, feed.sector, feed.color)
+      
+      if (json.status !== 'ok' || !json.items) throw new Error('Invalid feed')
+      
+      return json.items.slice(0, 6).map((item, i) => {
+        const title = item.title?.trim() || ''
+        const desc = item.description?.replace(/<[^>]*>/g,'').trim().slice(0,120) || ''
+        
+        // Find mentioned assets
+        const lower = (title + ' ' + desc).toLowerCase()
+        const mentioned = Object.entries(ASSET_KEYWORDS)
+          .filter(([,kws]) => kws.some(kw => lower.includes(kw)))
+          .map(([id]) => id)
+          
+        return {
+          id: `${feed.source}-${i}-${Date.now()}`,
+          title,
+          link: item.link || '#',
+          desc,
+          source: feed.source,
+          sector: feed.sector,
+          color: feed.color,
+          published: item.pubDate ? new Date(item.pubDate.replace(' ', 'T') + 'Z') : new Date(),
+          mentionedAssets: mentioned,
+        }
+      })
     } catch(e) {
       if (attempt === retries) return []
-      await new Promise(r => setTimeout(r, 1500 * (attempt + 1)))
+      await new Promise(r => setTimeout(r, 1000))
     }
   }
   return []
