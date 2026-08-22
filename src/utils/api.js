@@ -112,6 +112,8 @@ export async function fetchAllMetals() {
   return results.filter(r => r.status === 'fulfilled').map(r => r.value)
 }
 
+const FINNHUB_KEY = import.meta.env.VITE_FINNHUB_KEY;
+
 // Using Finnhub for Equities (ETFs as proxies for indices)
 export async function fetchFMPStocks() {
   if (!FINNHUB_KEY) {

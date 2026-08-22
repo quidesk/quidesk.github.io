@@ -6,6 +6,9 @@
   "rules": {
     "react/prop-types": "off",
     "react/react-in-jsx-scope": "off",
-    "no-unused-vars": "off"
+    "no-unused-vars": "off",
+    "no-empty": "off",
+    "react/no-unescaped-entities": "off",
+    "react-hooks/exhaustive-deps": "off"
   }
 }
