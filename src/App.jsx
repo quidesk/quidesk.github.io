@@ -98,7 +98,7 @@ export default function App() {
       {/* Footer */}
       <footer style={fS.footer}>
         <div style={fS.inner}>
-          <span style={fS.brand}><Logo size={40} /></span>
+          <span style={fS.brand}><Logo size={48} /></span>
           <span style={fS.text}>Market intelligence terminal · For informational purposes only</span>
           <span style={fS.text}>Last tick: {lastUpdate.toLocaleTimeString()}</span>
         </div>

@@ -13,6 +13,7 @@ export default function Logo({ size = 36, className = '', style = {} }) {
         minWidth: size,
         objectFit: 'contain',
         display: 'block',
+        filter: 'drop-shadow(0px 3px 6px rgba(0,0,0,0.4))',
         ...style
       }}
     />
