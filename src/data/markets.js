@@ -143,6 +143,7 @@ export function detectHotspots(assets) {
         signal: `${Math.abs(a.change).toFixed(2)}% ${a.change > 0 ? 'surge' : 'drop'}`,
         severity: absChange > 7 ? 'high' : absChange > 5 ? 'medium' : 'low',
         color: a.change > 0 ? '#22d47a' : '#f04060',
+        timestamp: Date.now(),
       });
     }
     const data = a.chartData;
@@ -157,6 +158,7 @@ export function detectHotspots(assets) {
           signal: `momentum ${mom > 0 ? 'building' : 'fading'} quietly`,
           severity: 'low',
           color: '#a78bfa',
+          timestamp: Date.now(),
         });
       }
     }

@@ -39,7 +39,6 @@ export function useMarketData() {
   const [data, setData]             = useState(MARKET_DATA)
   const [lastUpdate, setLastUpdate] = useState(new Date())
   const [isLive, setIsLive]         = useState(true)
-  const [hotspots, setHotspots]     = useState([])
   const wsRef = useRef(null)
 
   // ── CRYPTO: Binance REST primary, CoinGecko fallback ────────────────────
@@ -213,7 +212,6 @@ export function useMarketData() {
         energy:   prev.energy.map(appendChartPoint),
         forex:    (prev.forex || []).map(appendChartPoint),
       }
-      setHotspots(detectHotspots(Object.values(next).flat()))
       return next
     })
     setLastUpdate(new Date())
@@ -225,10 +223,6 @@ export function useMarketData() {
     return () => clearInterval(id)
   }, [isLive, tick])
 
-  useEffect(() => {
-    setHotspots(detectHotspots(Object.values(data).flat()))
-  }, [])
-
   const allAssets = [
     ...(data.equities || []),
     ...(data.crypto   || []),
@@ -236,6 +230,8 @@ export function useMarketData() {
     ...(data.energy   || []),
     ...(data.forex    || []),
   ]
+
+  const hotspots = detectHotspots(allAssets)
 
   return { data, allAssets, lastUpdate, isLive, setIsLive, hotspots }
 }

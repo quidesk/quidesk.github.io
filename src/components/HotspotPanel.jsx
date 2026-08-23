@@ -40,6 +40,11 @@ export default function HotspotPanel({ hotspots, allAssets, onSelect }) {
                 <span style={{ ...s.typeBadge, color: typeInfo.color, borderColor: typeInfo.color + '40' }}>
                   {typeInfo.label}
                 </span>
+                {h.timestamp && (
+                  <span style={{ fontFamily: 'var(--font-mono)', fontSize: '9px', color: 'var(--text-dim)', marginLeft: 'auto' }}>
+                    {new Date(h.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' })}
+                  </span>
+                )}
               </div>
               <div style={s.signal}>{h.signal}</div>
             </div>
