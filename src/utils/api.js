@@ -88,7 +88,7 @@ export async function fetchCryptoPrices() {
 const METAL_SYMBOLS = { gold:'XAU', silver:'XAG', platinum:'XPT' }
 let _prevMetalPrices = (() => { try { return JSON.parse(localStorage.getItem('quidesk_metal_prev') || '{}') } catch { return {} } })()
 
-export async function fetchMetalPrice(metalId) {
+export async function fetchMetalPrice(metalId, prevRateFallback) {
   const symbol = METAL_SYMBOLS[metalId]
   if (!symbol) throw new Error(`Metal not supported: ${metalId}`)
   const res   = await fetch(`https://api.gold-api.com/price/${symbol}`)
@@ -96,8 +96,10 @@ export async function fetchMetalPrice(metalId) {
   const json  = await res.json()
   const price = parseFloat(json.price ?? 0)
   if (!price || isNaN(price)) throw new Error(`Invalid price for ${symbol}`)
-  const prev   = _prevMetalPrices[metalId]
+  
+  let prev = prevRateFallback || _prevMetalPrices[metalId]
   const change = prev ? parseFloat((((price - prev) / prev) * 100).toFixed(2)) : 0
+  
   _prevMetalPrices[metalId] = price
   try { localStorage.setItem('quidesk_metal_prev', JSON.stringify(_prevMetalPrices)) } catch {}
   return {
@@ -108,7 +110,26 @@ export async function fetchMetalPrice(metalId) {
 }
 
 export async function fetchAllMetals() {
-  const results = await Promise.allSettled(Object.keys(METAL_SYMBOLS).map(fetchMetalPrice))
+  let prevRates = null;
+  try {
+    const d = new Date();
+    d.setDate(d.getDate() - 1);
+    const dateStr = d.toISOString().split('T')[0];
+    const res = await fetch(`https://cdn.jsdelivr.net/npm/@fawazahmed0/currency-api@${dateStr}/v1/currencies/usd.json`);
+    const json = await res.json();
+    prevRates = json.usd;
+  } catch(e) {
+    console.warn("Could not fetch 24h metal historical data", e.message);
+  }
+
+  const results = await Promise.allSettled(Object.keys(METAL_SYMBOLS).map(async (metalId) => {
+    let fallback = null;
+    if (prevRates) {
+      const sym = METAL_SYMBOLS[metalId].toLowerCase();
+      if (prevRates[sym]) fallback = 1 / prevRates[sym];
+    }
+    return fetchMetalPrice(metalId, fallback);
+  }))
   return results.filter(r => r.status === 'fulfilled').map(r => r.value)
 }
 
