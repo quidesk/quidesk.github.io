@@ -113,6 +113,7 @@ export async function fetchAllMetals() {
 }
 
 const FINNHUB_KEY = import.meta.env.VITE_FINNHUB_KEY;
+export const isFinnhubMissing = !FINNHUB_KEY;
 
 // Using Finnhub for Equities (ETFs as proxies for indices)
 export async function fetchFMPStocks() {

@@ -5,6 +5,7 @@ import DetailChart from '../components/DetailChart'
 import AssetCard from '../components/AssetCard'
 import { formatPrice, SECTOR_META } from '../data/markets'
 import { useNewsSignals } from '../hooks/useNewsSignals'
+import { isFinnhubMissing } from '../utils/api'
 import NewsSignals from '../components/NewsSignals'
 
 function NarrativeStrip({ allAssets, hotspots }) {
@@ -61,6 +62,13 @@ export default function MapPage({ data, allAssets, hotspots, watchlistProps, con
 
   return (
     <div style={s.page} className="page-wrap">
+      {/* Missing Key Warning */}
+      {isFinnhubMissing && (
+        <div style={{ background: 'var(--amber-dim)', border: '1px solid var(--amber)', color: 'var(--amber)', padding: '12px 16px', borderRadius: '8px', marginBottom: '16px', fontSize: '13px', display: 'flex', alignItems: 'center', gap: '8px' }}>
+          <strong>Action Required:</strong> Stock and Energy prices are currently frozen because the <code>VITE_FINNHUB_KEY</code> secret is missing from your GitHub repository. Please add your free Finnhub API Key to GitHub Actions Secrets to enable real-time tracking for these assets!
+        </div>
+      )}
+
       {/* Narrative */}
       <div className="fade-up" style={{ marginBottom:'16px' }}>
         <NarrativeStrip allAssets={allAssets} hotspots={hotspots} />
