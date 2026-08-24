@@ -117,6 +117,7 @@ export default function ShareModal({ isOpen, onClose, data }) {
           </button>
         </div>
         <div style={s.actionsSub}>
+          <button style={{...s.btnSub, flex: 0.5, border: 'none', background: 'rgba(255,255,255,0.05)'}} onClick={onClose}>Close</button>
           <button style={s.btnSub} onClick={handleDownload}><Download size={14} /> Download Image</button>
           <button style={s.btnSub} onClick={handleCopy}><Copy size={14} /> Copy Image</button>
         </div>
@@ -171,22 +172,31 @@ export default function ShareModal({ isOpen, onClose, data }) {
             )}
 
             {renderData.type === 'global' && renderData.assets && (
-              <div style={{ display: 'flex', flexDirection: 'column', gap: '10px', marginTop: '16px' }}>
-                <div style={{ color: '#fff', fontSize: '16px', fontWeight: 'bold', marginBottom: '4px', letterSpacing: '0.05em' }}>Top Market Movers</div>
-                {renderData.assets.map(a => (
-                  <div key={a.id} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '12px 16px', background: 'rgba(255,255,255,0.04)', borderRadius: '8px', border: '1px solid rgba(255,255,255,0.06)' }}>
-                    <div style={{ display: 'flex', flexDirection: 'column' }}>
-                      <span style={{ color: '#fff', fontSize: '15px', fontWeight: 800 }}>{a.symbol}</span>
-                      <span style={{ color: '#888', fontSize: '11px', fontWeight: 500 }}>{a.name}</span>
-                    </div>
-                    <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end' }}>
-                      <span style={{ color: '#fff', fontSize: '15px', fontWeight: 700 }}>${a.price.toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2})}</span>
-                      <span style={{ color: a.change >= 0 ? '#34d399' : '#f87171', fontSize: '12px', fontWeight: 800 }}>
-                        {a.change >= 0 ? '+' : ''}{a.change.toFixed(2)}%
-                      </span>
-                    </div>
-                  </div>
-                ))}
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '12px', marginTop: '16px' }}>
+                <div style={{ color: '#fff', fontSize: '16px', fontWeight: 900, letterSpacing: '0.1em', marginBottom: '2px' }}>MARKET HOTSPOT</div>
+                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px' }}>
+                  {renderData.assets.map(a => {
+                    let dSym = a.symbol;
+                    if (dSym.includes('/')) dSym = dSym.split('/')[0];
+                    else if (dSym.endsWith('USDT')) dSym = dSym.replace('USDT', '');
+                    else if (dSym.endsWith('USD')) dSym = dSym.replace('USD', '');
+                    if (dSym.length > 5) dSym = dSym.substring(0, 5);
+
+                    return (
+                      <div key={a.id} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '12px', background: 'rgba(255,255,255,0.04)', borderRadius: '8px', border: '1px solid rgba(255,255,255,0.06)' }}>
+                        <div style={{ display: 'flex', flexDirection: 'column', gap: '2px' }}>
+                          <span style={{ color: '#fff', fontSize: '15px', fontWeight: 900 }}>{dSym}</span>
+                        </div>
+                        <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: '2px' }}>
+                          <span style={{ color: '#fff', fontSize: '14px', fontWeight: 700 }}>${a.price.toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2})}</span>
+                          <span style={{ color: a.change >= 0 ? '#34d399' : '#f87171', fontSize: '11px', fontWeight: 800 }}>
+                            {a.change >= 0 ? '+' : ''}{a.change.toFixed(2)}%
+                          </span>
+                        </div>
+                      </div>
+                    )
+                  })}
+                </div>
               </div>
             )}
           </div>

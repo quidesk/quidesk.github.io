@@ -149,7 +149,18 @@ export default function Navbar({ active, setActive, isLive, setIsLive, hotspotCo
       <ShareModal 
         isOpen={showGlobalShare} 
         onClose={() => setShowGlobalShare(false)}
-        data={{ type: 'global', assets: (allAssets || []).slice(0, 5) }} 
+        data={{ 
+          type: 'global', 
+          assets: (() => {
+            const targets = ['BTCUSDT', 'ETHUSDT', 'SOLUSDT', 'XAU', 'XAG', 'EUR/USD'];
+            const popular = (allAssets || []).filter(a => targets.includes(a.symbol)).slice(0, 6);
+            if (popular.length < 6) {
+              const missing = 6 - popular.length;
+              popular.push(...(allAssets || []).filter(a => !targets.includes(a.symbol)).slice(0, missing));
+            }
+            return popular;
+          })()
+        }} 
       />
 
       {/* ── Mobile top bar ── */}
