@@ -174,7 +174,7 @@ export default function ShareModal({ isOpen, onClose, data }) {
             {renderData.type === 'global' && renderData.assets && (
               <div style={{ display: 'flex', flexDirection: 'column', gap: '12px', marginTop: '16px' }}>
                 <div style={{ color: '#fff', fontSize: '16px', fontWeight: 900, letterSpacing: '0.1em', marginBottom: '2px' }}>MARKET HOTSPOT</div>
-                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px' }}>
+                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '6px' }}>
                   {renderData.assets.map(a => {
                     let dSym = a.symbol;
                     if (dSym.includes('/')) dSym = dSym.split('/')[0];
@@ -183,13 +183,13 @@ export default function ShareModal({ isOpen, onClose, data }) {
                     if (dSym.length > 5) dSym = dSym.substring(0, 5);
 
                     return (
-                      <div key={a.id} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '12px', background: 'rgba(255,255,255,0.04)', borderRadius: '8px', border: '1px solid rgba(255,255,255,0.06)' }}>
-                        <div style={{ display: 'flex', flexDirection: 'column', gap: '2px' }}>
-                          <span style={{ color: '#fff', fontSize: '15px', fontWeight: 900 }}>{dSym}</span>
+                      <div key={a.id} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '8px 10px', background: 'rgba(255,255,255,0.04)', borderRadius: '6px', border: '1px solid rgba(255,255,255,0.06)' }}>
+                        <div style={{ display: 'flex', flexDirection: 'column', gap: '1px' }}>
+                          <span style={{ color: '#fff', fontSize: '14px', fontWeight: 900 }}>{dSym}</span>
                         </div>
-                        <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: '2px' }}>
-                          <span style={{ color: '#fff', fontSize: '14px', fontWeight: 700 }}>${a.price.toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2})}</span>
-                          <span style={{ color: a.change >= 0 ? '#34d399' : '#f87171', fontSize: '11px', fontWeight: 800 }}>
+                        <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: '1px' }}>
+                          <span style={{ color: '#fff', fontSize: '13px', fontWeight: 700 }}>${a.price.toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2})}</span>
+                          <span style={{ color: a.change >= 0 ? '#34d399' : '#f87171', fontSize: '10px', fontWeight: 800 }}>
                             {a.change >= 0 ? '+' : ''}{a.change.toFixed(2)}%
                           </span>
                         </div>
@@ -220,8 +220,7 @@ const XIcon = () => (
 
 const s = {
   overlay: {
-    position: 'fixed', top: 0, left: 0, right: 0, bottom: 0,
-    background: 'rgba(0,0,0,0.8)', backdropFilter: 'blur(4px)',
+    position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.85)', backdropFilter: 'blur(8px)',
     display: 'flex', alignItems: 'center', justifyContent: 'center',
     zIndex: 9999, padding: '20px'
   },
@@ -229,15 +228,16 @@ const s = {
     background: 'var(--bg-card)', border: '1px solid var(--border-subtle)',
     borderRadius: '12px', width: '100%', maxWidth: '420px',
     boxShadow: '0 20px 40px rgba(0,0,0,0.4)',
-    display: 'flex', flexDirection: 'column', overflow: 'hidden'
+    display: 'flex', flexDirection: 'column', overflow: 'hidden',
+    maxHeight: '90vh'
   },
   header: {
     display: 'flex', justifyContent: 'space-between', alignItems: 'center',
     padding: '16px 20px', borderBottom: '1px solid var(--border-subtle)',
+    flexShrink: 0
   },
   title: {
-    fontFamily: 'var(--font-display)', fontSize: '14px', fontWeight: 600,
-    color: 'var(--text-primary)', letterSpacing: '0.04em'
+    color: '#fff', fontSize: '15px', fontWeight: 600, letterSpacing: '0.05em'
   },
   closeBtn: {
     background: 'none', border: 'none', color: 'var(--text-dim)', cursor: 'pointer',
@@ -246,7 +246,7 @@ const s = {
   previewContainer: {
     padding: '24px', background: 'var(--bg-surface)',
     display: 'flex', justifyContent: 'center', alignItems: 'center',
-    minHeight: '200px'
+    minHeight: '200px', flex: '1 1 auto', overflowY: 'auto'
   },
   previewImg: {
     width: '100%', height: 'auto', borderRadius: '8px',
@@ -258,7 +258,8 @@ const s = {
   },
   actions: {
     display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px',
-    padding: '20px', borderTop: '1px solid var(--border-subtle)'
+    padding: '20px', borderTop: '1px solid var(--border-subtle)',
+    flexShrink: 0
   },
   btn: {
     display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px',
@@ -267,7 +268,8 @@ const s = {
     cursor: 'pointer', transition: 'opacity 0.2s'
   },
   actionsSub: {
-    display: 'flex', gap: '10px', padding: '0 20px 20px'
+    display: 'flex', gap: '10px', padding: '0 20px 20px',
+    flexShrink: 0
   },
   btnSub: {
     flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '6px',
