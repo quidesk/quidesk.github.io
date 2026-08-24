@@ -2,6 +2,7 @@ import React, { useState, useEffect, useRef } from 'react'
 import { toPng } from 'html-to-image'
 import { X, Instagram, Facebook, Download, Copy } from 'lucide-react'
 import MiniChart from './MiniChart'
+import Logo from './Logo'
 
 export default function ShareModal({ isOpen, onClose, data }) {
   const [imgUrl, setImgUrl] = useState(null)
@@ -123,8 +124,7 @@ export default function ShareModal({ isOpen, onClose, data }) {
           <div ref={nodeRef} style={s.shareCard}>
             <div style={s.cardHeader}>
               <div style={s.brand}>
-                <div style={s.brandIcon} />
-                <span style={s.brandName}>QUIDESK</span>
+                <Logo size={80} />
               </div>
               <span style={s.watermark}>quidesk.github.io</span>
             </div>
