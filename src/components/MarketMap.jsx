@@ -386,6 +386,13 @@ export default function MarketMap({ allAssets, hotspots, onSelectAsset, convertP
           // Sector tint for orb interior
           const sectorColor = meta.color || '#6b7280'
 
+          // Clean symbol to first word / base asset
+          let dSym = asset.symbol;
+          if (dSym.includes('/')) dSym = dSym.split('/')[0];
+          else if (dSym.endsWith('USDT')) dSym = dSym.replace('USDT', '');
+          else if (dSym.endsWith('USD')) dSym = dSym.replace('USD', '');
+          if (dSym.length > 5) dSym = dSym.substring(0, 5);
+
           return (
             <g key={asset.id}
               transform={`translate(${pos.x},${pos.y})`}
@@ -421,11 +428,11 @@ export default function MarketMap({ allAssets, hotspots, onSelectAsset, convertP
                   dur="3s" repeatCount="indefinite"/>
               </circle>
 
-              {/* Orb body — dark frosted glass with sector tint */}
               <clipPath id={`clip-${asset.id}`}>
                 <circle r={nr} />
               </clipPath>
 
+              {/* Orb body — dark frosted glass with sector tint */}
               <circle r={nr}
                 fill={`color-mix(in srgb, ${sectorColor} 20%, #1a1d23 80%)`}
                 stroke="rgba(255,255,255,0.08)"
@@ -467,18 +474,18 @@ export default function MarketMap({ allAssets, hotspots, onSelectAsset, convertP
               )}
 
               {/* Text: Symbol */}
-              <text textAnchor="middle" dominantBaseline="central" y={-nr*0.12}
-                fontSize={asset.symbol.length>5 ? Math.max(7, nr/3.2) : asset.symbol.length>3 ? Math.max(8, nr/2.8) : Math.max(9.5, nr/2.4)}
-                fontFamily="var(--font-mono)" fontWeight="600"
+              <text textAnchor="middle" dominantBaseline="central" y={-nr*0.2}
+                fontSize={dSym.length>4 ? Math.max(6.5, nr/3.4) : Math.max(8.5, nr/2.6)}
+                fontFamily="var(--font-mono)" fontWeight="700"
                 fill="rgba(255,255,255,0.95)"
                 style={{ userSelect:'none' }}
               >
-                {asset.symbol.length>6?asset.symbol.slice(0,5):asset.symbol}
+                {dSym}
               </text>
 
               {/* Text: Change % */}
-              <text y={nr*0.38} textAnchor="middle"
-                fontSize={Math.max(7, nr/3.2)} fontFamily="var(--font-mono)" fontWeight="600"
+              <text y={nr*0.32} textAnchor="middle" dominantBaseline="central"
+                fontSize={Math.max(6.5, nr/3.2)} fontFamily="var(--font-mono)" fontWeight="700"
                 fill={isUp ? 'rgba(52,211,153,0.95)' : 'rgba(248,113,113,0.95)'}
                 style={{ userSelect:'none' }}
               >

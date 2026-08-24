@@ -89,18 +89,6 @@ export default function Navbar({ active, setActive, isLive, setIsLive, hotspotCo
 
           {/* Right controls */}
           <div style={s.right}>
-            <div style={{ display: 'flex', gap: '8px', marginRight: '8px' }}>
-              <button style={{...s.iconBtn, padding: '6px', background: '#1877F2', borderColor: '#1877F2', boxShadow: '0 2px 8px rgba(24,119,242,0.3)'}} onClick={shareFB} title="Share on Facebook">
-                <Facebook size={14} color="#ffffff"/>
-              </button>
-              <button style={{...s.iconBtn, padding: '6px', background: '#000000', borderColor: 'rgba(255,255,255,0.2)', boxShadow: '0 2px 8px rgba(0,0,0,0.5)'}} onClick={shareX} title="Share on X">
-                <XLogo size={14} color="#ffffff"/>
-              </button>
-              <button style={{...s.iconBtn, padding: '6px', background: 'linear-gradient(45deg, #f09433 0%, #e6683c 25%, #dc2743 50%, #cc2366 75%, #bc1888 100%)', borderColor: 'transparent', boxShadow: '0 2px 8px rgba(220,39,67,0.3)'}} onClick={copyIG} title="Share on Instagram">
-                <Instagram size={14} color="#ffffff"/>
-              </button>
-            </div>
-
             <SearchBar allAssets={allAssets || []} onSelect={() => setActive('map')} />
 
             {alertCount > 0 && (
@@ -144,6 +132,19 @@ export default function Navbar({ active, setActive, isLive, setIsLive, hotspotCo
           </div>
         </div>
       </nav>
+
+      {/* ── Floating Social Bar (Desktop Only) ── */}
+      <div style={s.floatingShare} className="desktop-only">
+        <button style={{...s.iconBtn, padding: '10px', borderRadius: '50%', background: '#1877F2', borderColor: '#1877F2', boxShadow: '0 4px 12px rgba(24,119,242,0.3)'}} onClick={shareFB} title="Share on Facebook">
+          <Facebook size={18} color="#ffffff"/>
+        </button>
+        <button style={{...s.iconBtn, padding: '10px', borderRadius: '50%', background: '#000000', borderColor: 'rgba(255,255,255,0.15)', boxShadow: '0 4px 12px rgba(0,0,0,0.5)'}} onClick={shareX} title="Share on X">
+          <XLogo size={18} color="#ffffff"/>
+        </button>
+        <button style={{...s.iconBtn, padding: '10px', borderRadius: '50%', background: 'linear-gradient(45deg, #f09433 0%, #e6683c 25%, #dc2743 50%, #cc2366 75%, #bc1888 100%)', borderColor: 'transparent', boxShadow: '0 4px 12px rgba(220,39,67,0.3)'}} onClick={copyIG} title="Share on Instagram">
+          <Instagram size={18} color="#ffffff"/>
+        </button>
+      </div>
 
       {/* ── Mobile top bar ── */}
       <nav style={s.mobileTop} className="mobile-only">
@@ -310,5 +311,15 @@ const s = {
     display:'flex', alignItems:'center',
     justifyContent:'space-between',
     padding:'12px 16px', gap:'10px', minHeight:'72px'
+  },
+  floatingShare: {
+    position: 'fixed',
+    top: '50%',
+    left: '20px',
+    transform: 'translateY(-50%)',
+    display: 'flex',
+    flexDirection: 'column',
+    gap: '12px',
+    zIndex: 9999,
   },
 }
