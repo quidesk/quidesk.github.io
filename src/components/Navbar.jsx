@@ -1,7 +1,13 @@
 import React, { useState, useEffect } from 'react'
-import { Sun, Moon, RefreshCw } from 'lucide-react'
+import { Sun, Moon, RefreshCw, Facebook, Instagram, Share2 } from 'lucide-react'
 import Logo from './Logo'
 import SearchBar from './SearchBar'
+
+const XLogo = ({ size = 14, color = "currentColor" }) => (
+  <svg width={size} height={size} viewBox="0 0 24 24" fill={color}>
+    <path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-5.214-6.817L4.99 21.75H1.68l7.73-8.835L1.254 2.25H8.08l4.713 6.231zm-1.161 17.52h1.833L7.084 4.126H5.117z"/>
+  </svg>
+)
 
 const NAV_TABS = [
   { id:'map',       label:'Market Map',  short:'Map'  },
@@ -19,9 +25,33 @@ export default function Navbar({ active, setActive, isLive, setIsLive, hotspotCo
   const [clock, setClock] = useState(new Date())
 
   useEffect(() => {
-    const t = setInterval(() => setClock(new Date()), 1000)
-    return () => clearInterval(t)
+    const timer = setInterval(() => setClock(new Date()), 1000)
+    return () => clearInterval(timer)
   }, [])
+
+  const shareUrl = 'https://quidesk.github.io'
+  const shareText = 'Check out Quidesk - Live Market Intelligence, served neat and easy!'
+
+  const shareFB = () => window.open(`https://www.facebook.com/sharer/sharer.php?u=${encodeURIComponent(shareUrl)}`)
+  const shareX = () => window.open(`https://twitter.com/intent/tweet?text=${encodeURIComponent(shareText)}&url=${encodeURIComponent(shareUrl)}`)
+  const copyIG = async () => {
+    try {
+      await navigator.clipboard.writeText(shareUrl)
+      alert('Link copied to clipboard! Paste it to share on Instagram.')
+    } catch (e) {
+      console.error(e)
+    }
+  }
+
+  const handleMobileShare = async () => {
+    if (navigator.share) {
+      try {
+        await navigator.share({ title: 'Quidesk', text: shareText, url: shareUrl })
+      } catch (e) {}
+    } else {
+      copyIG()
+    }
+  }
 
   return (
     <>
@@ -59,6 +89,18 @@ export default function Navbar({ active, setActive, isLive, setIsLive, hotspotCo
 
           {/* Right controls */}
           <div style={s.right}>
+            <div style={{ display: 'flex', gap: '6px', marginRight: '8px' }}>
+              <button style={{...s.iconBtn, padding: '5px', borderColor: 'transparent'}} onClick={shareFB} title="Share on Facebook">
+                <Facebook size={14} color="var(--text-secondary)"/>
+              </button>
+              <button style={{...s.iconBtn, padding: '5px', borderColor: 'transparent'}} onClick={shareX} title="Share on X">
+                <XLogo size={14} color="var(--text-secondary)"/>
+              </button>
+              <button style={{...s.iconBtn, padding: '5px', borderColor: 'transparent'}} onClick={copyIG} title="Share on Instagram">
+                <Instagram size={14} color="var(--text-secondary)"/>
+              </button>
+            </div>
+
             <SearchBar allAssets={allAssets || []} onSelect={() => setActive('map')} />
 
             {alertCount > 0 && (
@@ -107,9 +149,15 @@ export default function Navbar({ active, setActive, isLive, setIsLive, hotspotCo
       <nav style={s.mobileTop} className="mobile-only">
         <button style={{ ...s.brand, flexDirection: 'column', alignItems: 'flex-start', gap: '2px' }} onClick={() => setActive('map')}>
           <Logo size={180} />
-          <span style={{ fontSize: '9px', color: 'var(--text-secondary)', fontWeight: 500, letterSpacing: '0.01em', paddingLeft: '4px' }}>
-            Live Market Intelligence, served neat and easy
-          </span>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '8px', paddingTop: '4px' }}>
+            <span style={{ fontSize: '9px', color: 'var(--text-secondary)', fontWeight: 500, letterSpacing: '0.01em', paddingLeft: '4px' }}>
+              Live Market Intelligence
+            </span>
+            <div onClick={(e) => { e.stopPropagation(); handleMobileShare(); }} style={{ padding: '2px 6px', background: 'var(--bg-card)', borderRadius: '4px', border: '1px solid var(--border-subtle)', display: 'flex', alignItems: 'center', gap: '4px', cursor: 'pointer' }}>
+              <Share2 size={10} color="var(--text-primary)" />
+              <span style={{ fontSize: '9px', color: 'var(--text-primary)', fontWeight: 600 }}>Share</span>
+            </div>
+          </div>
         </button>
         <div style={{ display:'flex', alignItems:'center', gap:'8px' }}>
           <SearchBar allAssets={allAssets || []} onSelect={() => setActive('map')}/>
