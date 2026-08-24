@@ -291,61 +291,32 @@ export default function MarketMap({ allAssets, hotspots, onSelectAsset, convertP
             </feMerge>
           </filter>
 
-          {/* Zone blob filters */}
-          {ZONES.map(z => (
-            <filter key={z.id} id={`glow-${z.id}`}
-              x="-50%" y="-50%" width="200%" height="200%">
-              <feGaussianBlur stdDeviation="22" result="blur"/>
-              <feMerge>
-                <feMergeNode in="blur"/>
-                <feMergeNode in="SourceGraphic"/>
-              </feMerge>
-            </filter>
-          ))}
+          {/* Liquid wave path for bull/bear fill */}
+          <path id="liquidWave" d="M -90 0 C -75 -6, -60 -6, -45 0 C -30 6, -15 6, 0 0 C 15 -6, 30 -6, 45 0 C 60 6, 75 6, 90 0 V 60 H -90 Z" />
         </defs>
 
-        {/* Zone blobs — colour by sector average sentiment */}
+        {/* Zone boundaries — light rounded rects with sector tags */}
         {ZONES.map(z => {
-          const avg       = getSectorAvg(allAssets, z.id)
-          const isBull    = avg >= 0
-          const intensity = Math.min(1, Math.abs(avg) / 5)
-          const blobColor   = isBull
-            ? `rgba(20,180,80,${0.05 + intensity*0.12})`
-            : `rgba(200,40,60,${0.05 + intensity*0.12})`
-          const borderColor = isBull
-            ? `rgba(40,200,90,${0.2 + intensity*0.3})`
-            : `rgba(210,50,70,${0.2 + intensity*0.3})`
+          const x = (z.cx - z.rx) * INTERNAL_W
+          const y = (z.cy - z.ry) * INTERNAL_H
+          const w = z.rx * 2 * INTERNAL_W
+          const h = z.ry * 2 * INTERNAL_H
           return (
             <g key={z.id}>
-              <ellipse
-                cx={z.cx*INTERNAL_W} cy={z.cy*INTERNAL_H}
-                rx={z.rx*INTERNAL_W} ry={z.ry*INTERNAL_H}
-                fill={blobColor}
-                filter={`url(#glow-${z.id})`}
+              <rect
+                x={x} y={y} width={w} height={h}
+                rx="12" ry="12"
+                fill="none"
+                stroke={z.color}
+                strokeWidth="0.6"
+                opacity="0.2"
+                strokeDasharray="4 3"
               />
-              <ellipse
-                cx={z.cx*INTERNAL_W} cy={z.cy*INTERNAL_H}
-                rx={z.rx*INTERNAL_W} ry={z.ry*INTERNAL_H}
-                fill="none" stroke={borderColor}
-                strokeWidth="1.2" strokeDasharray="6 4"
-              >
-                <animate attributeName="stroke-opacity"
-                  values={isBull?"0.4;1;0.4":"0.3;0.8;0.3"}
-                  dur="3s" repeatCount="indefinite"/>
-                <animate attributeName="rx"
-                  values={`${z.rx*INTERNAL_W};${z.rx*INTERNAL_W*1.02};${z.rx*INTERNAL_W}`}
-                  dur="4s" repeatCount="indefinite"/>
-                <animate attributeName="ry"
-                  values={`${z.ry*INTERNAL_H};${z.ry*INTERNAL_H*1.03};${z.ry*INTERNAL_H}`}
-                  dur="4s" repeatCount="indefinite"/>
-              </ellipse>
               <text
-                x={z.cx*INTERNAL_W}
-                y={(z.cy - z.ry)*INTERNAL_H - 8}
-                textAnchor="middle"
-                fill={isBull?'rgba(40,200,90,0.5)':'rgba(210,60,80,0.5)'}
-                fontSize="9" fontFamily="var(--font-mono)"
-                letterSpacing="0.12em"
+                x={x + 10} y={y + 14}
+                fontSize="9" fontFamily="var(--font-mono)" fontWeight="600"
+                fill={z.color} opacity="0.5"
+                letterSpacing="0.06em"
               >
                 {z.label}
               </text>
@@ -451,11 +422,27 @@ export default function MarketMap({ allAssets, hotspots, onSelectAsset, convertP
               </circle>
 
               {/* Orb body — dark frosted glass with sector tint */}
+              <clipPath id={`clip-${asset.id}`}>
+                <circle r={nr} />
+              </clipPath>
+
               <circle r={nr}
                 fill={`color-mix(in srgb, ${sectorColor} 20%, #1a1d23 80%)`}
                 stroke="rgba(255,255,255,0.08)"
                 strokeWidth="0.5"
               />
+
+              {/* Liquid wave fill — bull green / bear red */}
+              <g clipPath={`url(#clip-${asset.id})`}>
+                <use href="#liquidWave" fill={isUp ? 'rgba(52,211,153,0.55)' : 'rgba(248,113,113,0.55)'} y={nr * 0.05}>
+                  <animateTransform attributeName="transform" type="translate"
+                    from="0 0" to="-90 0" dur="3s" repeatCount="indefinite" />
+                </use>
+                <use href="#liquidWave" fill={isUp ? 'rgba(52,211,153,0.3)' : 'rgba(248,113,113,0.3)'} y={nr * -0.15}>
+                  <animateTransform attributeName="transform" type="translate"
+                    from="-45 0" to="-135 0" dur="4s" repeatCount="indefinite" />
+                </use>
+              </g>
 
               {/* Sector accent — subtle inner ring */}
               <circle r={nr-3} fill="none"
