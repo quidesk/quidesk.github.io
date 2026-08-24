@@ -130,9 +130,9 @@ export default function ShareModal({ isOpen, onClose, data }) {
                 <div style={{ display: 'flex', flexDirection: 'column', gap: '2px' }}>
                   <span style={{ color: '#fff', fontSize: '14px', fontWeight: 900, letterSpacing: '0.2em', lineHeight: 1, fontFamily: 'var(--font-display, system-ui)' }}>QUIDESK</span>
                   <span style={{ color: '#888', fontSize: '9px', fontWeight: 600, letterSpacing: '0.25em', fontFamily: 'var(--font-mono, monospace)' }}>LIVE INTELLIGENCE</span>
+                  <span style={{ color: '#555', fontSize: '11px', fontFamily: 'var(--font-mono, monospace)', fontWeight: 500, marginTop: '4px' }}>quidesk.github.io</span>
                 </div>
               </div>
-              <span style={{ color: '#666', fontSize: '14px', fontFamily: 'var(--font-mono, monospace)', fontWeight: 500 }}>quidesk.github.io</span>
             </div>
             
             {renderData.type === 'asset' && renderData.asset && (
