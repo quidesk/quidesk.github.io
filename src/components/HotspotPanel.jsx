@@ -71,43 +71,43 @@ export default function HotspotPanel({ hotspots, allAssets, onSelect }) {
 const s = {
   list: { display:'flex', flexDirection:'column' },
   item: {
-    display:'flex', alignItems:'center', gap:'10px',
-    padding:'10px 14px', cursor:'pointer',
+    display:'flex', alignItems:'center', gap:'12px',
+    padding:'12px 20px', cursor:'pointer',
     borderBottom:'1px solid var(--border-subtle)',
-    transition:'background 0.1s ease', position:'relative',
+    transition:'background 0.2s ease', position:'relative',
   },
   sevBar: {
-    width:'3px', height:'32px', borderRadius:'2px', flexShrink:0,
+    width:'4px', height:'36px', borderRadius:'2px', flexShrink:0,
   },
   itemBody: { flex:1, minWidth:0 },
   itemTop: {
-    display:'flex', alignItems:'center', gap:'7px', marginBottom:'2px',
+    display:'flex', alignItems:'center', gap:'8px', marginBottom:'4px',
   },
   symbol: {
-    fontFamily:'var(--font-mono)', fontSize:'11px', fontWeight:500,
+    fontFamily:'var(--font-mono)', fontSize:'12px', fontWeight:600,
     color:'var(--text-primary)',
   },
   typeBadge: {
-    fontFamily:'var(--font-mono)', fontSize:'8px', letterSpacing:'0.08em',
-    border:'1px solid', borderRadius:'2px', padding:'0 5px', lineHeight:'14px',
+    fontFamily:'var(--font-mono)', fontSize:'9px', letterSpacing:'0.04em',
+    border:'1px solid', borderRadius:'4px', padding:'0 6px', lineHeight:'16px',
   },
   signal: {
-    fontFamily:'var(--font-body)', fontSize:'11px',
+    fontFamily:'var(--font-body)', fontSize:'12px',
     color:'var(--text-secondary)', whiteSpace:'nowrap',
     overflow:'hidden', textOverflow:'ellipsis',
   },
   itemRight: { textAlign:'right', flexShrink:0 },
   empty: {
     display:'flex', flexDirection:'column', alignItems:'center',
-    justifyContent:'center', padding:'32px 16px', gap:'6px',
+    justifyContent:'center', padding:'40px 16px', gap:'8px',
   },
   emptyIcon: {
     fontSize:'24px', color:'var(--text-dim)', lineHeight:1,
   },
   emptyText: {
-    fontFamily:'var(--font-mono)', fontSize:'11px', color:'var(--text-secondary)',
+    fontFamily:'var(--font-mono)', fontSize:'12px', color:'var(--text-secondary)',
   },
   emptySub: {
-    fontFamily:'var(--font-body)', fontSize:'11px', color:'var(--text-dim)',
+    fontFamily:'var(--font-body)', fontSize:'12px', color:'var(--text-dim)',
   },
 };

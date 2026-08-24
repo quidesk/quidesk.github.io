@@ -149,37 +149,43 @@ export default function NewsSignals({ news, loading, lastFetch, onRefresh, layou
                     </div>
                   </div>
                 </a>
-                <button
-                  style={{
-                    background: 'var(--bg-surface)', 
-                    border: '1px solid var(--border-subtle)', 
-                    borderRadius: '4px',
-                    cursor: 'pointer', 
-                    padding: '3px 6px', 
-                    display: 'flex', 
-                    alignItems: 'center', 
-                    color: 'var(--text-secondary)',
-                    transition: 'all 0.15s ease'
-                  }}
-                  onMouseEnter={e => {
-                    e.currentTarget.style.borderColor = 'var(--accent)'
-                    e.currentTarget.style.color = 'var(--accent)'
-                    e.currentTarget.style.background = 'var(--accent-dim)'
-                  }}
-                  onMouseLeave={e => {
-                    e.currentTarget.style.borderColor = 'var(--border-subtle)'
-                    e.currentTarget.style.color = 'var(--text-secondary)'
-                    e.currentTarget.style.background = 'var(--bg-surface)'
-                  }}
-                  onClick={(e) => {
-                    e.preventDefault()
-                    e.stopPropagation()
-                    setShareItem(item)
-                  }}
-                  title="Share Insight"
-                >
-                  <Share2 size={13} style={{ color: 'inherit' }} />
-                </button>
+              <button
+                style={{
+                  background: 'var(--bg-overlay)', 
+                  border: '1px solid var(--border-subtle)', 
+                  borderRadius: '6px',
+                  cursor: 'pointer', 
+                  padding: '4px 10px', 
+                  display: 'flex', 
+                  alignItems: 'center',
+                  gap: '6px',
+                  color: 'var(--text-primary)',
+                  fontFamily: 'var(--font-body)',
+                  fontSize: '11px',
+                  fontWeight: 500,
+                  transition: 'all 0.2s ease',
+                  boxShadow: '0 2px 4px rgba(0,0,0,0.1)'
+                }}
+                onMouseEnter={e => {
+                  e.currentTarget.style.borderColor = 'var(--accent)'
+                  e.currentTarget.style.color = 'var(--accent)'
+                  e.currentTarget.style.background = 'var(--accent-dim)'
+                }}
+                onMouseLeave={e => {
+                  e.currentTarget.style.borderColor = 'var(--border-subtle)'
+                  e.currentTarget.style.color = 'var(--text-primary)'
+                  e.currentTarget.style.background = 'var(--bg-overlay)'
+                }}
+                onClick={(e) => {
+                  e.preventDefault()
+                  e.stopPropagation()
+                  setShareItem(item)
+                }}
+                title="Share Insight"
+              >
+                <Share2 size={12} style={{ color: 'inherit' }} />
+                Share
+              </button>
               </div>
             )
           })
@@ -201,43 +207,46 @@ const s = {
   wrap: {
     background: 'var(--bg-card)',
     border: '1px solid var(--border-subtle)',
-    borderRadius: '10px',
+    borderRadius: '12px',
     overflow: 'hidden',
     display: 'flex',
     flexDirection: 'column',
+    boxShadow: 'inset 0 1px 0 rgba(255,255,255,0.06), 0 4px 20px rgba(0,0,0,0.12)',
+    backdropFilter: 'blur(16px)'
   },
   header: {
     display: 'flex',
     justifyContent: 'space-between',
     alignItems: 'center',
-    padding: '10px 14px',
+    padding: '16px 20px',
     borderBottom: '1px solid var(--border-subtle)',
-    background: 'var(--bg-surface)',
+    background: 'var(--bg-overlay)',
   },
   headerLeft: {
-    display: 'flex', alignItems: 'center', gap: '7px',
+    display: 'flex', alignItems: 'center', gap: '8px',
   },
   title: {
-    fontFamily: 'var(--font-mono)',
-    fontSize: '10px', fontWeight: 500,
-    color: 'var(--text-primary)', letterSpacing: '0.12em',
+    fontFamily: 'var(--font-body)',
+    fontSize: '14px', fontWeight: 600,
+    color: 'var(--text-primary)', letterSpacing: '-0.01em',
   },
   subtitle: {
-    fontFamily: 'var(--font-mono)',
-    fontSize: '9px', color: 'var(--text-dim)', letterSpacing: '0.06em',
+    fontFamily: 'var(--font-body)',
+    fontSize: '12px', color: 'var(--text-secondary)',
   },
   headerRight: {
     display: 'flex', alignItems: 'center', gap: '8px',
   },
   lastFetch: {
-    fontFamily: 'var(--font-mono)', fontSize: '9px', color: 'var(--text-dim)',
+    fontFamily: 'var(--font-mono)', fontSize: '10px', color: 'var(--text-secondary)',
   },
   refreshBtn: {
-    background: 'none', border: 'none', cursor: 'pointer',
-    padding: '2px', display: 'flex', alignItems: 'center',
+    background: 'none', border: '1px solid var(--border-subtle)', cursor: 'pointer',
+    padding: '6px', borderRadius: '6px', display: 'flex', alignItems: 'center',
+    transition: 'border-color 0.2s'
   },
   filters: {
-    display: 'flex', gap: '5px', padding: '8px 14px',
+    display: 'flex', gap: '6px', padding: '12px 20px',
     borderBottom: '1px solid var(--border-subtle)',
     flexWrap: 'wrap',
   },
@@ -251,43 +260,49 @@ const s = {
   },
   list: {
     overflowY: 'auto',
-    maxHeight: '340px',
+    maxHeight: '400px',
     scrollbarWidth: 'thin',
   },
   loading: {
     display: 'flex', alignItems: 'center', gap: '8px',
-    padding: '20px 14px',
+    padding: '24px 20px',
   },
   loadingDot: {
-    width: '6px', height: '6px', borderRadius: '50%',
+    width: '8px', height: '8px', borderRadius: '50%',
     background: 'var(--bull)',
     animation: 'pulseDot 1.2s ease-in-out infinite',
   },
   loadingText: {
-    fontFamily: 'var(--font-mono)', fontSize: '11px', color: 'var(--text-dim)',
+    fontFamily: 'var(--font-mono)', fontSize: '12px', color: 'var(--text-secondary)',
   },
   item: {
-    display: 'flex', alignItems: 'flex-start', gap: '10px',
-    padding: '9px 14px',
+    display: 'flex', alignItems: 'flex-start', gap: '12px',
+    padding: '14px 20px',
     borderBottom: '1px solid var(--border-subtle)',
     textDecoration: 'none',
     cursor: 'pointer',
-    transition: 'background 0.1s',
+    transition: 'background 0.2s',
   },
   itemLeft: {
-    paddingTop: '4px', flexShrink: 0,
+    paddingTop: '6px', flexShrink: 0,
   },
   dot: {
-    display: 'block', width: '5px', height: '5px', borderRadius: '50%',
+    display: 'block', width: '6px', height: '6px', borderRadius: '50%',
   },
-  itemBody: { flex: 1, minWidth: 0 },
+  itemBody: { flex: 1, minWidth: 0, display: 'flex', flexDirection: 'column', gap: '4px' },
   itemTitle: {
-    fontFamily: 'var(--font-body)', fontSize: '12px', fontWeight: 500,
-    color: 'var(--text-primary)', lineHeight: 1.4,
-    whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis',
+    fontFamily: 'var(--font-body)',
+    fontSize: '13px', fontWeight: 500, lineHeight: 1.4,
+    color: 'var(--text-primary)',
+    display: '-webkit-box',
+    WebkitLineClamp: 2,
+    WebkitBoxOrient: 'vertical',
+    overflow: 'hidden',
   },
   itemMeta: {
-    display: 'flex', alignItems: 'center', gap: '4px', marginTop: '3px', flexWrap: 'wrap',
+    display: 'flex', alignItems: 'center', gap: '8px',
+    fontFamily: 'var(--font-mono)', fontSize: '11px',
+    color: 'var(--text-secondary)', flexWrap: 'wrap',
   },
   itemSource: {
     fontFamily: 'var(--font-mono)', fontSize: '9px', letterSpacing: '0.04em',

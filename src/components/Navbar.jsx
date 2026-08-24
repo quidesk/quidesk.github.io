@@ -160,11 +160,11 @@ const s = {
     background:'var(--bg-overlay)',
     backdropFilter:'blur(24px)',
     borderBottom:'1px solid var(--border-subtle)',
-    boxShadow:'0 1px 0 rgba(240,165,0,0.06)',
+    boxShadow: '0 4px 24px rgba(0,0,0,0.2)'
   },
   inner: {
     display:'flex', alignItems:'center', gap:'0',
-    padding:'0 24px', minHeight:'84px',
+    padding:'0 24px', minHeight:'64px',
     maxWidth:'1700px', margin:'0 auto',
   },
   brand: {
@@ -174,39 +174,38 @@ const s = {
   },
   brandText: { display:'flex', flexDirection:'column', gap:'1px' },
   brandName: {
-    fontFamily:'var(--font-display)', fontSize:'15px', fontWeight:800,
-    color:'var(--text-primary)', letterSpacing:'0.12em', textAlign:'left',
+    fontFamily:'var(--font-display)', fontSize:'16px', fontWeight:700,
+    color:'var(--text-primary)', letterSpacing:'-0.01em', textAlign:'left',
   },
   brandTag: {
-    fontFamily:'var(--font-mono)', fontSize:'9px',
-    color:'var(--text-dim)', letterSpacing:'0.08em',
+    fontFamily:'var(--font-mono)', fontSize:'10px',
+    color:'var(--text-dim)', letterSpacing:'0.02em',
   },
   divider: {
-    width:'1px', height:'32px',
+    width:'1px', height:'24px',
     background:'var(--border-mid)',
-    margin:'0 20px', flexShrink:0,
+    margin:'0 24px', flexShrink:0,
   },
   tabs: {
-    display:'flex', gap:'2px', flex:1,
+    display:'flex', gap:'6px', flex:1,
     overflowX:'auto', scrollbarWidth:'none',
   },
   tab: {
-    position:'relative', background:'none', border:'none',
+    position:'relative', background:'none', border:'1px solid transparent',
     color:'var(--text-dim)', fontFamily:'var(--font-body)',
-    fontSize:'12px', fontWeight:500,
-    padding:'6px 11px', cursor:'pointer',
-    transition:'color 0.15s', borderRadius:'6px',
-    whiteSpace:'nowrap', display:'flex', alignItems:'center', gap:'5px',
+    fontSize:'13px', fontWeight:500,
+    padding:'7px 12px', cursor:'pointer',
+    transition:'all 0.2s', borderRadius:'8px',
+    whiteSpace:'nowrap', display:'flex', alignItems:'center', gap:'6px',
   },
   tabOn: {
-    color:'var(--text-primary)',
-    background:'rgba(128,128,128,0.08)',
+    color:'var(--text-primary)', fontWeight: 600,
+    background:'var(--bg-card)',
+    borderColor:'var(--border-subtle)',
+    boxShadow:'inset 0 1px 0 rgba(255,255,255,0.06), 0 2px 10px rgba(0,0,0,0.1)'
   },
   tabBar: {
-    position:'absolute', bottom:0, left:'50%',
-    transform:'translateX(-50%)',
-    width:'50%', height:'2px',
-    background:'var(--accent)', borderRadius:'1px',
+    display: 'none'
   },
   hotBadge: {
     fontFamily:'var(--font-mono)', fontSize:'9px',

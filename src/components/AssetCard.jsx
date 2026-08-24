@@ -97,33 +97,39 @@ export default function AssetCard({ asset, onClick, isWatched, onToggleWatch, co
             <span className={isUp ? 'badge badge-bull' : 'badge badge-bear'}>
               {isUp ? '▲' : '▼'} {formatChange(asset.change)}
             </span>
-            <button
-              style={{
-                background: 'var(--bg-surface)', 
-                border: '1px solid var(--border-subtle)', 
-                borderRadius: '4px',
-                cursor: 'pointer', 
-                padding: '3px 6px', 
-                display: 'flex', 
-                alignItems: 'center', 
-                color: 'var(--text-secondary)',
-                transition: 'all 0.15s ease'
-              }}
-              onMouseEnter={e => {
-                e.currentTarget.style.borderColor = 'var(--accent)'
-                e.currentTarget.style.color = 'var(--accent)'
-                e.currentTarget.style.background = 'var(--accent-dim)'
-              }}
-              onMouseLeave={e => {
-                e.currentTarget.style.borderColor = 'var(--border-subtle)'
-                e.currentTarget.style.color = 'var(--text-secondary)'
-                e.currentTarget.style.background = 'var(--bg-surface)'
-              }}
-              onClick={handleShareClick}
-              title="Share insight card"
-            >
-              <Share2 size={13} style={{ color: 'inherit' }} />
-            </button>
+              <button
+                style={{
+                  background: 'var(--bg-overlay)', 
+                  border: '1px solid var(--border-subtle)', 
+                  borderRadius: '6px',
+                  cursor: 'pointer', 
+                  padding: '4px 10px', 
+                  display: 'flex', 
+                  alignItems: 'center',
+                  gap: '6px',
+                  color: 'var(--text-primary)',
+                  fontFamily: 'var(--font-body)',
+                  fontSize: '11px',
+                  fontWeight: 500,
+                  transition: 'all 0.2s ease',
+                  boxShadow: '0 2px 4px rgba(0,0,0,0.1)'
+                }}
+                onMouseEnter={e => {
+                  e.currentTarget.style.borderColor = 'var(--accent)'
+                  e.currentTarget.style.color = 'var(--accent)'
+                  e.currentTarget.style.background = 'var(--accent-dim)'
+                }}
+                onMouseLeave={e => {
+                  e.currentTarget.style.borderColor = 'var(--border-subtle)'
+                  e.currentTarget.style.color = 'var(--text-primary)'
+                  e.currentTarget.style.background = 'var(--bg-overlay)'
+                }}
+                onClick={handleShareClick}
+                title="Share insight card"
+              >
+                <Share2 size={12} style={{ color: 'inherit' }} />
+                Share
+              </button>
             {onToggleWatch && (
               <button
                 style={{ background:'none', border:'none', cursor:'pointer', padding:'2px', display:'flex', alignItems:'center', lineHeight:1 }}

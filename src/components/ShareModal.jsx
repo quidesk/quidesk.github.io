@@ -15,9 +15,9 @@ export default function ShareModal({ isOpen, onClose, data }) {
       // Generate image immediately on next frame
       requestAnimationFrame(() => {
         toPng(nodeRef.current, { 
-          pixelRatio: 2, 
+          pixelRatio: 1.5, 
           backgroundColor: '#0a0a0a',
-          skipFonts: true, // drastically speeds up generation
+          skipFonts: true, 
         })
           .then((dataUrl) => {
             setImgUrl(dataUrl)

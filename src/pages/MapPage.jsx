@@ -220,57 +220,58 @@ export default function MapPage({ data, allAssets, hotspots, watchlistProps, con
 
 const s = {
   page: { padding:'24px 28px', maxWidth:'1700px', margin:'0 auto' },
-  layout: { display:'grid', gridTemplateColumns:'1fr 300px', gap:'24px', alignItems:'start', marginBottom:'32px' },
+  layout: { display:'grid', gridTemplateColumns:'1fr 340px', gap:'24px', alignItems:'start', marginBottom:'48px' },
   mapCol: { display:'flex', flexDirection:'column', gap:'0' },
   mapHeader: {
-    display:'flex', justifyContent:'space-between', alignItems:'flex-start',
-    marginBottom:'16px', flexWrap:'wrap', gap:'12px',
+    display:'flex', justifyContent:'space-between', alignItems:'flex-end',
+    marginBottom:'20px', flexWrap:'wrap', gap:'16px',
   },
   mapTitle: {
-    fontFamily:'var(--font-display)', fontSize:'18px', fontWeight:700,
-    color:'var(--text-primary)', letterSpacing:'0.04em',
+    fontFamily:'var(--font-display)', fontSize:'28px', fontWeight:700,
+    color:'var(--text-primary)', letterSpacing:'-0.02em', lineHeight:1,
   },
   mapSub: {
-    fontFamily:'var(--font-body)', fontSize:'12px', color:'var(--text-dim)', marginTop:'2px',
+    fontFamily:'var(--font-body)', fontSize:'13px', color:'var(--text-secondary)', marginTop:'8px',
   },
   sectorPill: {
-    display:'flex', alignItems:'center', gap:'5px',
-    background:'var(--bg-surface)', border:'1px solid var(--border-subtle)',
-    borderRadius:'6px', padding:'4px 12px',
+    display:'flex', alignItems:'center', gap:'6px',
+    background:'var(--bg-card)', border:'1px solid var(--border-subtle)',
+    borderRadius:'8px', padding:'6px 14px',
+    boxShadow: 'inset 0 1px 0 rgba(255,255,255,0.04)',
   },
-  sidebar: { display:'flex', flexDirection:'column', gap:'16px' },
+  sidebar: { display:'flex', flexDirection:'column', gap:'24px' },
   sideCard: {
     background:'var(--bg-card)', border:'1px solid var(--border-subtle)', borderRadius:'12px',
     overflow:'hidden',
-    backdropFilter: 'blur(16px)',
-    boxShadow: '0 4px 20px rgba(0,0,0,0.04)'
+    boxShadow: 'inset 0 1px 0 rgba(255,255,255,0.06), 0 4px 20px rgba(0,0,0,0.12)',
+    backdropFilter: 'blur(16px)'
   },
   sideHeader: {
     display:'flex', justifyContent:'space-between', alignItems:'center',
-    padding:'14px 16px', borderBottom:'1px solid var(--border-subtle)',
-    background:'var(--bg-surface)',
+    padding:'16px 20px', borderBottom:'1px solid var(--border-subtle)',
+    background:'var(--bg-overlay)',
   },
   sideTitle: {
-    fontFamily:'var(--font-display)', fontSize:'12px', fontWeight:600,
-    color:'var(--text-primary)', letterSpacing:'0.06em',
+    fontFamily:'var(--font-body)', fontSize:'14px', fontWeight:600,
+    color:'var(--text-primary)', letterSpacing:'-0.01em',
   },
   moversSection: {},
   moverRow: {
-    display:'flex', alignItems:'center', gap:'8px',
-    padding:'9px 16px', cursor:'pointer', transition:'background 0.15s',
+    display:'flex', alignItems:'center', gap:'12px',
+    padding:'12px 20px', cursor:'pointer', transition:'background 0.2s',
     borderBottom:'1px solid var(--border-subtle)',
   },
-  moverSym: { fontFamily:'var(--font-mono)', fontSize:'12px', color:'var(--text-primary)', flex:1, fontWeight:500 },
-  moverPrice: { fontFamily:'var(--font-mono)', fontSize:'11px', color:'var(--text-secondary)' },
-  moverChg: { fontFamily:'var(--font-mono)', fontSize:'11px', minWidth:'52px', textAlign:'right' },
-  sectorsStrip: { display:'flex', flexDirection:'column', gap:'24px' },
+  moverSym: { fontFamily:'var(--font-mono)', fontSize:'13px', color:'var(--text-primary)', flex:1, fontWeight:600 },
+  moverPrice: { fontFamily:'var(--font-mono)', fontSize:'12px', color:'var(--text-secondary)' },
+  moverChg: { fontFamily:'var(--font-mono)', fontSize:'12px', minWidth:'56px', textAlign:'right', fontWeight:600 },
+  sectorsStrip: { display:'flex', flexDirection:'column', gap:'32px' },
   sectorBlock: {},
   sectorBlockHeader: {
-    display:'flex', alignItems:'center', gap:'8px', marginBottom:'12px',
+    display:'flex', alignItems:'center', gap:'12px', marginBottom:'16px',
   },
   sectorCards: {
     display:'grid',
-    gridTemplateColumns:'repeat(auto-fill, minmax(160px, 1fr))',
-    gap:'12px',
+    gridTemplateColumns:'repeat(auto-fill, minmax(180px, 1fr))',
+    gap:'16px',
   },
 };
