@@ -176,18 +176,17 @@ export default function ShareModal({ isOpen, onClose, data }) {
                 <div style={{ color: '#fff', fontSize: '16px', fontWeight: 900, letterSpacing: '0.1em', marginBottom: '2px' }}>MARKET HOTSPOT</div>
                 <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '6px' }}>
                   {renderData.assets.map(a => {
-                    let dSym = a.symbol;
-                    if (dSym.includes('/')) dSym = dSym.split('/')[0];
-                    else if (dSym.endsWith('USDT')) dSym = dSym.replace('USDT', '');
-                    else if (dSym.endsWith('USD')) dSym = dSym.replace('USD', '');
-                    if (dSym.length > 5) dSym = dSym.substring(0, 5);
+                    let cName = a.name;
+                    if (cName.includes('(')) cName = cName.split('(')[0].trim();
+                    if (cName === 'US Dollar / INR') cName = 'USD / INR'; // Keep it slightly compact so it doesn't wrap
+                    if (cName === 'Euro / INR') cName = 'EUR / INR';
 
                     return (
                       <div key={a.id} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '8px 10px', background: 'rgba(255,255,255,0.04)', borderRadius: '6px', border: '1px solid rgba(255,255,255,0.06)' }}>
-                        <div style={{ display: 'flex', flexDirection: 'column', gap: '1px' }}>
-                          <span style={{ color: '#fff', fontSize: '14px', fontWeight: 900 }}>{dSym}</span>
+                        <div style={{ display: 'flex', flexDirection: 'column', gap: '1px', flex: 1, minWidth: 0 }}>
+                          <span style={{ color: '#fff', fontSize: '13px', fontWeight: 800, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{cName}</span>
                         </div>
-                        <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: '1px' }}>
+                        <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: '1px', flexShrink: 0, marginLeft: '8px' }}>
                           <span style={{ color: '#fff', fontSize: '13px', fontWeight: 700 }}>${a.price.toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2})}</span>
                           <span style={{ color: a.change >= 0 ? '#34d399' : '#f87171', fontSize: '10px', fontWeight: 800 }}>
                             {a.change >= 0 ? '+' : ''}{a.change.toFixed(2)}%
