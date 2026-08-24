@@ -124,10 +124,10 @@ export default function ShareModal({ isOpen, onClose, data }) {
           <div ref={nodeRef} style={s.shareCard}>
             <div style={s.cardHeader}>
               <div style={{ display: 'flex', alignItems: 'center', gap: '16px' }}>
-                <Logo size={72} />
-                <div style={{ display: 'flex', flexDirection: 'column', gap: '3px' }}>
-                  <span style={{ color: '#fff', fontSize: '20px', fontWeight: 900, letterSpacing: '0.15em', lineHeight: 1, fontFamily: 'var(--font-display, system-ui)' }}>QUIDESK</span>
-                  <span style={{ color: '#888', fontSize: '11px', fontWeight: 600, letterSpacing: '0.25em', fontFamily: 'var(--font-mono, monospace)' }}>LIVE INTELLIGENCE</span>
+                <Logo size={120} />
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '2px' }}>
+                  <span style={{ color: '#fff', fontSize: '14px', fontWeight: 900, letterSpacing: '0.2em', lineHeight: 1, fontFamily: 'var(--font-display, system-ui)' }}>QUIDESK</span>
+                  <span style={{ color: '#888', fontSize: '9px', fontWeight: 600, letterSpacing: '0.25em', fontFamily: 'var(--font-mono, monospace)' }}>LIVE INTELLIGENCE</span>
                 </div>
               </div>
               <span style={{ color: '#666', fontSize: '14px', fontFamily: 'var(--font-mono, monospace)', fontWeight: 500 }}>quidesk.github.io</span>
