@@ -123,10 +123,14 @@ export default function ShareModal({ isOpen, onClose, data }) {
         <div style={s.hiddenNodeWrapper}>
           <div ref={nodeRef} style={s.shareCard}>
             <div style={s.cardHeader}>
-              <div style={s.brand}>
-                <Logo size={80} />
+              <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+                <Logo size={48} />
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '2px' }}>
+                  <span style={{ color: '#fff', fontSize: '28px', fontWeight: 900, letterSpacing: '0.1em', lineHeight: 1, fontFamily: 'var(--font-display, system-ui)' }}>QUIDESK</span>
+                  <span style={{ color: '#888', fontSize: '13px', fontWeight: 600, letterSpacing: '0.15em', fontFamily: 'var(--font-mono, monospace)' }}>LIVE INTELLIGENCE</span>
+                </div>
               </div>
-              <span style={s.watermark}>quidesk.github.io</span>
+              <span style={{ color: '#666', fontSize: '14px', fontFamily: 'var(--font-mono, monospace)', fontWeight: 500 }}>quidesk.github.io</span>
             </div>
             
             {renderData.type === 'asset' && renderData.asset && (
