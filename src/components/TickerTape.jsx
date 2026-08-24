@@ -16,7 +16,9 @@ export default function TickerTape({ allAssets }) {
             return (
               <span key={`${a.id}-${i}`} style={s.item}>
                 <span style={s.sym}>{a.symbol}</span>
-                <span style={s.price}>{a.pricePrefix ? `${a.pricePrefix}${a.price.toLocaleString('en-US',{minimumFractionDigits:2,maximumFractionDigits:a.price>100?2:4})}` : formatPrice(a.price)}</span>
+                <span style={s.price}>
+                  {a.pricePrefix || ''}{formatPrice(a.price).replace('$', a.pricePrefix ? '' : '$')}
+                </span>
                 <span style={{ ...s.chg, color: up ? 'var(--bull)' : 'var(--bear)' }}>
                   {up ? '▲' : '▼'}{Math.abs(a.change).toFixed(2)}%
                 </span>
@@ -64,17 +66,25 @@ const s = {
   item: {
     display:'inline-flex', alignItems:'center', gap:'6px',
     padding:'0 2px',
+    flexShrink: 0,
+    whiteSpace: 'nowrap',
   },
   sym: {
     fontFamily:'var(--font-mono)', fontSize:'10px', fontWeight:500,
     color:'var(--text-secondary)', letterSpacing:'0.03em',
+    flexShrink: 0,
+    whiteSpace: 'nowrap',
   },
   price: {
     fontFamily:'var(--font-mono)', fontSize:'11px',
     color:'var(--text-primary)',
+    flexShrink: 0,
+    whiteSpace: 'nowrap',
   },
   chg: {
     fontFamily:'var(--font-mono)', fontSize:'10px',
+    flexShrink: 0,
+    whiteSpace: 'nowrap',
   },
   sep: {
     display:'inline-block', width:'1px', height:'12px',
