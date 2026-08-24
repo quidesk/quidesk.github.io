@@ -42,7 +42,7 @@ export const SECTOR_META = {
   crypto:      { label:'Crypto',      color:'#a78bfa', icon:'-+', cssVar:'--sector-crypto' },
   metals:      { label:'Metals',      color:'#f0a500', icon:'-Z', cssVar:'--sector-metals' },
   energy:      { label:'Energy',      color:'#f97316', icon:'-%', cssVar:'--sector-energy' },
-  forex:       { label:'Forex',       color:'#22d3ee', icon:',', cssVar:'--sector-forex' },
+  forex:       { label:'Forex',       color:'#8b949e', icon:'¥', cssVar:'--sector-forex' },
 };
 
 export const MARKET_DATA = {

@@ -210,8 +210,13 @@ export default function MarketMap({ allAssets, hotspots, onSelectAsset, convertP
     return () => cancelAnimationFrame(animFrameRef.current)
   }, [allAssets.length])
 
-  // Circle radius is now constant — always computed from fixed INTERNAL_W
-  const nr         = Math.max(18, Math.min(26, INTERNAL_W * 0.024))  // always 21.6
+  // Circle radius helper - scale dynamically based on absolute percentage change
+  const getAssetRadius = useCallback((asset) => {
+    const baseR = Math.max(16, Math.min(24, INTERNAL_W * 0.022))
+    const extraR = Math.min(28, Math.abs(asset.change) * 4) // +0 to 28px depending on volatility
+    return baseR + extraR
+  }, [])
+
   const activeId   = hovered || selected
   const hotspotIds = new Set(hotspots.map(h => h.assetId))
 
@@ -238,6 +243,9 @@ export default function MarketMap({ allAssets, hotspots, onSelectAsset, convertP
       const scale = INTERNAL_W > 0 ? rect.width / INTERNAL_W : 1
       const absX  = rect.left + pos.x * INTERNAL_W * scale
       const absY  = rect.top  + pos.y * INTERNAL_H * scale
+      
+      const nr = getAssetRadius(asset)
+      
       const tipX  = absX + nr * scale + 8 > window.innerWidth - 300
         ? absX - 296
         : absX + nr * scale + 8
@@ -376,6 +384,8 @@ export default function MarketMap({ allAssets, hotspots, onSelectAsset, convertP
         {allAssets.map(asset => {
           const pos = getPos(asset.id)
           if (!pos) return null
+          
+          const nr        = getAssetRadius(asset)
           const meta      = SECTOR_META[asset.sector] || {}
           const isUp      = asset.change >= 0
           const isHot     = hotspotIds.has(asset.id)
@@ -383,9 +393,7 @@ export default function MarketMap({ allAssets, hotspots, onSelectAsset, convertP
           const absChg    = Math.abs(asset.change)
           const intensity = Math.min(1, absChg / 8)
           const tiltDeg   = Math.min(18, absChg * 2.2) * (isUp ? 1 : -1)
-          const nodeFill  = isUp
-            ? `rgba(30,180,80,${0.12 + intensity*0.20})`
-            : `rgba(200,40,60,${0.12 + intensity*0.20})`
+          
           const nodeStroke = isUp
             ? `rgba(40,210,100,${0.5 + intensity*0.4})`
             : `rgba(220,50,70,${0.5 + intensity*0.4})`
@@ -449,17 +457,17 @@ export default function MarketMap({ allAssets, hotspots, onSelectAsset, convertP
 
               <g transform={`rotate(${-tiltDeg})`}>
                 <text textAnchor="middle" dominantBaseline="central"
-                  fontSize={asset.symbol.length>5?"7":asset.symbol.length>3?"8.5":"9.5"}
+                  fontSize={asset.symbol.length>5 ? Math.max(6, nr/3.8) : asset.symbol.length>3 ? Math.max(7, nr/3.2) : Math.max(8.5, nr/2.8)}
                   fontFamily="var(--font-mono)" fontWeight="700"
-                  fill="#ffffff"
-                  style={{ userSelect:'none', textShadow: '0px 1px 3px rgba(0,0,0,0.8)' }}
+                  fill="#000000"
+                  style={{ userSelect:'none', textShadow: '0px 1px 2px rgba(255,255,255,0.7)' }}
                 >
                   {asset.symbol.length>6?asset.symbol.slice(0,5):asset.symbol}
                 </text>
-                <text y={nr+11} textAnchor="middle"
-                  fontSize="8.5" fontFamily="var(--font-mono)" fontWeight="600"
-                  fill={isUp?'rgba(120,255,160,1)':'rgba(255,120,140,1)'}
-                  style={{ userSelect:'none', textShadow: '0px 1px 3px rgba(0,0,0,0.8)' }}
+                <text y={nr*0.55} textAnchor="middle"
+                  fontSize={Math.max(7.5, nr/3.5)} fontFamily="var(--font-mono)" fontWeight="700"
+                  fill="#000000"
+                  style={{ userSelect:'none', textShadow: '0px 1px 2px rgba(255,255,255,0.8)' }}
                 >
                   {isUp?'+':''}{asset.change.toFixed(1)}%
                 </text>
