@@ -6,12 +6,24 @@ import MiniChart from './MiniChart'
 export default function ShareModal({ isOpen, onClose, data }) {
   const [imgUrl, setImgUrl] = useState(null)
   const [loading, setLoading] = useState(true)
+  const [renderData, setRenderData] = useState(null)
   const nodeRef = useRef(null)
 
+  // 1. Capture snapshot of data when modal opens so live updates don't cause flickering
   useEffect(() => {
-    if (isOpen && data && nodeRef.current) {
-      setLoading(true)
+    if (isOpen && data && !renderData) {
+      setRenderData(data)
+    } else if (!isOpen) {
+      setRenderData(null)
       setImgUrl(null)
+      setLoading(true)
+    }
+  }, [isOpen, data, renderData])
+
+  // 2. Generate image once snapshot is ready
+  useEffect(() => {
+    if (renderData && nodeRef.current && !imgUrl) {
+      setLoading(true)
       // Generate image immediately on next frame
       requestAnimationFrame(() => {
         toPng(nodeRef.current, { 
@@ -29,20 +41,20 @@ export default function ShareModal({ isOpen, onClose, data }) {
           })
       })
     }
-  }, [isOpen, data])
+  }, [renderData, imgUrl])
 
-  if (!isOpen || !data) return null
+  if (!isOpen || !renderData) return null
 
-  const titleText = data.type === 'asset' 
-    ? `Check out the latest on ${data.asset.symbol} via Quidesk!` 
-    : `OSINT Alert: ${data.news.title}`
+  const titleText = renderData.type === 'asset' 
+    ? `Check out the latest on ${renderData.asset.symbol} via Quidesk!` 
+    : `OSINT Alert: ${renderData.news.title}`
   const shareUrl = 'https://quidesk.github.io'
   const combinedText = `${titleText}\n\nLive on ${shareUrl}`
 
   const handleDownload = () => {
     if (!imgUrl) return
     const link = document.createElement('a')
-    link.download = `quidesk-${data.type}-${Date.now()}.png`
+    link.download = `quidesk-${renderData.type}-${Date.now()}.png`
     link.href = imgUrl
     link.click()
   }
@@ -117,35 +129,35 @@ export default function ShareModal({ isOpen, onClose, data }) {
               <span style={s.watermark}>quidesk.github.io</span>
             </div>
             
-            {data.type === 'asset' && data.asset && (
+            {renderData.type === 'asset' && renderData.asset && (
               <div style={s.assetContent}>
                 <div style={s.assetTop}>
                   <div>
-                    <div style={s.assetSymbol}>{data.asset.symbol}</div>
-                    <div style={s.assetName}>{data.asset.name}</div>
+                    <div style={s.assetSymbol}>{renderData.asset.symbol}</div>
+                    <div style={s.assetName}>{renderData.asset.name}</div>
                   </div>
                   <div style={{ textAlign: 'right' }}>
-                    <div style={s.assetPrice}>{data.asset.pricePrefix || '$'}{data.asset.price.toLocaleString(undefined, {minimumFractionDigits:2})}</div>
-                    <div style={{...s.assetChange, color: data.asset.change >= 0 ? '#10b981' : '#ef4444'}}>
-                      {data.asset.change >= 0 ? '+' : ''}{data.asset.change.toFixed(2)}%
+                    <div style={s.assetPrice}>{renderData.asset.pricePrefix || '$'}{renderData.asset.price.toLocaleString(undefined, {minimumFractionDigits:2})}</div>
+                    <div style={{...s.assetChange, color: renderData.asset.change >= 0 ? '#10b981' : '#ef4444'}}>
+                      {renderData.asset.change >= 0 ? '+' : ''}{renderData.asset.change.toFixed(2)}%
                     </div>
                   </div>
                 </div>
                 <div style={s.assetChart}>
                   <MiniChart 
-                    data={data.asset.chartData || []} 
-                    color={data.asset.change >= 0 ? '#10b981' : '#ef4444'} 
+                    data={renderData.asset.chartData || []} 
+                    color={renderData.asset.change >= 0 ? '#10b981' : '#ef4444'} 
                   />
                 </div>
               </div>
             )}
 
-            {data.type === 'news' && data.news && (
+            {renderData.type === 'news' && renderData.news && (
               <div style={s.newsContent}>
                 <div style={s.newsLabel}>OSINT ALERT</div>
-                <div style={s.newsTitle}>"{data.news.title}"</div>
+                <div style={s.newsTitle}>"{renderData.news.title}"</div>
                 <div style={s.newsMeta}>
-                  <span style={{ color: data.news.color || '#4d9eff' }}>{data.news.source}</span>
+                  <span style={{ color: renderData.news.color || '#4d9eff' }}>{renderData.news.source}</span>
                   <span style={{ color: '#555' }}> • </span>
                   <span style={{ color: '#888' }}>Live</span>
                 </div>
