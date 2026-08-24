@@ -260,6 +260,17 @@ export default function MarketMap({ allAssets, hotspots, onSelectAsset, convertP
         style={s.svg}
       >
         <defs>
+          <radialGradient id="sphereGlow" cx="30%" cy="30%" r="70%">
+            <stop offset="0%" stopColor="rgba(255, 255, 255, 0.45)" />
+            <stop offset="30%" stopColor="rgba(255, 255, 255, 0.15)" />
+            <stop offset="100%" stopColor="rgba(0, 0, 0, 0.55)" />
+          </radialGradient>
+          <radialGradient id="sphereEdge" cx="50%" cy="50%" r="50%">
+            <stop offset="85%" stopColor="rgba(0,0,0,0)" />
+            <stop offset="100%" stopColor="rgba(0,0,0,0.5)" />
+          </radialGradient>
+          <path id="liquidWave" d="M 0 0 C 15 -8, 30 -8, 45 0 C 60 8, 75 8, 90 0 C 105 -8, 120 -8, 135 0 C 150 8, 165 8, 180 0 V 100 H 0 Z" />
+          
           {ZONES.map(z => (
             <filter key={z.id} id={`glow-${z.id}`}
               x="-50%" y="-50%" width="200%" height="200%">
@@ -407,33 +418,48 @@ export default function MarketMap({ allAssets, hotspots, onSelectAsset, convertP
                 <circle r={nr+4} fill="none"
                   stroke={nodeStroke} strokeWidth="1.5" opacity="0.8"/>
               )}
-              <circle r={nr} fill={nodeFill} stroke={nodeStroke}
-                strokeWidth={isAct ? 1.8 : 1}
+              
+              <clipPath id={`clip-${asset.id}`}>
+                <circle r={nr} />
+              </clipPath>
+
+              {/* Category Background (Top Half Air) */}
+              <circle r={nr} fill={meta.color || '#333'} opacity="0.8" 
                 style={{
                   filter: isAct||isHot
                     ? `drop-shadow(0 0 ${6+intensity*8}px ${glowColor})`
                     : 'none',
-                  transition:'fill 0.5s ease, stroke 0.5s ease',
                 }}
               />
-              <circle r={nr-5} fill="none"
-                stroke={meta.color||'#fff'}
-                strokeWidth="0.7" opacity="0.45"/>
+              
+              {/* Liquid Wave (Bottom Half) */}
+              <g clipPath={`url(#clip-${asset.id})`}>
+                <use href="#liquidWave" fill={isUp ? '#22c55e' : '#ef4444'} opacity="0.9" y="2">
+                  <animateTransform attributeName="transform" type="translate" from="0 0" to="-90 0" dur="2s" repeatCount="indefinite" />
+                </use>
+                <use href="#liquidWave" fill={isUp ? '#22c55e' : '#ef4444'} opacity="0.5" y="-2">
+                  <animateTransform attributeName="transform" type="translate" from="-45 0" to="-135 0" dur="2.7s" repeatCount="indefinite" />
+                </use>
+              </g>
+
+              {/* 3D Glass Sphere Overlay */}
+              <circle r={nr} fill="url(#sphereGlow)" pointerEvents="none" />
+              <circle r={nr} fill="url(#sphereEdge)" pointerEvents="none" />
+              <circle r={nr} fill="none" stroke="rgba(255,255,255,0.2)" strokeWidth="0.5" pointerEvents="none" />
+
               <g transform={`rotate(${-tiltDeg})`}>
                 <text textAnchor="middle" dominantBaseline="central"
                   fontSize={asset.symbol.length>5?"7":asset.symbol.length>3?"8.5":"9.5"}
-                  fontFamily="var(--font-mono)" fontWeight="500"
-                  fill={isAct
-                    ? (isUp?'rgba(80,240,140,1)':'rgba(255,100,120,1)')
-                    : 'var(--text-primary)'}
-                  style={{ userSelect:'none' }}
+                  fontFamily="var(--font-mono)" fontWeight="700"
+                  fill="#ffffff"
+                  style={{ userSelect:'none', textShadow: '0px 1px 3px rgba(0,0,0,0.8)' }}
                 >
                   {asset.symbol.length>6?asset.symbol.slice(0,5):asset.symbol}
                 </text>
                 <text y={nr+11} textAnchor="middle"
-                  fontSize="8" fontFamily="var(--font-mono)"
-                  fill={isUp?'rgba(50,220,110,0.95)':'rgba(230,70,90,0.95)'}
-                  style={{ userSelect:'none' }}
+                  fontSize="8.5" fontFamily="var(--font-mono)" fontWeight="600"
+                  fill={isUp?'rgba(120,255,160,1)':'rgba(255,120,140,1)'}
+                  style={{ userSelect:'none', textShadow: '0px 1px 3px rgba(0,0,0,0.8)' }}
                 >
                   {isUp?'+':''}{asset.change.toFixed(1)}%
                 </text>
