@@ -39,8 +39,8 @@ function withHistory(asset, vol) {
 
 export const SECTOR_META = {
   equities:    { label:'Equities',    color:'#4d9eff', icon:'-^', cssVar:'--sector-equities' },
-  crypto:      { label:'Crypto',      color:'#a78bfa', icon:'-+', cssVar:'--sector-crypto' },
-  metals:      { label:'Metals',      color:'#f0a500', icon:'-Z', cssVar:'--sector-metals' },
+  crypto:      { label:'Crypto',      color:'#00d4ff', icon:'₿', cssVar:'--sector-crypto' },
+  metals:      { label:'Metals',      color:'#ffd700', icon:'Au', cssVar:'--sector-metals' },
   energy:      { label:'Energy',      color:'#f97316', icon:'-%', cssVar:'--sector-energy' },
   forex:       { label:'Forex',       color:'#8b949e', icon:'¥', cssVar:'--sector-forex' },
 };
