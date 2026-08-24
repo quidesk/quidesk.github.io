@@ -268,17 +268,30 @@ export default function MarketMap({ allAssets, hotspots, onSelectAsset, convertP
         style={s.svg}
       >
         <defs>
-          <radialGradient id="sphereGlow" cx="30%" cy="30%" r="70%">
-            <stop offset="0%" stopColor="rgba(255, 255, 255, 0.45)" />
-            <stop offset="30%" stopColor="rgba(255, 255, 255, 0.15)" />
-            <stop offset="100%" stopColor="rgba(0, 0, 0, 0.55)" />
+          {/* Frosted glass highlight — top-left specular */}
+          <radialGradient id="orbHighlight" cx="35%" cy="30%" r="60%">
+            <stop offset="0%" stopColor="rgba(255,255,255,0.35)" />
+            <stop offset="50%" stopColor="rgba(255,255,255,0.08)" />
+            <stop offset="100%" stopColor="rgba(255,255,255,0)" />
           </radialGradient>
-          <radialGradient id="sphereEdge" cx="50%" cy="50%" r="50%">
-            <stop offset="85%" stopColor="rgba(0,0,0,0)" />
-            <stop offset="100%" stopColor="rgba(0,0,0,0.5)" />
+
+          {/* Soft edge darkening for depth */}
+          <radialGradient id="orbDepth" cx="50%" cy="50%" r="50%">
+            <stop offset="0%" stopColor="rgba(0,0,0,0)" />
+            <stop offset="75%" stopColor="rgba(0,0,0,0)" />
+            <stop offset="100%" stopColor="rgba(0,0,0,0.25)" />
           </radialGradient>
-          <path id="liquidWave" d="M 0 0 C 15 -8, 30 -8, 45 0 C 60 8, 75 8, 90 0 C 105 -8, 120 -8, 135 0 C 150 8, 165 8, 180 0 V 100 H 0 Z" />
-          
+
+          {/* Glow filter for sentiment rings */}
+          <filter id="ringGlow" x="-50%" y="-50%" width="200%" height="200%">
+            <feGaussianBlur stdDeviation="3" result="blur"/>
+            <feMerge>
+              <feMergeNode in="blur"/>
+              <feMergeNode in="SourceGraphic"/>
+            </feMerge>
+          </filter>
+
+          {/* Zone blob filters */}
           {ZONES.map(z => (
             <filter key={z.id} id={`glow-${z.id}`}
               x="-50%" y="-50%" width="200%" height="200%">
@@ -380,7 +393,7 @@ export default function MarketMap({ allAssets, hotspots, onSelectAsset, convertP
           )
         })}
 
-        {/* Asset nodes */}
+        {/* Asset nodes — Frosted Glass Orbs */}
         {allAssets.map(asset => {
           const pos = getPos(asset.id)
           if (!pos) return null
@@ -392,18 +405,19 @@ export default function MarketMap({ allAssets, hotspots, onSelectAsset, convertP
           const isAct     = activeId === asset.id
           const absChg    = Math.abs(asset.change)
           const intensity = Math.min(1, absChg / 8)
-          const tiltDeg   = Math.min(18, absChg * 2.2) * (isUp ? 1 : -1)
-          
-          const nodeStroke = isUp
-            ? `rgba(40,210,100,${0.5 + intensity*0.4})`
-            : `rgba(220,50,70,${0.5 + intensity*0.4})`
-          const glowColor = isUp
-            ? `rgba(40,210,100,${0.3 + intensity*0.5})`
-            : `rgba(220,50,70,${0.3 + intensity*0.5})`
+
+          // Sentiment ring color
+          const ringColor = isUp
+            ? `rgba(52,211,153,${0.5 + intensity*0.5})`
+            : `rgba(248,113,113,${0.5 + intensity*0.5})`
+          // Ring thickness scales with volatility
+          const ringWidth = 1.5 + intensity * 2.5
+          // Sector tint for orb interior
+          const sectorColor = meta.color || '#6b7280'
 
           return (
             <g key={asset.id}
-              transform={`translate(${pos.x},${pos.y}) rotate(${tiltDeg})`}
+              transform={`translate(${pos.x},${pos.y})`}
               style={{ cursor:'pointer' }}
               onMouseEnter={() => handleNodeEnter(asset)}
               onMouseLeave={handleNodeLeave}
@@ -412,66 +426,77 @@ export default function MarketMap({ allAssets, hotspots, onSelectAsset, convertP
                 if (onSelectAsset) onSelectAsset(asset)
               }}
             >
+              {/* Hotspot pulse ring */}
               {isHot && (
-                <circle r={nr+5} fill="none"
-                  stroke={isUp?'rgba(40,210,100,0.7)':'rgba(220,50,70,0.7)'}
-                  strokeWidth="1">
+                <circle r={nr+6} fill="none"
+                  stroke={ringColor}
+                  strokeWidth="1" opacity="0.6">
                   <animate attributeName="r"
-                    from={nr+3} to={nr+16} dur="2s" repeatCount="indefinite"/>
+                    from={nr+4} to={nr+18} dur="2s" repeatCount="indefinite"/>
                   <animate attributeName="opacity"
                     from="0.6" to="0" dur="2s" repeatCount="indefinite"/>
                 </circle>
               )}
-              {isAct && (
-                <circle r={nr+4} fill="none"
-                  stroke={nodeStroke} strokeWidth="1.5" opacity="0.8"/>
-              )}
-              
-              <clipPath id={`clip-${asset.id}`}>
-                <circle r={nr} />
-              </clipPath>
 
-              {/* Category Background (Top Half Air) */}
-              <circle r={nr} fill={meta.color || '#333'} opacity="0.8" 
-                style={{
-                  filter: isAct||isHot
-                    ? `drop-shadow(0 0 ${6+intensity*8}px ${glowColor})`
-                    : 'none',
-                }}
+              {/* Sentiment glow ring — thicker = more volatile */}
+              <circle r={nr+2} fill="none"
+                stroke={ringColor}
+                strokeWidth={ringWidth}
+                opacity={isAct ? 1 : 0.7}
+                filter={isAct || isHot ? 'url(#ringGlow)' : 'none'}
+              >
+                <animate attributeName="opacity"
+                  values={isAct ? '1;0.8;1' : '0.7;0.4;0.7'}
+                  dur="3s" repeatCount="indefinite"/>
+              </circle>
+
+              {/* Orb body — dark frosted glass with sector tint */}
+              <circle r={nr}
+                fill={`color-mix(in srgb, ${sectorColor} 20%, #1a1d23 80%)`}
+                stroke="rgba(255,255,255,0.08)"
+                strokeWidth="0.5"
               />
-              
-              {/* Liquid Wave (Bottom Half) */}
-              <g clipPath={`url(#clip-${asset.id})`}>
-                <use href="#liquidWave" fill={isUp ? '#22c55e' : '#ef4444'} opacity="0.9" y="2">
-                  <animateTransform attributeName="transform" type="translate" from="0 0" to="-90 0" dur="2s" repeatCount="indefinite" />
-                </use>
-                <use href="#liquidWave" fill={isUp ? '#22c55e' : '#ef4444'} opacity="0.5" y="-2">
-                  <animateTransform attributeName="transform" type="translate" from="-45 0" to="-135 0" dur="2.7s" repeatCount="indefinite" />
-                </use>
-              </g>
 
-              {/* 3D Glass Sphere Overlay */}
-              <circle r={nr} fill="url(#sphereGlow)" pointerEvents="none" />
-              <circle r={nr} fill="url(#sphereEdge)" pointerEvents="none" />
-              <circle r={nr} fill="none" stroke="rgba(255,255,255,0.2)" strokeWidth="0.5" pointerEvents="none" />
+              {/* Sector accent — subtle inner ring */}
+              <circle r={nr-3} fill="none"
+                stroke={sectorColor}
+                strokeWidth="0.6" opacity="0.3"
+              />
 
-              <g transform={`rotate(${-tiltDeg})`}>
-                <text textAnchor="middle" dominantBaseline="central"
-                  fontSize={asset.symbol.length>5 ? Math.max(6, nr/3.8) : asset.symbol.length>3 ? Math.max(7, nr/3.2) : Math.max(8.5, nr/2.8)}
-                  fontFamily="var(--font-mono)" fontWeight="700"
-                  fill="#000000"
-                  style={{ userSelect:'none', textShadow: '0px 1px 2px rgba(255,255,255,0.7)' }}
-                >
-                  {asset.symbol.length>6?asset.symbol.slice(0,5):asset.symbol}
-                </text>
-                <text y={nr*0.55} textAnchor="middle"
-                  fontSize={Math.max(7.5, nr/3.5)} fontFamily="var(--font-mono)" fontWeight="700"
-                  fill="#000000"
-                  style={{ userSelect:'none', textShadow: '0px 1px 2px rgba(255,255,255,0.8)' }}
-                >
-                  {isUp?'+':''}{asset.change.toFixed(1)}%
-                </text>
-              </g>
+              {/* Glass specular highlight overlay */}
+              <circle r={nr} fill="url(#orbHighlight)" pointerEvents="none" />
+
+              {/* Edge depth shadow */}
+              <circle r={nr} fill="url(#orbDepth)" pointerEvents="none" />
+
+              {/* Active selection ring */}
+              {isAct && (
+                <circle r={nr+1} fill="none"
+                  stroke="rgba(255,255,255,0.3)" strokeWidth="1"
+                  strokeDasharray="3 2" opacity="0.8">
+                  <animateTransform attributeName="transform" type="rotate"
+                    from="0" to="360" dur="8s" repeatCount="indefinite"/>
+                </circle>
+              )}
+
+              {/* Text: Symbol */}
+              <text textAnchor="middle" dominantBaseline="central" y={-nr*0.12}
+                fontSize={asset.symbol.length>5 ? Math.max(7, nr/3.2) : asset.symbol.length>3 ? Math.max(8, nr/2.8) : Math.max(9.5, nr/2.4)}
+                fontFamily="var(--font-mono)" fontWeight="600"
+                fill="rgba(255,255,255,0.95)"
+                style={{ userSelect:'none' }}
+              >
+                {asset.symbol.length>6?asset.symbol.slice(0,5):asset.symbol}
+              </text>
+
+              {/* Text: Change % */}
+              <text y={nr*0.38} textAnchor="middle"
+                fontSize={Math.max(7, nr/3.2)} fontFamily="var(--font-mono)" fontWeight="600"
+                fill={isUp ? 'rgba(52,211,153,0.95)' : 'rgba(248,113,113,0.95)'}
+                style={{ userSelect:'none' }}
+              >
+                {isUp?'+':''}{asset.change.toFixed(1)}%
+              </text>
             </g>
           )
         })}
