@@ -89,15 +89,15 @@ export default function Navbar({ active, setActive, isLive, setIsLive, hotspotCo
 
           {/* Right controls */}
           <div style={s.right}>
-            <div style={{ display: 'flex', gap: '6px', marginRight: '8px' }}>
-              <button style={{...s.iconBtn, padding: '5px', borderColor: 'transparent'}} onClick={shareFB} title="Share on Facebook">
-                <Facebook size={14} color="var(--text-secondary)"/>
+            <div style={{ display: 'flex', gap: '8px', marginRight: '8px' }}>
+              <button style={{...s.iconBtn, padding: '6px', background: '#1877F2', borderColor: '#1877F2', boxShadow: '0 2px 8px rgba(24,119,242,0.3)'}} onClick={shareFB} title="Share on Facebook">
+                <Facebook size={14} color="#ffffff"/>
               </button>
-              <button style={{...s.iconBtn, padding: '5px', borderColor: 'transparent'}} onClick={shareX} title="Share on X">
-                <XLogo size={14} color="var(--text-secondary)"/>
+              <button style={{...s.iconBtn, padding: '6px', background: '#000000', borderColor: 'rgba(255,255,255,0.2)', boxShadow: '0 2px 8px rgba(0,0,0,0.5)'}} onClick={shareX} title="Share on X">
+                <XLogo size={14} color="#ffffff"/>
               </button>
-              <button style={{...s.iconBtn, padding: '5px', borderColor: 'transparent'}} onClick={copyIG} title="Share on Instagram">
-                <Instagram size={14} color="var(--text-secondary)"/>
+              <button style={{...s.iconBtn, padding: '6px', background: 'linear-gradient(45deg, #f09433 0%, #e6683c 25%, #dc2743 50%, #cc2366 75%, #bc1888 100%)', borderColor: 'transparent', boxShadow: '0 2px 8px rgba(220,39,67,0.3)'}} onClick={copyIG} title="Share on Instagram">
+                <Instagram size={14} color="#ffffff"/>
               </button>
             </div>
 
@@ -153,9 +153,9 @@ export default function Navbar({ active, setActive, isLive, setIsLive, hotspotCo
             <span style={{ fontSize: '9px', color: 'var(--text-secondary)', fontWeight: 500, letterSpacing: '0.01em', paddingLeft: '4px' }}>
               Live Market Intelligence
             </span>
-            <div onClick={(e) => { e.stopPropagation(); handleMobileShare(); }} style={{ padding: '2px 6px', background: 'var(--bg-card)', borderRadius: '4px', border: '1px solid var(--border-subtle)', display: 'flex', alignItems: 'center', gap: '4px', cursor: 'pointer' }}>
-              <Share2 size={10} color="var(--text-primary)" />
-              <span style={{ fontSize: '9px', color: 'var(--text-primary)', fontWeight: 600 }}>Share</span>
+            <div onClick={(e) => { e.stopPropagation(); handleMobileShare(); }} style={{ padding: '3px 8px', background: '#4d9eff', borderRadius: '4px', border: 'none', display: 'flex', alignItems: 'center', gap: '4px', cursor: 'pointer', boxShadow: '0 2px 8px rgba(77, 158, 255, 0.35)' }}>
+              <Share2 size={10} color="#ffffff" />
+              <span style={{ fontSize: '10px', color: '#ffffff', fontWeight: 700 }}>Share</span>
             </div>
           </div>
         </button>
