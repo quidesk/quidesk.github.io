@@ -76,6 +76,7 @@ export const MARKET_DATA = {
     withHistory({ id:'usdchf', symbol:'USD/CHF', name:'US Dollar / CHF',   unit:'CHF', pricePrefix:'Fr', price:0.7993, change:-0.06, volume:'130B', marketCap:'—', sector:'forex' }, 0.002),
     withHistory({ id:'eurgbp', symbol:'EUR/GBP', name:'Euro / GBP',        unit:'GBP', pricePrefix:'£', price:0.8560, change:0.04,  volume:'90B',  marketCap:'—', sector:'forex' }, 0.002),
     withHistory({ id:'usdinr', symbol:'USD/INR', name:'US Dollar / INR',   unit:'INR', pricePrefix:'₹', price:95.73,  change:0.08,  volume:'40B',  marketCap:'—', sector:'forex' }, 0.18),
+    withHistory({ id:'eurinr', symbol:'EUR/INR', name:'Euro / INR',        unit:'INR', pricePrefix:'₹', price:112.20, change:0.15,  volume:'20B',  marketCap:'—', sector:'forex' }, 0.25),
   ],
   energy: [
     withHistory({ id:'wti',   symbol:'USO',      name:'Crude Oil (USO)',   price:75.25,   change:rp(3),  volume:'820M', marketCap:'—', sector:'energy' }, 1.2),

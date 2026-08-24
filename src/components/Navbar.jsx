@@ -152,13 +152,21 @@ export default function Navbar({ active, setActive, isLive, setIsLive, hotspotCo
         data={{ 
           type: 'global', 
           assets: (() => {
-            const targets = ['BTCUSDT', 'ETHUSDT', 'SOLUSDT', 'XAU', 'XAG', 'EUR/USD'];
+            const targets = ['BTC', 'EUR/INR', 'USO', 'XAU/USD', 'USD/INR', 'QQQ'];
             const popular = (allAssets || []).filter(a => targets.includes(a.symbol)).slice(0, 6);
             if (popular.length < 6) {
               const missing = 6 - popular.length;
               popular.push(...(allAssets || []).filter(a => !targets.includes(a.symbol)).slice(0, missing));
             }
-            return popular;
+            // Sort to preserve requested order
+            return popular.sort((a, b) => {
+              const idxA = targets.indexOf(a.symbol);
+              const idxB = targets.indexOf(b.symbol);
+              if (idxA === -1 && idxB === -1) return 0;
+              if (idxA === -1) return 1;
+              if (idxB === -1) return -1;
+              return idxA - idxB;
+            });
           })()
         }} 
       />
