@@ -68,14 +68,16 @@ export default function SectorPage({ sector, assets, watchlistProps, convertPric
       )}
 
       {/* Cards grid */}
-      <div className="fade-up-2 asset-grid" style={s.grid}>
+      <div className="row row-cols-1 row-cols-sm-2 row-cols-md-3 row-cols-xl-5 g-3 fade-up-2">
         {sorted.map(asset => (
-          <AssetCard key={asset.id} asset={asset}
-            onClick={setSelected}
-            isWatched={watchlistProps?.isWatched(asset.id)}
-            onToggleWatch={watchlistProps?.onToggleWatch}
-            convertPrice={convertPrice}
-          />
+          <div className="col" key={asset.id}>
+            <AssetCard asset={asset}
+              onClick={setSelected}
+              isWatched={watchlistProps?.isWatched(asset.id)}
+              onToggleWatch={watchlistProps?.onToggleWatch}
+              convertPrice={convertPrice}
+            />
+          </div>
         ))}
       </div>
 

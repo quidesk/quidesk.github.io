@@ -53,7 +53,7 @@ export default function Navbar({ active, setActive, isLive, setIsLive, hotspotCo
   return (
     <>
       {/* ── Desktop navbar ── */}
-      <nav style={s.nav} className="desktop-only">
+      <nav style={s.nav} className="d-none d-md-block">
         <div style={s.inner}>
 
           {/* Brand — logo + wordmark */}
@@ -131,7 +131,7 @@ export default function Navbar({ active, setActive, isLive, setIsLive, hotspotCo
       </nav>
 
       {/* ── Floating Social Bar (Desktop Only) ── */}
-      <div style={s.floatingShare} className="desktop-only">
+      <div style={s.floatingShare} className="d-none d-md-flex">
         <button style={{...s.iconBtn, padding: '8px', borderRadius: '50%', background: '#25D366', borderColor: '#25D366', boxShadow: '0 2px 8px rgba(37,211,102,0.4)'}} onClick={() => setShowGlobalShare(true)} title="Share on WhatsApp">
           <WhatsappIcon size={16} color="#ffffff"/>
         </button>
@@ -172,7 +172,7 @@ export default function Navbar({ active, setActive, isLive, setIsLive, hotspotCo
       />
 
       {/* ── Mobile top bar ── */}
-      <nav style={s.mobileTop} className="mobile-only">
+      <nav style={s.mobileTop} className="d-md-none">
         <button style={{ ...s.brand, flexDirection: 'column', alignItems: 'flex-start', gap: '2px' }} onClick={() => setActive('map')}>
           <Logo size={180} />
           <div style={{ display: 'flex', alignItems: 'center', gap: '8px', paddingTop: '4px' }}>
@@ -210,7 +210,7 @@ export default function Navbar({ active, setActive, isLive, setIsLive, hotspotCo
       </nav>
 
       {/* ── Mobile bottom nav ── */}
-      <div className="mobile-nav mobile-only">
+      <div className="mobile-nav d-md-none">
         {NAV_TABS.map(t => (
           <button
             key={t.id}

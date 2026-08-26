@@ -75,9 +75,9 @@ export default function ComparePage({ data }) {
         </div>
       </div>
 
-      <div style={s.layout} className='compare-layout'>
+      <div className="row g-4">
         {/* Left: selector */}
-        <div className="fade-up-1" style={s.selector}>
+        <div className="col-12 col-xl-3 fade-up-1" style={s.selector}>
           <div style={s.selectorHeader}>
             <span style={s.selectorTitle}>Select Assets</span>
             <span style={{ fontFamily:'var(--font-mono)', fontSize:'10px', color:'var(--text-dim)' }}>
@@ -130,7 +130,7 @@ export default function ComparePage({ data }) {
         </div>
 
         {/* Right: chart area */}
-        <div style={s.chartArea}>
+        <div className="col-12 col-xl-9" style={s.chartArea}>
           {selectedAssets.length < 2 ? (
             <div style={s.empty}>
               <div style={s.emptyIcon}>◎</div>

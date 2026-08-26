@@ -158,7 +158,6 @@ body::before {
 
 /* ── MOBILE ── */
 @media (max-width:768px) {
-  .desktop-only { display:none !important; }
   .mobile-nav {
     position:fixed; bottom:0; left:0; right:0;
     background:var(--bg-panel); border-top:1px solid var(--border-subtle);
@@ -173,19 +172,7 @@ body::before {
   }
   .mobile-nav-btn.active { color:var(--accent); }
   main { padding-bottom:70px; }
-  .map-layout        { grid-template-columns:1fr !important; }
-  .sector-cards-grid { grid-template-columns:repeat(2,1fr) !important; gap:8px !important; }
-  .asset-grid        { grid-template-columns:repeat(2,1fr) !important; gap:8px !important; }
   .page-wrap         { padding:12px 14px !important; }
-  .stats-bar         { grid-template-columns:repeat(2,1fr) !important; }
-  .charts-row        { flex-direction:column !important; }
-  .compare-layout    { grid-template-columns:1fr !important; }
-  .summary-strip     { grid-template-columns:repeat(2,1fr) !important; }
   .table-scroll      { overflow-x:auto !important; }
   .nav-clock         { display:none !important; }
 }
-@media (max-width:480px) {
-  /* Let compact sector grids stay 2-column on small screens, only big asset grids go to 1fr if needed */
-  .asset-grid { grid-template-columns:1fr !important; }
-}
-@media (min-width:769px) { .mobile-only { display:none !important; } }

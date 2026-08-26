@@ -75,9 +75,9 @@ export default function MapPage({ data, allAssets, hotspots, watchlistProps, con
       </div>
 
       {/* Main layout: map + sidebar */}
-      <div style={s.layout} className="map-layout">
+      <div className="row g-4 mb-5">
         {/* Map — takes most of the space */}
-        <div style={s.mapCol}>
+        <div className="col-12 col-xl-9" style={s.mapCol}>
           <div className="fade-up-1" style={s.mapHeader}>
             <div>
               <div style={s.mapTitle}>Live Market Map</div>
@@ -125,7 +125,7 @@ export default function MapPage({ data, allAssets, hotspots, watchlistProps, con
         </div>
 
         {/* Right sidebar */}
-        <div style={s.sidebar}>
+        <div className="col-12 col-xl-3" style={s.sidebar}>
           {/* Hotspots */}
           <div className="fade-up-2" style={s.sideCard}>
             <div style={s.sideHeader}>
@@ -197,17 +197,18 @@ export default function MapPage({ data, allAssets, hotspots, watchlistProps, con
                 <span style={{ fontFamily:'var(--font-display)', fontSize:'11px', color:'var(--text-primary)', letterSpacing:'0.05em' }}>{meta.label}</span>
                 <div style={{ flex:1, height:'1px', background:`${meta.color}20`, marginLeft:'8px' }} />
               </div>
-              <div style={s.sectorCards} className="sector-cards-grid">
+              <div className="row row-cols-1 row-cols-sm-2 row-cols-lg-3 row-cols-xl-4 g-3">
                 {assets.map(asset => (
-                  <AssetCard
-                    key={asset.id}
-                    asset={asset}
-                    compact
-                    onClick={setSelectedAsset}
-                    isWatched={watchlistProps?.isWatched(asset.id)}
-                    onToggleWatch={watchlistProps?.onToggleWatch}
-                    convertPrice={convertPrice}
-                  />
+                  <div className="col" key={asset.id}>
+                    <AssetCard
+                      asset={asset}
+                      compact
+                      onClick={setSelectedAsset}
+                      isWatched={watchlistProps?.isWatched(asset.id)}
+                      onToggleWatch={watchlistProps?.onToggleWatch}
+                      convertPrice={convertPrice}
+                    />
+                  </div>
                 ))}
               </div>
             </div>

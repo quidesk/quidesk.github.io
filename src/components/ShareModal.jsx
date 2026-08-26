@@ -174,23 +174,28 @@ export default function ShareModal({ isOpen, onClose, data }) {
             {renderData.type === 'global' && renderData.assets && (
               <div style={{ display: 'flex', flexDirection: 'column', gap: '12px', marginTop: '16px' }}>
                 <div style={{ color: '#fff', fontSize: '16px', fontWeight: 900, letterSpacing: '0.1em', marginBottom: '2px' }}>MARKET HOTSPOT</div>
-                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '6px' }}>
+                <div className="row row-cols-1 row-cols-sm-2 g-2">
                   {renderData.assets.map(a => {
                     let cName = a.name;
-                    if (cName.includes('(')) cName = cName.split('(')[0].trim();
-                    if (cName === 'US Dollar / INR') cName = 'USD / INR'; // Keep it slightly compact so it doesn't wrap
-                    if (cName === 'Euro / INR') cName = 'EUR / INR';
-
+                    if(a.symbol === 'XAU/USD') cName = 'Gold';
+                    if(a.symbol === 'WTI') cName = 'Crude Oil';
+                    if(a.symbol === 'EUR/INR') cName = 'EUR vs INR';
+                    if(a.symbol === 'USD/INR') cName = 'USD vs INR';
+                    if(a.symbol === 'QQQ') cName = 'NASDAQ';
+                    if(a.symbol === 'BTC') cName = 'Bitcoin';
+                    
                     return (
-                      <div key={a.id} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '8px 10px', background: 'rgba(255,255,255,0.04)', borderRadius: '6px', border: '1px solid rgba(255,255,255,0.06)' }}>
-                        <div style={{ display: 'flex', flexDirection: 'column', gap: '1px', flex: 1, minWidth: 0 }}>
-                          <span style={{ color: '#fff', fontSize: '13px', fontWeight: 800, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{cName}</span>
-                        </div>
-                        <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: '1px', flexShrink: 0, marginLeft: '8px' }}>
-                          <span style={{ color: '#fff', fontSize: '13px', fontWeight: 700 }}>${a.price.toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2})}</span>
-                          <span style={{ color: a.change >= 0 ? '#34d399' : '#f87171', fontSize: '10px', fontWeight: 800 }}>
-                            {a.change >= 0 ? '+' : ''}{a.change.toFixed(2)}%
-                          </span>
+                      <div className="col" key={a.id}>
+                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '8px 10px', background: 'rgba(255,255,255,0.04)', borderRadius: '6px', border: '1px solid rgba(255,255,255,0.06)' }}>
+                          <div style={{ display: 'flex', flexDirection: 'column', gap: '1px', flex: 1, minWidth: 0 }}>
+                            <span style={{ color: '#fff', fontSize: '13px', fontWeight: 800, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{cName}</span>
+                          </div>
+                          <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: '1px', flexShrink: 0, marginLeft: '8px' }}>
+                            <span style={{ color: '#fff', fontSize: '13px', fontWeight: 700 }}>${a.price.toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2})}</span>
+                            <span style={{ color: a.change >= 0 ? '#34d399' : '#f87171', fontSize: '10px', fontWeight: 800 }}>
+                              {a.change >= 0 ? '+' : ''}{a.change.toFixed(2)}%
+                            </span>
+                          </div>
                         </div>
                       </div>
                     )
