@@ -172,33 +172,11 @@ export async function fetchFMPStocks() {
 }
 
 // Using Finnhub for Energy (ETFs as proxies for commodities)
+// Note: Finnhub free tier doesn't support real-time commodity futures.
+// We return empty here to rely on the realistic baselines + simulateTick in markets.js,
+// rather than overwriting commodity prices with ETF proxy prices (e.g., $132 USO instead of $74 WTI).
 export async function fetchFMPEnergy() {
-  if (!FINNHUB_KEY) return {};
-  
-  const mapping = {
-    wti: 'USO',
-    brent: 'BNO',
-    ng: 'UNG',
-    rbob: 'UGA'
-  };
-
-  const results = {};
-  await Promise.allSettled(Object.entries(mapping).map(async ([id, sym]) => {
-    try {
-      const res = await fetch(`https://finnhub.io/api/v1/quote?symbol=${sym}&token=${FINNHUB_KEY}`);
-      if (!res.ok) throw new Error(`Finnhub ${res.status}`);
-      const json = await res.json();
-      if (json && json.c && json.c > 0) {
-        results[id] = {
-          price: parseFloat(parseFloat(json.c).toFixed(2)),
-          change: parseFloat(parseFloat(json.dp ?? 0).toFixed(2))
-        };
-      }
-    } catch (e) {
-      console.warn(`Finnhub energy ${id}:`, e.message);
-    }
-  }));
-  return results;
+  return {};
 }
 
 // ─── FOREX: fawazahmed0 (free, no key, proven CORS-safe) ─────────────────────

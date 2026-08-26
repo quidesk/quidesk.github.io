@@ -79,10 +79,10 @@ export const MARKET_DATA = {
     withHistory({ id:'eurinr', symbol:'EUR/INR', name:'Euro / INR',        unit:'INR', pricePrefix:'₹', price:111.67, change:-0.09, volume:'20B',  marketCap:'—', sector:'forex' }, 0.25),
   ],
   energy: [
-    withHistory({ id:'wti',   symbol:'USO',      name:'Crude Oil (USO)',   price:132.45,  change:-1.62, volume:'820M', marketCap:'—', sector:'energy' }, 1.2),
-    withHistory({ id:'brent', symbol:'BNO',      name:'Brent Crude (BNO)', price:52.90,   change:-1.67, volume:'940M', marketCap:'—', sector:'energy' }, 1.3),
-    withHistory({ id:'ng',    symbol:'UNG',      name:'Natural Gas (UNG)', price:10.17,   change:1.80,  volume:'210M', marketCap:'—', sector:'energy' }, 0.08),
-    withHistory({ id:'rbob',  symbol:'UGA',      name:'Gasoline (UGA)',    price:123.06,  change:-2.22, volume:'180M', marketCap:'—', sector:'energy' }, 0.05),
+    withHistory({ id:'wti',   symbol:'WTI',      name:'WTI Crude Oil',    price:74.52,  change:-0.62, volume:'820M', marketCap:'—', sector:'energy', unit:'bbl' }, 1.2),
+    withHistory({ id:'brent', symbol:'BRENT',    name:'Brent Crude',      price:78.10,  change:-0.67, volume:'940M', marketCap:'—', sector:'energy', unit:'bbl' }, 1.3),
+    withHistory({ id:'ng',    symbol:'NGAS',     name:'Natural Gas',      price:2.35,   change:1.80,  volume:'210M', marketCap:'—', sector:'energy', unit:'MMBtu' }, 0.08),
+    withHistory({ id:'rbob',  symbol:'RBOB',     name:'RBOB Gasoline',    price:2.15,   change:-1.22, volume:'180M', marketCap:'—', sector:'energy', unit:'gal' }, 0.05),
   ],
 };
 

@@ -152,7 +152,7 @@ export default function Navbar({ active, setActive, isLive, setIsLive, hotspotCo
         data={{ 
           type: 'global', 
           assets: (() => {
-            const targets = ['BTC', 'EUR/INR', 'USO', 'XAU/USD', 'USD/INR', 'QQQ'];
+            const targets = ['BTC', 'EUR/INR', 'WTI', 'XAU/USD', 'USD/INR', 'QQQ'];
             const popular = (allAssets || []).filter(a => targets.includes(a.symbol)).slice(0, 6);
             if (popular.length < 6) {
               const missing = 6 - popular.length;
