@@ -55,6 +55,30 @@ export default function WatchlistPage({ data, watchlist, allAssets, onToggleWatc
           <div style={s.emptyIcon}>★</div>
           <div style={s.emptyText}>Your watchlist is empty</div>
           <div style={s.emptySub}>Visit any sector and click ★ on a card to add it here</div>
+          <a
+            href="https://www.binance.com/register?ref=1067434967"
+            target="_blank"
+            rel="noopener noreferrer"
+            style={{
+              marginTop: '12px',
+              display: 'inline-flex',
+              alignItems: 'center',
+              gap: '6px',
+              padding: '8px 16px',
+              background: 'var(--accent)',
+              color: '#000',
+              fontFamily: 'var(--font-mono)',
+              fontSize: '11px',
+              fontWeight: 700,
+              textDecoration: 'none',
+              borderRadius: '6px',
+              transition: 'opacity 0.2s',
+            }}
+            onMouseEnter={e => e.currentTarget.style.opacity = 0.8}
+            onMouseLeave={e => e.currentTarget.style.opacity = 1}
+          >
+            Start Trading Crypto on Binance ↗
+          </a>
         </div>
       ) : (
         <>

@@ -93,6 +93,46 @@ export default function PortfolioPage({ portfolio, allAssets }) {
         </div>
       )}
 
+      {holdings.length === 0 ? (
+        <div className="fade-up-1" style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', padding: '60px', gap: '8px', border: '1px solid var(--border-subtle)', borderRadius: '12px', background: 'var(--bg-card)', marginTop: '20px' }}>
+          <div style={{ fontSize:'32px', color:'var(--text-dim)' }}>💼</div>
+          <div style={{ fontFamily:'var(--font-display)', fontSize:'14px', color:'var(--text-secondary)', letterSpacing:'0.04em' }}>Your portfolio is empty</div>
+          <div style={{ fontFamily:'var(--font-body)', fontSize:'12px', color:'var(--text-dim)' }}>Click "Add Position" to track your assets manually</div>
+          
+          <a
+            href="https://www.binance.com/register?ref=1067434967"
+            target="_blank"
+            rel="noopener noreferrer"
+            style={{
+              marginTop: '16px',
+              display: 'inline-flex',
+              alignItems: 'center',
+              gap: '6px',
+              padding: '10px 18px',
+              background: 'rgba(255, 255, 255, 0.05)',
+              border: '1px solid var(--border-subtle)',
+              color: 'var(--text-primary)',
+              fontFamily: 'var(--font-mono)',
+              fontSize: '11px',
+              fontWeight: 700,
+              textDecoration: 'none',
+              borderRadius: '6px',
+              transition: 'all 0.2s',
+            }}
+            onMouseEnter={e => {
+              e.currentTarget.style.borderColor = 'var(--accent)'
+              e.currentTarget.style.color = 'var(--accent)'
+            }}
+            onMouseLeave={e => {
+              e.currentTarget.style.borderColor = 'var(--border-subtle)'
+              e.currentTarget.style.color = 'var(--text-primary)'
+            }}
+          >
+            Or Start Trading Crypto on Binance ↗
+          </a>
+        </div>
+      ) : (
+        <>
       {/* Summary strip */}
       <div className="fade-up-1" style={s.summaryStrip}>
         {[
@@ -253,6 +293,8 @@ export default function PortfolioPage({ portfolio, allAssets }) {
           </table>
         </div>
       </div>
+      </>
+      )}
 
     </div>
   )

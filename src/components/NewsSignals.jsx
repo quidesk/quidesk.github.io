@@ -28,7 +28,7 @@ export default function NewsSignals({ news, loading, lastFetch, onRefresh, layou
     : news.filter(n => n.sector === filter)
 
   const affiliateContent = {
-    crypto: { title: 'Trade Crypto on Binance (0% Fees)', link: 'https://accounts.binance.com/register' },
+    crypto: { title: 'Trade Crypto on Binance (0% Fees)', link: 'https://www.binance.com/register?ref=1067434967' },
     equities: { title: 'Buy Stocks & Options on eToro', link: 'https://etoro.com' },
     metals: { title: 'Buy Physical Gold & Silver on APMEX', link: 'https://apmex.com' },
     energy: { title: 'Trade Energy Futures on Interactive Brokers', link: 'https://interactivebrokers.com' },

@@ -52,15 +52,50 @@ export default function DetailChart({ asset, onClose }) {
         )}
       </div>
 
-      {/* Range pills */}
-      <div style={s.ranges}>
-        {['1H','24H','1M','1Y'].map(r => (
-          <button
-            key={r}
-            style={{ ...s.range, ...(range===r ? { ...s.rangeOn, color: meta.color || 'var(--accent)', borderColor: meta.color || 'var(--accent)', background:`${meta.color||'#f0a500'}12` } : {}) }}
-            onClick={() => setRange(r)}
-          >{r}</button>
-        ))}
+      {/* Range pills and Trade Action */}
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom:'14px', flexWrap: 'wrap', gap: '10px' }}>
+        <div style={{ display:'flex', gap:'4px' }}>
+          {['1H','24H','1M','1Y'].map(r => (
+            <button
+              key={r}
+              style={{ ...s.range, ...(range===r ? { ...s.rangeOn, color: meta.color || 'var(--accent)', borderColor: meta.color || 'var(--accent)', background:`${meta.color||'#f0a500'}12` } : {}) }}
+              onClick={() => setRange(r)}
+            >{r}</button>
+          ))}
+        </div>
+        
+        {asset.sector === 'crypto' && (
+          <a
+            href="https://www.binance.com/register?ref=1067434967"
+            target="_blank"
+            rel="noopener noreferrer"
+            style={{
+              background: 'rgba(255, 255, 255, 0.05)',
+              border: `1px solid ${meta.color || 'var(--accent)'}60`,
+              borderRadius: '4px',
+              color: 'var(--text-primary)',
+              fontFamily: 'var(--font-mono)',
+              fontSize: '11px',
+              letterSpacing: '0.04em',
+              padding: '4px 10px',
+              textDecoration: 'none',
+              transition: 'all 0.2s',
+              display: 'flex',
+              alignItems: 'center',
+              boxShadow: `0 0 10px ${meta.color || 'var(--accent)'}15`
+            }}
+            onMouseEnter={e => {
+              e.currentTarget.style.background = `${meta.color || 'var(--accent)'}20`;
+              e.currentTarget.style.borderColor = meta.color || 'var(--accent)';
+            }}
+            onMouseLeave={e => {
+              e.currentTarget.style.background = 'rgba(255, 255, 255, 0.05)';
+              e.currentTarget.style.borderColor = `${meta.color || 'var(--accent)'}60`;
+            }}
+          >
+            Trade {asset.symbol} ↗
+          </a>
+        )}
       </div>
 
       {/* Chart */}
