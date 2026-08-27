@@ -23,9 +23,33 @@ export default function NewsSignals({ news, loading, lastFetch, onRefresh, layou
   const [shareItem, setShareItem] = useState(null)
 
   const isHorz = layout === 'horizontal'
-  const filtered = filter === 'all'
+  const baseFiltered = filter === 'all'
     ? news
     : news.filter(n => n.sector === filter)
+
+  const affiliateContent = {
+    crypto: { title: 'Trade Crypto on Binance (0% Fees)', link: 'https://accounts.binance.com/register' },
+    equities: { title: 'Buy Stocks & Options on eToro', link: 'https://etoro.com' },
+    metals: { title: 'Buy Physical Gold & Silver on APMEX', link: 'https://apmex.com' },
+    energy: { title: 'Trade Energy Futures on Interactive Brokers', link: 'https://interactivebrokers.com' },
+    forex: { title: 'Trade Forex on OANDA (Low Spreads)', link: 'https://oanda.com' }
+  }
+
+  const filtered = [...baseFiltered]
+  if (filtered.length >= 2 && filtered.length < 50) { // Limit to ensure we don't spam if huge list, though we only inject one
+    const activeSector = filter === 'all' ? (filtered[1]?.sector || 'crypto') : filter
+    const sponsor = affiliateContent[activeSector] || affiliateContent.crypto
+    filtered.splice(2, 0, {
+      id: `sponsored-${activeSector}`,
+      isSponsored: true,
+      sector: activeSector,
+      title: sponsor.title,
+      source: 'PARTNER',
+      published: new Date(),
+      mentionedAssets: ['AD'],
+      link: sponsor.link
+    })
+  }
 
   return (
     <div style={{...s.wrap, ...(isHorz ? { border: 'none', background: 'transparent' } : {})}}>
@@ -108,6 +132,7 @@ export default function NewsSignals({ news, loading, lastFetch, onRefresh, layou
                 key={item.id}
                 style={{
                   ...s.item,
+                  ...(item.isSponsored ? { background: 'rgba(255, 255, 255, 0.03)', borderLeft: `2px solid ${meta.color || 'var(--accent)'}` } : {}),
                   ...(isHorz ? {
                     border: '1px solid var(--border-subtle)',
                     borderRadius: '8px',
@@ -119,7 +144,7 @@ export default function NewsSignals({ news, loading, lastFetch, onRefresh, layou
                   } : {})
                 }}
                 onMouseEnter={e => e.currentTarget.style.background = 'var(--bg-card-hover)'}
-                onMouseLeave={e => e.currentTarget.style.background = isHorz ? 'var(--bg-card)' : 'transparent'}
+                onMouseLeave={e => e.currentTarget.style.background = isHorz ? 'var(--bg-card)' : (item.isSponsored ? 'rgba(255, 255, 255, 0.03)' : 'transparent')}
               >
                 <a
                   href={item.link}
@@ -133,11 +158,11 @@ export default function NewsSignals({ news, loading, lastFetch, onRefresh, layou
                   <div style={s.itemBody}>
                     <div style={s.itemTitle}>{item.title}</div>
                     <div style={s.itemMeta}>
-                      <span style={{ ...s.itemSource, color: meta.color || 'var(--accent)' }}>
+                      <span style={{ ...s.itemSource, color: meta.color || 'var(--accent)', fontWeight: item.isSponsored ? 800 : 500 }}>
                         {item.source}
                       </span>
-                      <span style={s.itemDot}>•</span>
-                      <span style={s.itemTime}>{timeAgo(item.published)}</span>
+                      {!item.isSponsored && <span style={s.itemDot}>•</span>}
+                      {!item.isSponsored && <span style={s.itemTime}>{timeAgo(item.published)}</span>}
                       {item.mentionedAssets.length > 0 && (
                         <>
                           <span style={s.itemDot}>•</span>
@@ -149,43 +174,45 @@ export default function NewsSignals({ news, loading, lastFetch, onRefresh, layou
                     </div>
                   </div>
                 </a>
-              <button
-                style={{
-                  background: 'var(--bg-overlay)', 
-                  border: '1px solid var(--border-subtle)', 
-                  borderRadius: '6px',
-                  cursor: 'pointer', 
-                  padding: '4px 10px', 
-                  display: 'flex', 
-                  alignItems: 'center',
-                  gap: '6px',
-                  color: 'var(--text-primary)',
-                  fontFamily: 'var(--font-body)',
-                  fontSize: '11px',
-                  fontWeight: 500,
-                  transition: 'all 0.2s ease',
-                  boxShadow: '0 2px 4px rgba(0,0,0,0.1)'
-                }}
-                onMouseEnter={e => {
-                  e.currentTarget.style.borderColor = 'var(--accent)'
-                  e.currentTarget.style.color = 'var(--accent)'
-                  e.currentTarget.style.background = 'var(--accent-dim)'
-                }}
-                onMouseLeave={e => {
-                  e.currentTarget.style.borderColor = 'var(--border-subtle)'
-                  e.currentTarget.style.color = 'var(--text-primary)'
-                  e.currentTarget.style.background = 'var(--bg-overlay)'
-                }}
-                onClick={(e) => {
-                  e.preventDefault()
-                  e.stopPropagation()
-                  setShareItem(item)
-                }}
-                title="Share Insight"
-              >
-                <Share2 size={12} style={{ color: 'inherit' }} />
-                Share
-              </button>
+                {!item.isSponsored && (
+                  <button
+                    style={{
+                      background: 'var(--bg-overlay)', 
+                      border: '1px solid var(--border-subtle)', 
+                      borderRadius: '6px',
+                      cursor: 'pointer', 
+                      padding: '4px 10px', 
+                      display: 'flex', 
+                      alignItems: 'center',
+                      gap: '6px',
+                      color: 'var(--text-primary)',
+                      fontFamily: 'var(--font-body)',
+                      fontSize: '11px',
+                      fontWeight: 500,
+                      transition: 'all 0.2s ease',
+                      boxShadow: '0 2px 4px rgba(0,0,0,0.1)'
+                    }}
+                    onMouseEnter={e => {
+                      e.currentTarget.style.borderColor = 'var(--accent)'
+                      e.currentTarget.style.color = 'var(--accent)'
+                      e.currentTarget.style.background = 'var(--accent-dim)'
+                    }}
+                    onMouseLeave={e => {
+                      e.currentTarget.style.borderColor = 'var(--border-subtle)'
+                      e.currentTarget.style.color = 'var(--text-primary)'
+                      e.currentTarget.style.background = 'var(--bg-overlay)'
+                    }}
+                    onClick={(e) => {
+                      e.preventDefault()
+                      e.stopPropagation()
+                      setShareItem(item)
+                    }}
+                    title="Share Insight"
+                  >
+                    <Share2 size={12} style={{ color: 'inherit' }} />
+                    Share
+                  </button>
+                )}
               </div>
             )
           })
