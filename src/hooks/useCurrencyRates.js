@@ -56,11 +56,49 @@ export function useCurrencyRates() {
 
     async function fetchLocalCurrency() {
       try {
-        let code = 'USD';
+        let code = null;
         try {
           const res = await fetch('https://ipapi.co/currency/');
-          if (res.ok) code = (await res.text()).trim();
+          if (res.ok) {
+            const text = (await res.text()).trim();
+            if (text.length === 3) code = text;
+          }
         } catch(e) {}
+
+        // Fallback: Timezone and Locale
+        if (!code || code === 'USD' || code.includes('Rate')) {
+          const tz = Intl.DateTimeFormat().resolvedOptions().timeZone || '';
+          if (tz.includes('Calcutta') || tz.includes('Kolkata')) code = 'INR';
+          else if (tz.includes('London')) code = 'GBP';
+          else if (tz.includes('Paris') || tz.includes('Berlin') || tz.includes('Rome') || tz.includes('Madrid') || tz.includes('Amsterdam') || tz.includes('Brussels') || tz.includes('Vienna') || tz.includes('Athens') || tz.includes('Dublin') || tz.includes('Lisbon')) code = 'EUR';
+          else if (tz.includes('Tokyo')) code = 'JPY';
+          else if (tz.includes('Sydney') || tz.includes('Melbourne') || tz.includes('Brisbane') || tz.includes('Perth') || tz.includes('Adelaide')) code = 'AUD';
+          else if (tz.includes('Toronto') || tz.includes('Vancouver') || tz.includes('Montreal') || tz.includes('Edmonton') || tz.includes('Winnipeg')) code = 'CAD';
+          else if (tz.includes('Dubai')) code = 'AED';
+          else if (tz.includes('Singapore')) code = 'SGD';
+          else if (tz.includes('Hong_Kong')) code = 'HKD';
+          else if (tz.includes('Shanghai') || tz.includes('Chongqing')) code = 'CNY';
+          else if (tz.includes('Taipei')) code = 'TWD';
+          else if (tz.includes('Seoul')) code = 'KRW';
+          else if (tz.includes('Auckland') || tz.includes('Fiji')) code = 'NZD';
+          else if (tz.includes('Zurich') || tz.includes('Geneva')) code = 'CHF';
+          else if (tz.includes('Johannesburg')) code = 'ZAR';
+          
+          if (!code && typeof navigator !== 'undefined' && navigator.language) {
+            const parts = navigator.language.split('-');
+            if (parts.length > 1) {
+              const c = parts[1].toUpperCase();
+              const map = {
+                'IN':'INR','GB':'GBP','AU':'AUD','CA':'CAD','JP':'JPY','AE':'AED',
+                'SG':'SGD','HK':'HKD','CN':'CNY','TW':'TWD','KR':'KRW','NZ':'NZD',
+                'CH':'CHF','ZA':'ZAR',
+                'FR':'EUR','DE':'EUR','IT':'EUR','ES':'EUR','NL':'EUR','BE':'EUR','AT':'EUR','GR':'EUR','PT':'EUR','FI':'EUR','IE':'EUR'
+              };
+              if (map[c]) code = map[c];
+            }
+          }
+        }
+
         if (code && code !== 'USD' && code.length === 3) {
           setLocalCurrency(code.toUpperCase());
         }
@@ -104,18 +142,19 @@ export function useCurrencyRates() {
   }
 
   function formatLocalPrice(usdPrice) {
-    if (!localCurrency) return null
-    const rate = allRates[localCurrency.toLowerCase()]
-    if (!rate) return null
-    const converted = usdPrice * rate
+    if (!localCurrency) return null;
+    const codeUpper = localCurrency.toUpperCase();
+    const rate = allRates[localCurrency.toLowerCase()] || rates[codeUpper];
+    if (!rate) return null;
+    const converted = usdPrice * rate;
     try {
       return new Intl.NumberFormat(undefined, {
         style: 'currency',
-        currency: localCurrency,
+        currency: codeUpper,
         maximumFractionDigits: converted > 100 ? 0 : 2
-      }).format(converted)
+      }).format(converted);
     } catch(e) {
-      return null
+      return null;
     }
   }
 
