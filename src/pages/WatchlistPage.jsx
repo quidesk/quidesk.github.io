@@ -9,7 +9,6 @@ export default function WatchlistPage({ data, watchlist, allAssets, onToggleWatc
   const [alertModal, setAlertModal] = useState(null);
   const [alertForm, setAlertForm] = useState({ type:'above', price:'' });
 
-  const allAssets = Object.values(data).flat();
   const watched = allAssets.filter(a => watchlist.includes(a.id));
 
   const handleAddAlert = () => {
