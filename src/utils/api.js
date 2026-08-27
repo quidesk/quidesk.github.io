@@ -149,7 +149,8 @@ export async function fetchFMPStocks() {
     dow: 'DIA',
     aapl: 'AAPL',
     nvda: 'NVDA',
-    tsla: 'TSLA'
+    tsla: 'TSLA',
+    meta: 'META'
   };
 
   const results = {};
@@ -194,7 +195,10 @@ const FOREX_PAIRS = {
   usdcad: { base:'cad', invert:false },
   usdchf: { base:'chf', invert:false },
   eurgbp: { cross:['gbp','eur']      },
+  gbpjpy: { cross:['jpy','gbp']      },
+  eurjpy: { cross:['jpy','eur']      },
   usdinr: { base:'inr', invert:false },
+  eurinr: { cross:['inr','eur']      },
 }
 
 let _prevForexRates = (() => { try { return JSON.parse(localStorage.getItem('quidesk_forex_prev') || 'null') } catch { return null } })()
