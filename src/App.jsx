@@ -20,46 +20,49 @@ export default function App() {
   const watchlist                  = useWatchlist()
   const portfolio                  = usePortfolio(allAssets)
   const alerts                     = useAlerts(allAssets)
-  const { convertPrice, loaded }   = useCurrencyRates()
+  const { convertPrice, formatLocalPrice, loaded } = useCurrencyRates()
   const { theme, toggle: toggleTheme } = useTheme()
 
   const watchlistProps = {
     isWatched: watchlist.isWatched,
-    onToggleWatch: watchlist.toggle,
+    onToggleWatch: watchlist.toggleWatch,
+    convertPrice,
+    formatLocalPrice
   }
 
   const renderPage = () => {
     switch (activeTab) {
       case 'map':
-        return <MapPage data={data} allAssets={allAssets} hotspots={hotspots} watchlistProps={watchlistProps} convertPrice={convertPrice} />
+        return <MapPage data={data} allAssets={allAssets} hotspots={hotspots} watchlistProps={watchlistProps} convertPrice={convertPrice} formatLocalPrice={formatLocalPrice} />
       case 'equities':
-        return <SectorPage sector="equities" assets={data.equities || []} watchlistProps={watchlistProps} convertPrice={convertPrice} />
+        return <SectorPage sector="equities" assets={data.equities || []} watchlistProps={watchlistProps} convertPrice={convertPrice} formatLocalPrice={formatLocalPrice} />
       case 'crypto':
-        return <SectorPage sector="crypto" assets={data.crypto || []} watchlistProps={watchlistProps} convertPrice={convertPrice} />
+        return <SectorPage sector="crypto" assets={data.crypto || []} watchlistProps={watchlistProps} convertPrice={convertPrice} formatLocalPrice={formatLocalPrice} />
       case 'metals':
-        return <SectorPage sector="metals" assets={data.metals || []} watchlistProps={watchlistProps} convertPrice={convertPrice} />
+        return <SectorPage sector="metals" assets={data.metals || []} watchlistProps={watchlistProps} convertPrice={convertPrice} formatLocalPrice={formatLocalPrice} />
       case 'energy':
-        return <SectorPage sector="energy" assets={data.energy || []} watchlistProps={watchlistProps} convertPrice={convertPrice} />
+        return <SectorPage sector="energy" assets={data.energy || []} watchlistProps={watchlistProps} convertPrice={convertPrice} formatLocalPrice={formatLocalPrice} />
       case 'forex':
-        return <SectorPage sector="forex" assets={data.forex || []} watchlistProps={watchlistProps} convertPrice={convertPrice} />
+        return <SectorPage sector="forex" assets={data.forex || []} watchlistProps={watchlistProps} convertPrice={convertPrice} formatLocalPrice={formatLocalPrice} />
       case 'compare':
-        return <ComparePage data={data} />
+        return <ComparePage data={data} formatLocalPrice={formatLocalPrice} />
       case 'watchlist':
         return (
           <WatchlistPage
-            data={data}
-            watchlist={watchlist.watchlist}
-            onToggleWatch={watchlist.toggle}
+            watchlist={watchlist.items}
+            allAssets={allAssets}
+            onToggleWatch={watchlist.toggleWatch}
             alerts={alerts}
             onAddAlert={alerts.addAlert}
             onRemoveAlert={alerts.removeAlert}
             convertPrice={convertPrice}
+            formatLocalPrice={formatLocalPrice}
           />
         )
       case 'portfolio':
-        return <PortfolioPage portfolio={portfolio} allAssets={allAssets} />
+        return <PortfolioPage portfolio={portfolio} allAssets={allAssets} formatLocalPrice={formatLocalPrice} />
       default:
-        return <MapPage data={data} allAssets={allAssets} hotspots={hotspots} watchlistProps={watchlistProps} convertPrice={convertPrice} />
+        return <MapPage data={data} allAssets={allAssets} hotspots={hotspots} watchlistProps={watchlistProps} convertPrice={convertPrice} formatLocalPrice={formatLocalPrice} />
     }
   }
 
@@ -75,8 +78,9 @@ export default function App() {
         theme={theme}
         onToggleTheme={toggleTheme}
         allAssets={allAssets}
+        formatLocalPrice={formatLocalPrice}
       />
-      <TickerTape allAssets={allAssets} />
+      <TickerTape allAssets={allAssets} formatLocalPrice={formatLocalPrice} />
       <main style={{ flex:1 }}>
         {renderPage()}
       </main>

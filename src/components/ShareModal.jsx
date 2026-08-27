@@ -4,7 +4,7 @@ import { X, Instagram, Facebook, Download, Copy } from 'lucide-react'
 import MiniChart from './MiniChart'
 import Logo from './Logo'
 
-export default function ShareModal({ isOpen, onClose, data }) {
+export default function ShareModal({ isOpen, onClose, data, formatLocalPrice }) {
   const [imgUrl, setImgUrl] = useState(null)
   const [loading, setLoading] = useState(true)
   const [renderData, setRenderData] = useState(null)
@@ -144,7 +144,14 @@ export default function ShareModal({ isOpen, onClose, data }) {
                     <div style={s.assetName}>{renderData.asset.name}</div>
                   </div>
                   <div style={{ textAlign: 'right' }}>
-                    <div style={s.assetPrice}>{renderData.asset.pricePrefix || '$'}{renderData.asset.price.toLocaleString(undefined, {minimumFractionDigits:2})}</div>
+                    <div style={s.assetPrice}>
+                      {renderData.asset.pricePrefix || '$'}{renderData.asset.price.toLocaleString(undefined, {minimumFractionDigits:2})}
+                      {formatLocalPrice && formatLocalPrice(renderData.asset.price) && (
+                        <span style={{ fontSize: '16px', color: 'rgba(255,255,255,0.7)', marginLeft: '6px', fontWeight: 500 }}>
+                          ({formatLocalPrice(renderData.asset.price)})
+                        </span>
+                      )}
+                    </div>
                     <div style={{...s.assetChange, color: renderData.asset.change >= 0 ? '#10b981' : '#ef4444'}}>
                       {renderData.asset.change >= 0 ? '+' : ''}{renderData.asset.change.toFixed(2)}%
                     </div>
@@ -191,7 +198,14 @@ export default function ShareModal({ isOpen, onClose, data }) {
                             <span style={{ color: '#fff', fontSize: '13px', fontWeight: 800, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{cName}</span>
                           </div>
                           <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: '1px', flexShrink: 0, marginLeft: '8px' }}>
-                            <span style={{ color: '#fff', fontSize: '13px', fontWeight: 700 }}>${a.price.toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2})}</span>
+                            <span style={{ color: '#fff', fontSize: '13px', fontWeight: 700 }}>
+                              ${a.price.toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2})}
+                            </span>
+                            {formatLocalPrice && formatLocalPrice(a.price) && (
+                              <span style={{ color: 'rgba(255,255,255,0.7)', fontSize: '10px', fontWeight: 500 }}>
+                                ({formatLocalPrice(a.price)})
+                              </span>
+                            )}
                             <span style={{ color: a.change >= 0 ? '#34d399' : '#f87171', fontSize: '10px', fontWeight: 800 }}>
                               {a.change >= 0 ? '+' : ''}{a.change.toFixed(2)}%
                             </span>

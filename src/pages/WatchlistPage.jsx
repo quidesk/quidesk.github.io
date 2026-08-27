@@ -4,7 +4,7 @@ import AssetCard from '../components/AssetCard'
 import DetailChart from '../components/DetailChart'
 import { formatPrice } from '../data/markets'
 
-export default function WatchlistPage({ data, watchlist, onToggleWatch, alerts, onAddAlert, onRemoveAlert, convertPrice }) {
+export default function WatchlistPage({ data, watchlist, allAssets, onToggleWatch, alerts, onAddAlert, onRemoveAlert, convertPrice, formatLocalPrice }) {
   const [selected, setSelected] = useState(null);
   const [alertModal, setAlertModal] = useState(null);
   const [alertForm, setAlertForm] = useState({ type:'above', price:'' });
@@ -67,7 +67,7 @@ export default function WatchlistPage({ data, watchlist, onToggleWatch, alerts, 
           <div className="fade-up-2" style={s.grid}>
             {watched.map(asset => (
               <div key={asset.id}>
-                <AssetCard asset={asset} onClick={setSelected} isWatched onToggleWatch={onToggleWatch} convertPrice={convertPrice} />
+                <AssetCard asset={asset} onClick={setSelected} isWatched onToggleWatch={onToggleWatch} convertPrice={convertPrice} formatLocalPrice={formatLocalPrice} />
                 <div style={s.cardActions}>
                   <button style={s.actionBtn} onClick={() => { setAlertModal(asset); setAlertForm({ type:'above', price:(asset.price*1.02).toFixed(2) }); }}>
                     <Bell size={10}/> Set Alert

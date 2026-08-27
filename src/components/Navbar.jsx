@@ -28,7 +28,7 @@ const NAV_TABS = [
   { id:'portfolio', label:'Portfolio',   short:'P&L'  },
 ]
 
-export default function Navbar({ active, setActive, isLive, setIsLive, hotspotCount, alertCount, theme, onToggleTheme, allAssets }) {
+export default function Navbar({ active, setActive, isLive, setIsLive, hotspotCount, alertCount, theme, onToggleTheme, allAssets, formatLocalPrice }) {
   const [clock, setClock] = useState(new Date())
   const [showGlobalShare, setShowGlobalShare] = useState(false)
 
@@ -149,6 +149,7 @@ export default function Navbar({ active, setActive, isLive, setIsLive, hotspotCo
       <ShareModal 
         isOpen={showGlobalShare} 
         onClose={() => setShowGlobalShare(false)}
+        formatLocalPrice={formatLocalPrice}
         data={{ 
           type: 'global', 
           assets: (() => {

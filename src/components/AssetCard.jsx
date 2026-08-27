@@ -5,7 +5,7 @@ import MiniChart from './MiniChart'
 import CurrencyTooltip from './CurrencyTooltip'
 import ShareModal from './ShareModal'
 
-export default function AssetCard({ asset, onClick, isWatched, onToggleWatch, compact, convertPrice }) {
+export default function AssetCard({ asset, onClick, isWatched, onToggleWatch, compact, convertPrice, formatLocalPrice }) {
   const [tf, setTf]                 = useState('24H')
   const [flash, setFlash]           = useState(null)
   const [prev, setPrev]             = useState(asset.price)
@@ -141,14 +141,22 @@ export default function AssetCard({ asset, onClick, isWatched, onToggleWatch, co
           </div>
         </div>
 
-        <div style={{ fontFamily:'var(--font-mono)', fontSize: compact ? '16px' : '20px', fontWeight:500, color: isUp ? 'var(--bull)' : 'var(--bear)', marginBottom: compact ? '6px' : '10px', letterSpacing:'0.02em' }}>
-          {asset.pricePrefix ? `${asset.pricePrefix}${asset.price.toLocaleString('en-US', {minimumFractionDigits:2,maximumFractionDigits:asset.price > 100 ? 2 : 4})}` : formatPrice(asset.price)}
-          {asset.unit && (
-            <span style={{ fontSize:'11px', color:'var(--text-dim)', marginLeft:'3px' }}>
-              /{asset.unit}
+        <div style={{ fontFamily:'var(--font-mono)', fontSize: compact ? '16px' : '20px', fontWeight:500, color: isUp ? 'var(--bull)' : 'var(--bear)', marginBottom: compact ? '6px' : '10px', letterSpacing:'0.02em', display: 'flex', alignItems: 'baseline', gap: '6px', flexWrap: 'wrap' }}>
+          <div>
+            {asset.pricePrefix ? `${asset.pricePrefix}${asset.price.toLocaleString('en-US', {minimumFractionDigits:2,maximumFractionDigits:asset.price > 100 ? 2 : 4})}` : formatPrice(asset.price)}
+            {asset.unit && (
+              <span style={{ fontSize:'11px', color:'var(--text-dim)', marginLeft:'3px' }}>
+                /{asset.unit}
+              </span>
+            )}
+          </div>
+          {formatLocalPrice && formatLocalPrice(asset.price) && (
+            <span style={{ fontSize: '13px', color: 'var(--text-secondary)', fontWeight: 400 }}>
+              ({formatLocalPrice(asset.price)})
             </span>
           )}
         </div>
+
 
         <div style={{ display:'flex', gap:'4px', marginBottom: compact ? '2px' : '6px', justifyContent:'flex-end' }}>
           {['1H','24H','1M','1Y'].map(t => (
@@ -203,6 +211,7 @@ export default function AssetCard({ asset, onClick, isWatched, onToggleWatch, co
       <ShareModal 
         isOpen={shareOpen} 
         onClose={() => setShareOpen(false)} 
+        formatLocalPrice={formatLocalPrice}
         data={{ type: 'asset', asset: { ...asset, chartData: asset.history ? asset.history[tf] : asset.chartData } }} 
       />
     </div>

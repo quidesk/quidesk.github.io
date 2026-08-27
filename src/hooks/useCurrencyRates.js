@@ -25,6 +25,8 @@ const INITIAL_RATES = {
 
 export function useCurrencyRates() {
   const [rates, setRates] = useState(INITIAL_RATES)
+  const [allRates, setAllRates] = useState({})
+  const [localCurrency, setLocalCurrency] = useState(null)
   const [btcPrice, setBtcPrice] = useState(77553.99)
   const [loaded, setLoaded] = useState(false)
 
@@ -35,6 +37,7 @@ export function useCurrencyRates() {
         if (!res.ok) return
         const json = await res.json()
         const r = json.usd
+        setAllRates(r)
         setRates({
           USD: 1,
           INR: r.inr ?? 95.73,
@@ -51,6 +54,21 @@ export function useCurrencyRates() {
       }
     }
 
+    async function fetchLocalCurrency() {
+      try {
+        let code = 'USD';
+        try {
+          const res = await fetch('https://ipapi.co/currency/');
+          if (res.ok) code = (await res.text()).trim();
+        } catch(e) {}
+        if (code && code !== 'USD' && code.length === 3) {
+          setLocalCurrency(code.toUpperCase());
+        }
+      } catch (e) {
+        console.warn('Could not determine local currency', e.message)
+      }
+    }
+
     async function fetchBTC() {
       try {
         const res = await fetch('https://data-api.binance.vision/api/v3/ticker/24hr?symbol=BTCUSDT')
@@ -63,6 +81,7 @@ export function useCurrencyRates() {
     }
 
     fetchRates()
+    fetchLocalCurrency()
     fetchBTC()
     const id = setInterval(fetchRates, 6 * 60 * 60 * 1000)
     return () => clearInterval(id)
@@ -84,5 +103,21 @@ export function useCurrencyRates() {
     })
   }
 
-  return { rates, convertPrice, loaded }
+  function formatLocalPrice(usdPrice) {
+    if (!localCurrency) return null
+    const rate = allRates[localCurrency.toLowerCase()]
+    if (!rate) return null
+    const converted = usdPrice * rate
+    try {
+      return new Intl.NumberFormat(undefined, {
+        style: 'currency',
+        currency: localCurrency,
+        maximumFractionDigits: converted > 100 ? 0 : 2
+      }).format(converted)
+    } catch(e) {
+      return null
+    }
+  }
+
+  return { rates, convertPrice, formatLocalPrice, loaded }
 }

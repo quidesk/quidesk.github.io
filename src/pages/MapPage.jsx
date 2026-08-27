@@ -52,7 +52,7 @@ const ns = {
   },
 };
 
-export default function MapPage({ data, allAssets, hotspots, watchlistProps, convertPrice }) {
+export default function MapPage({ data, allAssets, hotspots, watchlistProps, convertPrice, formatLocalPrice }) {
   const [selectedAsset, setSelectedAsset] = useState(null);
   const { news, loading, newsCorrelations, lastFetch, refresh } = useNewsSignals();
 
@@ -207,6 +207,7 @@ export default function MapPage({ data, allAssets, hotspots, watchlistProps, con
                       isWatched={watchlistProps?.isWatched(asset.id)}
                       onToggleWatch={watchlistProps?.onToggleWatch}
                       convertPrice={convertPrice}
+                      formatLocalPrice={formatLocalPrice}
                     />
                   </div>
                 ))}

@@ -3,7 +3,7 @@ import AssetCard from '../components/AssetCard'
 import DetailChart from '../components/DetailChart'
 import { formatPrice, SECTOR_META } from '../data/markets'
 
-export default function SectorPage({ sector, assets, watchlistProps, convertPrice }) {
+export default function SectorPage({ sector, assets, watchlistProps, convertPrice, formatLocalPrice }) {
   const [selected, setSelected] = useState(null);
   const [sort, setSort] = useState('default');
   const meta = SECTOR_META[sector] || {};
@@ -76,6 +76,7 @@ export default function SectorPage({ sector, assets, watchlistProps, convertPric
               isWatched={watchlistProps?.isWatched(asset.id)}
               onToggleWatch={watchlistProps?.onToggleWatch}
               convertPrice={convertPrice}
+              formatLocalPrice={formatLocalPrice}
             />
           </div>
         ))}

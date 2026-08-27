@@ -1,8 +1,9 @@
 import React from 'react'
 import { formatPrice, formatChange } from '../data/markets'
 
-export default function TickerTape({ allAssets }) {
+export default function TickerTape({ allAssets, formatLocalPrice }) {
   const items = [...allAssets, ...allAssets];
+
   return (
     <div style={s.wrap}>
       <div style={s.label}>
@@ -18,6 +19,11 @@ export default function TickerTape({ allAssets }) {
                 <span style={s.sym}>{a.symbol}</span>
                 <span style={s.price}>
                   {a.pricePrefix || ''}{formatPrice(a.price).replace('$', a.pricePrefix ? '' : '$')}
+                  {formatLocalPrice && formatLocalPrice(a.price) && (
+                    <span style={{ fontSize: '11px', color: 'var(--text-dim)', marginLeft: '4px', fontWeight: 400 }}>
+                      ({formatLocalPrice(a.price)})
+                    </span>
+                  )}
                 </span>
                 <span style={{ ...s.chg, color: up ? 'var(--bull)' : 'var(--bear)' }}>
                   {up ? '▲' : '▼'}{Math.abs(a.change).toFixed(2)}%
