@@ -3,12 +3,18 @@ import { useState, useEffect } from 'react'
 const STORAGE_KEY = 'quidesk-watchlist'
 
 export function useWatchlist() {
+  const DEFAULT = ['btc', 'spx', 'gold', 'eth']
   const [watchlist, setWatchlist] = useState(() => {
     try {
       const stored = localStorage.getItem(STORAGE_KEY)
-      return stored ? JSON.parse(stored) : ['btc', 'spx', 'gold', 'eth']
+      if (!stored) return DEFAULT
+      const parsed = JSON.parse(stored)
+      // Validate: must be an array of string IDs
+      if (!Array.isArray(parsed)) return DEFAULT
+      const valid = parsed.filter(x => typeof x === 'string' && x.length > 0 && x.length < 50)
+      return valid.length > 0 ? valid : DEFAULT
     } catch {
-      return ['btc', 'spx', 'gold', 'eth']
+      return DEFAULT
     }
   })
 

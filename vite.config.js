@@ -10,9 +10,15 @@ export default defineConfig({
     port: 3000,
     open: true,
   },
+  esbuild: {
+    drop: process.env.NODE_ENV === 'production' ? ['console', 'debugger'] : [],
+  },
   build: {
     outDir: 'dist',
     sourcemap: false,
+    // Strip console.* calls in production to prevent data leakage
+    minify: 'esbuild',
+    target: 'es2020',
     rollupOptions: {
       output: {
         manualChunks: {

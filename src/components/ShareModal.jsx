@@ -54,6 +54,10 @@ export default function ShareModal({ isOpen, onClose, data, formatLocalPrice }) 
   const shareUrl = 'https://quidesk.github.io'
   const combinedText = `${titleText}\n\nLive on ${shareUrl}`
 
+  // Preventive: validate shareUrl origin before passing to window.open
+  const ALLOWED_SHARE_ORIGIN = 'https://quidesk.github.io'
+  const safeShareUrl = shareUrl.startsWith(ALLOWED_SHARE_ORIGIN) ? shareUrl : ALLOWED_SHARE_ORIGIN
+
   const handleDownload = () => {
     if (!imgUrl) return
     const link = document.createElement('a')
@@ -77,13 +81,13 @@ export default function ShareModal({ isOpen, onClose, data, formatLocalPrice }) 
   }
 
   const handleShareWhatsApp = () => {
-    window.open(`https://api.whatsapp.com/send?text=${encodeURIComponent(combinedText)}`)
+    window.open(`https://api.whatsapp.com/send?text=${encodeURIComponent(combinedText)}`, '_blank', 'noopener,noreferrer')
   }
   const handleShareX = () => {
-    window.open(`https://twitter.com/intent/tweet?text=${encodeURIComponent(titleText)}&url=${encodeURIComponent(shareUrl)}`)
+    window.open(`https://twitter.com/intent/tweet?text=${encodeURIComponent(titleText)}&url=${encodeURIComponent(safeShareUrl)}`, '_blank', 'noopener,noreferrer')
   }
   const handleShareFB = () => {
-    window.open(`https://www.facebook.com/sharer/sharer.php?u=${encodeURIComponent(shareUrl)}`)
+    window.open(`https://www.facebook.com/sharer/sharer.php?u=${encodeURIComponent(safeShareUrl)}`, '_blank', 'noopener,noreferrer')
   }
 
   return (

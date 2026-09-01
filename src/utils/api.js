@@ -156,7 +156,9 @@ export async function fetchFMPStocks() {
   const results = {};
   await Promise.allSettled(Object.entries(mapping).map(async ([id, sym]) => {
     try {
-      const res = await fetch(`https://finnhub.io/api/v1/quote?symbol=${sym}&token=${FINNHUB_KEY}`);
+      const res = await fetch(`https://finnhub.io/api/v1/quote?symbol=${sym}`, {
+        headers: { 'X-Finnhub-Token': FINNHUB_KEY },
+      });
       if (!res.ok) throw new Error(`Finnhub ${res.status}`);
       const json = await res.json();
       if (json && json.c && json.c > 0) {

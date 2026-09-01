@@ -18,7 +18,17 @@ function useSettings() {
   const [settings, setSettings] = useState(() => {
     try {
       const stored = localStorage.getItem('quidesk-settings')
-      return stored ? { ...DEFAULT_SETTINGS, ...JSON.parse(stored) } : DEFAULT_SETTINGS
+      if (!stored) return DEFAULT_SETTINGS
+      const parsed = JSON.parse(stored)
+      // Validate: must be a plain object, only allow known keys with correct types
+      if (!parsed || typeof parsed !== 'object' || Array.isArray(parsed)) return DEFAULT_SETTINGS
+      const validated = { ...DEFAULT_SETTINGS }
+      for (const [key, defaultVal] of Object.entries(DEFAULT_SETTINGS)) {
+        if (key in parsed && typeof parsed[key] === typeof defaultVal) {
+          validated[key] = parsed[key]
+        }
+      }
+      return validated
     } catch {
       return DEFAULT_SETTINGS
     }

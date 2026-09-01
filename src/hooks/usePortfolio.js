@@ -15,7 +15,17 @@ export function usePortfolio(liveAssets) {
   const [holdings, setHoldings] = useState(() => {
     try {
       const s = localStorage.getItem(STORAGE_KEY)
-      return s ? JSON.parse(s) : DEFAULT_HOLDINGS
+      if (!s) return DEFAULT_HOLDINGS
+      const parsed = JSON.parse(s)
+      // Validate: must be an array of holding objects
+      if (!Array.isArray(parsed)) return DEFAULT_HOLDINGS
+      const valid = parsed.filter(h =>
+        h && typeof h === 'object' &&
+        typeof h.id === 'string' &&
+        typeof h.qty === 'number' &&
+        typeof h.avgCost === 'number'
+      )
+      return valid.length > 0 ? valid : DEFAULT_HOLDINGS
     } catch { return DEFAULT_HOLDINGS }
   })
 

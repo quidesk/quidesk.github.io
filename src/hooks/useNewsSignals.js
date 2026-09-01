@@ -74,7 +74,15 @@ async function fetchFeed(feed, retries = 1) {
       
       return json.items.slice(0, 6).map((item, i) => {
         const title = item.title?.trim() || ''
-        const desc = item.description?.replace(/<[^>]*>/g,'').trim().slice(0,120) || ''
+        const desc = (() => {
+          const raw = item.description || '';
+          try {
+            const doc = new DOMParser().parseFromString(raw, 'text/html');
+            return (doc.body.textContent || '').trim().slice(0, 120);
+          } catch {
+            return raw.replace(/<[^>]*>/g, '').trim().slice(0, 120);
+          }
+        })() || ''
         
         // Find mentioned assets
         const lower = (title + ' ' + desc).toLowerCase()

@@ -6,7 +6,17 @@ export function useAlerts(liveAssets) {
   const [alerts, setAlerts] = useState(() => {
     try {
       const stored = localStorage.getItem(STORAGE_KEY)
-      return stored ? JSON.parse(stored) : []
+      if (!stored) return []
+      const parsed = JSON.parse(stored)
+      // Validate: must be an array of objects with required fields
+      if (!Array.isArray(parsed)) return []
+      return parsed.filter(a =>
+        a && typeof a === 'object' &&
+        typeof a.id === 'string' &&
+        typeof a.assetId === 'string' &&
+        typeof a.type === 'string' &&
+        typeof a.price === 'number'
+      )
     } catch {
       return []
     }
