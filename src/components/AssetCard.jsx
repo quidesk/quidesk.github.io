@@ -5,7 +5,7 @@ import MiniChart from './MiniChart'
 import CurrencyTooltip from './CurrencyTooltip'
 import ShareModal from './ShareModal'
 
-export default function AssetCard({ asset, onClick, isWatched, onToggleWatch, compact, convertPrice, formatLocalPrice }) {
+export default function AssetCard({ asset, onClick, isWatched, onToggleWatch, compact, convertPrice, formatLocalPrice, isStale }) {
   const [tf, setTf]                 = useState('24H')
   const [flash, setFlash]           = useState(null)
   const [prev, setPrev]             = useState(asset.price)
@@ -26,6 +26,7 @@ export default function AssetCard({ asset, onClick, isWatched, onToggleWatch, co
 
   const isUp = asset.change >= 0
   const meta = SECTOR_META[asset.sector] || {}
+  const stale = isStale && isStale(asset.id, asset.sector)
 
   function showTooltip() {
     if (shareOpen) return // Don't show tooltip while sharing
@@ -58,6 +59,8 @@ export default function AssetCard({ asset, onClick, isWatched, onToggleWatch, co
     ? 'rgba(34,212,122,0.08)'
     : flash === 'down'
     ? 'rgba(240,64,96,0.08)'
+    : stale
+    ? 'var(--bg-overlay)'
     : 'var(--bg-card)'
 
   return (
@@ -84,6 +87,11 @@ export default function AssetCard({ asset, onClick, isWatched, onToggleWatch, co
               {!compact && (
                 <span style={{ fontFamily:'var(--font-mono)', fontSize:'8px', color: meta.color || 'var(--accent)', background: (meta.color || '#f0a500') + '14', border: '1px solid ' + (meta.color || '#f0a500') + '30', borderRadius:'3px', padding:'0 5px', lineHeight:'14px' }}>
                   {meta.label}
+                </span>
+              )}
+              {stale && (
+                <span style={{ fontFamily:'var(--font-mono)', fontSize:'8px', color:'var(--text-dim)', background: 'var(--bg-overlay)', border: '1px solid var(--border-subtle)', borderRadius:'3px', padding:'0 5px', lineHeight:'14px' }}>
+                  STALE
                 </span>
               )}
             </div>

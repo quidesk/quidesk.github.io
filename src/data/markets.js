@@ -98,6 +98,18 @@ export function formatPrice(price) {
   return `$${price.toFixed(2)}`;
 }
 export function formatChange(c) { return `${c>=0?'+':''}${c.toFixed(2)}%`; }
+
+/**
+ * formatChangeBubble — Space-constrained 1-decimal rounding for MarketMap bubble labels.
+ *
+ * Uses toFixed(1) because SVG text inside small orbs can't fit 2-decimal precision.
+ * Both this function and formatChange read from the same asset.change float —
+ * the difference is purely display formatting, not a second independent calculation.
+ *
+ * @param {number} c — percent change value
+ * @returns {string} — e.g. "+1.2%" or "-4.6%"
+ */
+export function formatChangeBubble(c) { return `${c>=0?'+':''}${c.toFixed(1)}%`; }
 export function formatVolume(v) { return v || '—'; }
 
 export function simulateTick(asset) {

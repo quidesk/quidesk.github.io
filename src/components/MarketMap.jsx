@@ -1,5 +1,5 @@
 import React, { useState, useRef, useEffect, useCallback } from 'react'
-import { formatPrice, CORRELATIONS, SECTOR_META } from '../data/markets'
+import { formatPrice, CORRELATIONS, SECTOR_META, formatChangeBubble } from '../data/markets'
 import CurrencyTooltip from './CurrencyTooltip'
 
 // Fixed internal SVG coordinate system — CSS width:100% + height:auto scales it
@@ -72,7 +72,7 @@ function initNodeState(allAssets) {
   return state
 }
 
-export default function MarketMap({ allAssets, hotspots, onSelectAsset, convertPrice, newsCorrelations }) {
+export default function MarketMap({ allAssets, hotspots, onSelectAsset, convertPrice, newsCorrelations, isStale }) {
   const [hovered, setHovered]           = useState(null)
   const [selected, setSelected]         = useState(null)
   const [containerW, setContainerW]     = useState(900) // only for tooltip pixel positioning
@@ -393,10 +393,13 @@ export default function MarketMap({ allAssets, hotspots, onSelectAsset, convertP
           else if (dSym.endsWith('USD')) dSym = dSym.replace('USD', '');
           if (dSym.length > 5) dSym = dSym.substring(0, 5);
 
+          const stale = isStale && isStale(asset.id, asset.sector);
+          const staleOpacity = stale ? 0.3 : 1;
+
           return (
             <g key={asset.id}
               transform={`translate(${pos.x},${pos.y})`}
-              style={{ cursor:'pointer' }}
+              style={{ cursor:'pointer', opacity: staleOpacity, transition: 'opacity 0.4s' }}
               onMouseEnter={() => handleNodeEnter(asset)}
               onMouseLeave={handleNodeLeave}
               onClick={() => {
@@ -489,7 +492,7 @@ export default function MarketMap({ allAssets, hotspots, onSelectAsset, convertP
                 fill={isUp ? 'rgba(52,211,153,0.95)' : 'rgba(248,113,113,0.95)'}
                 style={{ userSelect:'none' }}
               >
-                {isUp?'+':''}{asset.change.toFixed(1)}%
+                {formatChangeBubble(asset.change)}
               </text>
             </g>
           )

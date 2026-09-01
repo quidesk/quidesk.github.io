@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef, useCallback } from 'react'
+import { useState, useEffect, useRef, useCallback, useMemo } from 'react'
 import { MARKET_DATA, detectHotspots } from '../data/markets'
 import {
   fetchBinancePrices,
@@ -9,6 +9,7 @@ import {
   fetchFMPEnergy,
   fetchForexPrices,
 } from '../utils/api'
+import { validateEnergyPrices } from '../utils/energyValidator'
 
 function appendChartPoint(asset) {
   const val = asset.price;
@@ -41,6 +42,31 @@ export function useMarketData() {
   const [isLive, setIsLive]         = useState(true)
   const wsRef = useRef(null)
 
+  // ── STALENESS GUARD ─────────────────────────────────────────────────────
+  // Configurable max-age (ms) per sector before a price is flagged as stale
+  const STALE_MAX_AGE = {
+    equities: 30000,
+    crypto:   30000,
+    forex:    60000,
+    metals:   60000,
+    energy:   60000,
+  }
+  const priceTimestamps = useRef({}) // { [assetId]: number (Date.now()) }
+
+  // Record timestamp for each updated asset
+  function stampPrices(assetIds) {
+    const now = Date.now()
+    assetIds.forEach(id => { priceTimestamps.current[id] = now })
+  }
+
+  // Check if a specific asset's price is stale
+  function isStale(assetId, sector) {
+    const ts = priceTimestamps.current[assetId]
+    if (!ts) return false // never fetched yet — show seed price, don't dim on first load
+    const maxAge = STALE_MAX_AGE[sector] || 60000
+    return (Date.now() - ts) > maxAge
+  }
+
   // ── CRYPTO: Binance REST primary, CoinGecko fallback ────────────────────
   useEffect(() => {
     async function loadCrypto() {
@@ -53,6 +79,7 @@ export function useMarketData() {
             return live ? appendChartPoint({ ...a, ...live }) : a
           })
         }))
+        stampPrices(prices.map(p => p.id))
         console.info('Crypto ✓ Binance')
       } catch(e) {
         console.warn('Binance failed, trying CoinGecko:', e.message)
@@ -65,6 +92,7 @@ export function useMarketData() {
               return live ? appendChartPoint({ ...a, ...live }) : a
             })
           }))
+          stampPrices(prices.map(p => p.id))
           console.info('Crypto ✓ CoinGecko fallback')
         } catch(e2) {
           console.warn('Both crypto APIs failed:', e2.message)
@@ -89,6 +117,9 @@ export function useMarketData() {
             return appendChartPoint({ ...a, price, change })
           })
         }))
+        // Stamp the specific crypto that got a WS update
+        const wsAsset = data.crypto?.find(a => a.symbol === symbol)
+        if (wsAsset) stampPrices([wsAsset.id])
         setLastUpdate(new Date())
       })
       wsRef.current = ws
@@ -110,6 +141,7 @@ export function useMarketData() {
             return live ? appendChartPoint({ ...a, price: live.price, change: live.change }) : a
           })
         }))
+        stampPrices(metals.map(m => m.id))
         console.info('Metals ✓', metals.map(m => `${m.id}=$${m.price}`).join(' '))
       } catch(e) {
         console.warn('Gold-API failed:', e.message)
@@ -139,13 +171,12 @@ export function useMarketData() {
             return q ? appendChartPoint({ ...a, price: q.price, change: q.change, volume: q.volume || a.volume }) : a
           })
         }))
+        stampPrices(loaded.map(([id]) => id))
       } catch(e) {
         console.warn('FMP stocks failed:', e.message)
       }
     }
     loadStocks()
-    // Every 60s — uses 2 requests per refresh (batch call), ~2800 req/day max
-    // Well within FMP free tier 250 req/day at hourly refresh
     const id = setInterval(loadStocks, 60000)
     return () => clearInterval(id)
   }, [])
@@ -169,9 +200,17 @@ export function useMarketData() {
             return q ? appendChartPoint({ ...a, price: q.price, change: q.change }) : a
           })
         }))
+        stampPrices(loaded.map(([id]) => id))
       } catch(e) {
         console.warn('FMP energy failed:', e.message)
       }
+
+      // ── ENERGY FEED CHECK (Issue #3): cross-validate against independent API ──
+      try {
+        const currentPrices = {}
+        data.energy?.forEach(a => { currentPrices[a.id] = a.price })
+        validateEnergyPrices(currentPrices) // fire-and-forget, logs warnings
+      } catch (e) { /* non-critical */ }
     }
     loadEnergy()
     const id = setInterval(loadEnergy, 60000)
@@ -193,6 +232,7 @@ export function useMarketData() {
             return q ? appendChartPoint({ ...a, price: q.price, change: q.change }) : a
           })
         }))
+        stampPrices(loaded.map(([id]) => id))
       } catch(e) {
         console.warn('Forex failed:', e.message)
       }
@@ -223,15 +263,17 @@ export function useMarketData() {
     return () => clearInterval(id)
   }, [isLive, tick])
 
-  const allAssets = [
+  // ── SINGLE SOURCE OF TRUTH: memoize allAssets so all UI surfaces
+  //    read the exact same snapshot per render cycle ────────────────────────
+  const allAssets = useMemo(() => [
     ...(data.equities || []),
     ...(data.crypto   || []),
     ...(data.metals   || []),
     ...(data.energy   || []),
     ...(data.forex    || []),
-  ]
+  ], [data])
 
   const hotspots = detectHotspots(allAssets)
 
-  return { data, allAssets, lastUpdate, isLive, setIsLive, hotspots }
+  return { data, allAssets, lastUpdate, isLive, setIsLive, hotspots, isStale }
 }

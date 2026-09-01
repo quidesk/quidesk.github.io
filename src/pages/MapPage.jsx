@@ -7,31 +7,15 @@ import { formatPrice, SECTOR_META } from '../data/markets'
 import { useNewsSignals } from '../hooks/useNewsSignals'
 import { isFinnhubMissing } from '../utils/api'
 import NewsSignals from '../components/NewsSignals'
+import { computeMarketPulse } from '../utils/marketPulse'
 
 function NarrativeStrip({ allAssets, hotspots }) {
-  const rising = allAssets.filter(a => a.change > 0).length;
-  const falling = allAssets.filter(a => a.change < 0).length;
-  const total = allAssets.length;
-  const breadth = ((rising / total) * 100).toFixed(0);
-  const topGainer = [...allAssets].sort((a,b) => b.change - a.change)[0];
-  const topLoser  = [...allAssets].sort((a,b) => a.change - b.change)[0];
-  const highHot = hotspots.filter(h => h.severity === 'high');
-
-  let narrative = `${breadth}% of assets advancing · `;
-  if (hotspots.length > 0) {
-    narrative += `${hotspots.length} signal${hotspots.length > 1 ? 's' : ''} detected`;
-    if (highHot.length > 0) narrative += ` · ${highHot[0].symbol} showing ${highHot[0].signal}`;
-  } else {
-    narrative += `markets within normal volatility ranges`;
-  }
-  if (topGainer && topLoser) {
-    narrative += ` · ${topGainer.symbol} leading (+${topGainer.change.toFixed(2)}%), ${topLoser.symbol} lagging (${topLoser.change.toFixed(2)}%)`;
-  }
+  const pulse = computeMarketPulse(allAssets, hotspots);
 
   return (
     <div style={ns.wrap}>
       <div style={ns.eyebrow}>MARKET PULSE</div>
-      <div style={ns.text}>{narrative}</div>
+      <div style={ns.text}>{pulse.narrative}</div>
     </div>
   );
 }
@@ -52,7 +36,7 @@ const ns = {
   },
 };
 
-export default function MapPage({ data, allAssets, hotspots, watchlistProps, convertPrice, formatLocalPrice }) {
+export default function MapPage({ data, allAssets, hotspots, watchlistProps, convertPrice, formatLocalPrice, isStale }) {
   const [selectedAsset, setSelectedAsset] = useState(null);
   const { news, loading, newsCorrelations, lastFetch, refresh } = useNewsSignals();
 
@@ -110,6 +94,7 @@ export default function MapPage({ data, allAssets, hotspots, watchlistProps, con
               onSelectAsset={setSelectedAsset}
               convertPrice={convertPrice}
               newsCorrelations={newsCorrelations}
+              isStale={isStale}
             />
           </div>
 
@@ -208,6 +193,7 @@ export default function MapPage({ data, allAssets, hotspots, watchlistProps, con
                       onToggleWatch={watchlistProps?.onToggleWatch}
                       convertPrice={convertPrice}
                       formatLocalPrice={formatLocalPrice}
+                      isStale={isStale}
                     />
                   </div>
                 ))}

@@ -16,7 +16,7 @@ import Logo from './components/Logo'
 
 export default function App() {
   const [activeTab, setActiveTab] = useState('map')
-  const { data, allAssets, lastUpdate, isLive, setIsLive, hotspots } = useMarketData()
+  const { data, allAssets, lastUpdate, isLive, setIsLive, hotspots, isStale } = useMarketData()
   const watchlist                  = useWatchlist()
   const portfolio                  = usePortfolio(allAssets)
   const alerts                     = useAlerts(allAssets)
@@ -33,17 +33,17 @@ export default function App() {
   const renderPage = () => {
     switch (activeTab) {
       case 'map':
-        return <MapPage data={data} allAssets={allAssets} hotspots={hotspots} watchlistProps={watchlistProps} convertPrice={convertPrice} formatLocalPrice={formatLocalPrice} />
+        return <MapPage data={data} allAssets={allAssets} hotspots={hotspots} watchlistProps={watchlistProps} convertPrice={convertPrice} formatLocalPrice={formatLocalPrice} isStale={isStale} />
       case 'equities':
-        return <SectorPage sector="equities" assets={data.equities || []} watchlistProps={watchlistProps} convertPrice={convertPrice} formatLocalPrice={formatLocalPrice} />
+        return <SectorPage sector="equities" assets={data.equities || []} watchlistProps={watchlistProps} convertPrice={convertPrice} formatLocalPrice={formatLocalPrice} isStale={isStale} />
       case 'crypto':
-        return <SectorPage sector="crypto" assets={data.crypto || []} watchlistProps={watchlistProps} convertPrice={convertPrice} formatLocalPrice={formatLocalPrice} />
+        return <SectorPage sector="crypto" assets={data.crypto || []} watchlistProps={watchlistProps} convertPrice={convertPrice} formatLocalPrice={formatLocalPrice} isStale={isStale} />
       case 'metals':
-        return <SectorPage sector="metals" assets={data.metals || []} watchlistProps={watchlistProps} convertPrice={convertPrice} formatLocalPrice={formatLocalPrice} />
+        return <SectorPage sector="metals" assets={data.metals || []} watchlistProps={watchlistProps} convertPrice={convertPrice} formatLocalPrice={formatLocalPrice} isStale={isStale} />
       case 'energy':
-        return <SectorPage sector="energy" assets={data.energy || []} watchlistProps={watchlistProps} convertPrice={convertPrice} formatLocalPrice={formatLocalPrice} />
+        return <SectorPage sector="energy" assets={data.energy || []} watchlistProps={watchlistProps} convertPrice={convertPrice} formatLocalPrice={formatLocalPrice} isStale={isStale} />
       case 'forex':
-        return <SectorPage sector="forex" assets={data.forex || []} watchlistProps={watchlistProps} convertPrice={convertPrice} formatLocalPrice={formatLocalPrice} />
+        return <SectorPage sector="forex" assets={data.forex || []} watchlistProps={watchlistProps} convertPrice={convertPrice} formatLocalPrice={formatLocalPrice} isStale={isStale} />
       case 'compare':
         return <ComparePage data={data} formatLocalPrice={formatLocalPrice} />
       case 'watchlist':
@@ -57,10 +57,20 @@ export default function App() {
             onRemoveAlert={alerts.removeAlert}
             convertPrice={convertPrice}
             formatLocalPrice={formatLocalPrice}
+            isStale={isStale}
           />
         )
       case 'portfolio':
-        return <PortfolioPage portfolio={portfolio} allAssets={allAssets} formatLocalPrice={formatLocalPrice} />
+        return (
+          <PortfolioPage
+            portfolio={portfolio}
+            allAssets={allAssets}
+            alerts={alerts}
+            convertPrice={convertPrice}
+            formatLocalPrice={formatLocalPrice}
+            isStale={isStale}
+          />
+        )
       default:
         return <MapPage data={data} allAssets={allAssets} hotspots={hotspots} watchlistProps={watchlistProps} convertPrice={convertPrice} formatLocalPrice={formatLocalPrice} />
     }
@@ -80,7 +90,7 @@ export default function App() {
         allAssets={allAssets}
         formatLocalPrice={formatLocalPrice}
       />
-      <TickerTape allAssets={allAssets} formatLocalPrice={formatLocalPrice} />
+      <TickerTape allAssets={allAssets} formatLocalPrice={formatLocalPrice} isStale={isStale} />
       <main style={{ flex:1 }}>
         {renderPage()}
       </main>

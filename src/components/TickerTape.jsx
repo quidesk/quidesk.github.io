@@ -1,7 +1,7 @@
 import React from 'react'
 import { formatPrice, formatChange } from '../data/markets'
 
-export default function TickerTape({ allAssets, formatLocalPrice }) {
+export default function TickerTape({ allAssets, formatLocalPrice, isStale }) {
   const items = [...allAssets, ...allAssets];
 
   return (
@@ -14,8 +14,9 @@ export default function TickerTape({ allAssets, formatLocalPrice }) {
         <div style={s.scroll}>
           {items.map((a, i) => {
             const up = a.change >= 0;
+            const stale = isStale && isStale(a.id, a.sector);
             return (
-              <span key={`${a.id}-${i}`} style={s.item}>
+              <span key={`${a.id}-${i}`} style={{ ...s.item, opacity: stale ? 0.4 : 1 }}>
                 <span style={s.sym}>{a.symbol}</span>
                 <span style={s.price}>
                   {a.pricePrefix || ''}{formatPrice(a.price).replace('$', a.pricePrefix ? '' : '$')}
@@ -52,6 +53,8 @@ const s = {
     borderRight:'1px solid var(--border-subtle)',
     height:'100%',
     background:'rgba(34,212,122,0.04)',
+    position: 'relative',
+    zIndex: 2, // ensure label stays above scroll track
   },
   dot: {
     width:'5px', height:'5px', borderRadius:'50%',
@@ -68,10 +71,11 @@ const s = {
     display:'inline-flex', alignItems:'center',
     animation:'tickerScroll 90s linear infinite',
     whiteSpace:'nowrap',
+    paddingLeft: '16px', // issue 5 fix: breathing room so first item doesn't clip
   },
   item: {
     display:'inline-flex', alignItems:'center', gap:'6px',
-    padding:'0 2px',
+    padding:'0 8px', // issue 5 fix: increase padding from 2px to 8px
     flexShrink: 0,
     whiteSpace: 'nowrap',
   },
