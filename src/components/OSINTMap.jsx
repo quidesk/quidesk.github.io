@@ -69,10 +69,10 @@ export default function OSINTMap({ news = [] }) {
           <div style={styles.terminalHeader}>LATEST INTERCEPTS</div>
           {news.slice(0, 5).map(n => (
             <div key={n.id} style={{ ...styles.terminalLine, color: n.color || 'var(--text-dim)' }}>
-              > {n.source}: {n.title.length > 50 ? n.title.slice(0,47)+'...' : n.title}
+              {'>'} {n.source}: {n.title.length > 50 ? n.title.slice(0,47)+'...' : n.title}
             </div>
           ))}
-          {news.length === 0 && <div style={{ color: 'var(--text-dim)' }}>> AWAITING SIGNAL...</div>}
+          {news.length === 0 && <div style={{ color: 'var(--text-dim)' }}>{'>'} AWAITING SIGNAL...</div>}
         </div>
 
         <ComposableMap projection="geoMercator" projectionConfig={{ scale: 130 }}>
