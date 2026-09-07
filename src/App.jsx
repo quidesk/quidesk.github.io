@@ -12,6 +12,8 @@ import { usePortfolio } from './hooks/usePortfolio'
 import { useAlerts } from './hooks/useAlerts'
 import { useCurrencyRates } from './hooks/useCurrencyRates'
 import { useTheme } from './hooks/useTheme'
+import { useNewsSignals } from './hooks/useNewsSignals'
+import OSINTMap from './components/OSINTMap'
 import Logo from './components/Logo'
 
 export default function App() {
@@ -22,6 +24,7 @@ export default function App() {
   const alerts                     = useAlerts(allAssets)
   const { convertPrice, formatLocalPrice, loaded } = useCurrencyRates()
   const { theme, toggle: toggleTheme } = useTheme()
+  const newsSignals = useNewsSignals()
 
   const watchlistProps = {
     isWatched: watchlist.isWatched,
@@ -33,7 +36,7 @@ export default function App() {
   const renderPage = () => {
     switch (activeTab) {
       case 'map':
-        return <MapPage data={data} allAssets={allAssets} hotspots={hotspots} watchlistProps={watchlistProps} convertPrice={convertPrice} formatLocalPrice={formatLocalPrice} isStale={isStale} />
+        return <MapPage data={data} allAssets={allAssets} hotspots={hotspots} watchlistProps={watchlistProps} convertPrice={convertPrice} formatLocalPrice={formatLocalPrice} isStale={isStale} newsSignals={newsSignals} />
       case 'equities':
         return <SectorPage sector="equities" assets={data.equities || []} watchlistProps={watchlistProps} convertPrice={convertPrice} formatLocalPrice={formatLocalPrice} isStale={isStale} />
       case 'crypto':
@@ -72,7 +75,7 @@ export default function App() {
           />
         )
       default:
-        return <MapPage data={data} allAssets={allAssets} hotspots={hotspots} watchlistProps={watchlistProps} convertPrice={convertPrice} formatLocalPrice={formatLocalPrice} />
+        return <MapPage data={data} allAssets={allAssets} hotspots={hotspots} watchlistProps={watchlistProps} convertPrice={convertPrice} formatLocalPrice={formatLocalPrice} isStale={isStale} newsSignals={newsSignals} />
     }
   }
 
@@ -94,6 +97,9 @@ export default function App() {
       <main style={{ flex:1 }}>
         {renderPage()}
       </main>
+
+      {/* OSINT Live Tracker Map */}
+      <OSINTMap news={newsSignals.news} />
 
       {/* Disclaimer */}
       <div style={fS.disclaimer}>

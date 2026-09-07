@@ -4,7 +4,6 @@ import HotspotPanel from '../components/HotspotPanel'
 import DetailChart from '../components/DetailChart'
 import AssetCard from '../components/AssetCard'
 import { formatPrice, SECTOR_META } from '../data/markets'
-import { useNewsSignals } from '../hooks/useNewsSignals'
 import { isFinnhubMissing } from '../utils/api'
 import NewsSignals from '../components/NewsSignals'
 import { computeMarketPulse } from '../utils/marketPulse'
@@ -36,9 +35,9 @@ const ns = {
   },
 };
 
-export default function MapPage({ data, allAssets, hotspots, watchlistProps, convertPrice, formatLocalPrice, isStale }) {
+export default function MapPage({ data, allAssets, hotspots, watchlistProps, convertPrice, formatLocalPrice, isStale, newsSignals }) {
   const [selectedAsset, setSelectedAsset] = useState(null);
-  const { news, loading, newsCorrelations, lastFetch, refresh } = useNewsSignals();
+  const { news, loading, newsCorrelations, lastFetch, refresh } = newsSignals;
 
   // Top movers for sidebar
   const gainers = [...allAssets].sort((a,b) => b.change - a.change).slice(0,4);

@@ -11,10 +11,13 @@
     "test": "vitest run"
   },
   "dependencies": {
+    "d3-geo": "^3.1.1",
+    "d3-scale": "^4.0.2",
     "html-to-image": "^1.11.13",
     "lucide-react": "^0.400.0",
     "react": "^18.3.1",
     "react-dom": "^18.3.1",
+    "react-simple-maps": "^3.0.0",
     "recharts": "^2.12.7"
   },
   "devDependencies": {
