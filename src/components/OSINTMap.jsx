@@ -50,9 +50,9 @@ export default function OSINTMap({ news = [] }) {
             to { stroke-dashoffset: -20; }
           }
           @keyframes radarSweep {
-            0% { transform: translateY(-50px); opacity: 0; }
+            0% { transform: translateY(-80px); opacity: 0; }
             50% { opacity: 0.15; }
-            100% { transform: translateY(450px); opacity: 0; }
+            100% { transform: translateY(680px); opacity: 0; }
           }
         `}
       </style>
@@ -75,7 +75,7 @@ export default function OSINTMap({ news = [] }) {
           {news.length === 0 && <div style={{ color: 'var(--text-dim)' }}>{'>'} AWAITING SIGNAL...</div>}
         </div>
 
-        <ComposableMap projection="geoMercator" projectionConfig={{ scale: 130 }}>
+        <ComposableMap projection="geoMercator" width={1200} height={600} projectionConfig={{ scale: 190 }}>
           <Sphere stroke="rgba(255,255,255,0.05)" strokeWidth={1} />
           <Graticule stroke="rgba(255,255,255,0.05)" strokeWidth={0.5} />
 
@@ -118,27 +118,27 @@ export default function OSINTMap({ news = [] }) {
           {/* Draw Tracking Markers */}
           {points.map((pt, i) => (
             <Marker key={i} coordinates={pt.coords}>
-              <circle r={3} fill={pt.color} opacity={0.8} />
+              <circle r={4} fill={pt.color} opacity={0.8} />
               
               {/* Radar Ping Animation */}
-              <circle r={12} fill="transparent" stroke={pt.color} strokeWidth={1} opacity={0.4}>
-                <animate attributeName="r" from="3" to="24" dur="2s" repeatCount="indefinite" />
+              <circle r={14} fill="transparent" stroke={pt.color} strokeWidth={1.5} opacity={0.4}>
+                <animate attributeName="r" from="4" to="30" dur="2s" repeatCount="indefinite" />
                 <animate attributeName="opacity" from="0.8" to="0" dur="2s" repeatCount="indefinite" />
               </circle>
               
               {/* Target Reticle */}
-              <path d="M -6 0 L -2 0 M 6 0 L 2 0 M 0 -6 L 0 -2 M 0 6 L 0 2" stroke={pt.color} strokeWidth={1} opacity={0.8} />
+              <path d="M -8 0 L -3 0 M 8 0 L 3 0 M 0 -8 L 0 -3 M 0 8 L 0 3" stroke={pt.color} strokeWidth={1.5} opacity={0.8} />
               
               <text 
                 textAnchor="middle" 
-                y={-12} 
+                y={-14} 
                 style={{ 
                   fontFamily: "var(--font-mono)", 
-                  fontSize: "8px", 
-                  fill: "var(--text-secondary)",
+                  fontSize: "11px", 
+                  fill: "var(--text-primary)",
                   pointerEvents: "none",
-                  fontWeight: 600,
-                  textShadow: `0 0 4px ${pt.color}, 0 0 4px rgba(0,0,0,0.8)`
+                  fontWeight: 700,
+                  textShadow: `0 0 6px ${pt.color}, 0 0 6px rgba(0,0,0,1)`
                 }}
               >
                 {pt.name}
@@ -153,78 +153,80 @@ export default function OSINTMap({ news = [] }) {
 
 const styles = {
   container: {
-    padding: '24px 28px',
-    maxWidth: '1700px',
-    margin: '40px auto 0 auto',
+    padding: '40px 0 0 0',
+    width: '100%',
+    marginTop: '40px',
     borderTop: '1px solid var(--border-subtle)',
+    background: 'var(--bg-surface)',
   },
   title: {
     fontFamily: 'var(--font-display)',
-    fontSize: '12px',
+    fontSize: '14px',
     letterSpacing: '0.1em',
     color: 'var(--text-secondary)',
     display: 'flex',
     alignItems: 'center',
-    gap: '8px',
-    marginBottom: '16px',
+    gap: '10px',
+    marginBottom: '20px',
+    padding: '0 28px',
     textTransform: 'uppercase',
   },
   liveDot: {
-    width: '6px',
-    height: '6px',
+    width: '8px',
+    height: '8px',
     borderRadius: '50%',
     background: 'var(--neon-green)',
-    boxShadow: '0 0 8px var(--neon-green)',
+    boxShadow: '0 0 12px var(--neon-green)',
   },
   mapWrapper: {
     width: '100%',
-    height: '400px',
-    background: 'radial-gradient(circle at center, var(--bg-surface) 0%, var(--bg-base) 100%)',
-    borderRadius: '12px',
-    overflow: 'hidden',
+    height: '600px',
+    background: 'radial-gradient(ellipse at center, var(--bg-surface) 0%, var(--bg-base) 100%)',
     position: 'relative',
-    border: '1px solid var(--border-subtle)'
+    borderTop: '1px solid var(--border-subtle)',
+    borderBottom: '1px solid var(--border-subtle)',
+    overflow: 'hidden',
   },
   scanline: {
     position: 'absolute',
     top: 0,
     left: 0,
     right: 0,
-    height: '40px',
+    height: '60px',
     background: 'linear-gradient(to bottom, transparent, rgba(0, 255, 204, 0.4), transparent)',
-    animation: 'radarSweep 3s linear infinite',
+    animation: 'radarSweep 4s linear infinite',
     pointerEvents: 'none',
     zIndex: 10,
   },
   terminal: {
     position: 'absolute',
-    bottom: '20px',
-    left: '20px',
-    width: '320px',
-    background: 'rgba(10, 10, 10, 0.75)',
-    border: '1px solid rgba(0, 255, 204, 0.2)',
-    borderRadius: '6px',
-    padding: '12px',
+    bottom: '30px',
+    left: '30px',
+    width: '360px',
+    background: 'rgba(10, 10, 10, 0.85)',
+    border: '1px solid rgba(0, 255, 204, 0.3)',
+    borderRadius: '8px',
+    padding: '16px',
     zIndex: 10,
     fontFamily: 'var(--font-mono)',
-    fontSize: '10px',
+    fontSize: '11px',
     pointerEvents: 'none',
-    backdropFilter: 'blur(4px)',
-    boxShadow: '0 4px 12px rgba(0,0,0,0.5)'
+    backdropFilter: 'blur(8px)',
+    boxShadow: '0 8px 24px rgba(0,0,0,0.6)'
   },
   terminalHeader: {
     color: 'var(--neon-green)',
-    marginBottom: '8px',
-    borderBottom: '1px dashed rgba(0, 255, 204, 0.3)',
-    paddingBottom: '4px',
-    fontWeight: 600,
+    marginBottom: '10px',
+    borderBottom: '1px dashed rgba(0, 255, 204, 0.4)',
+    paddingBottom: '6px',
+    fontWeight: 700,
     letterSpacing: '0.1em'
   },
   terminalLine: {
-    marginBottom: '6px',
+    marginBottom: '8px',
     whiteSpace: 'nowrap',
     overflow: 'hidden',
     textOverflow: 'ellipsis',
-    lineHeight: 1.4
+    lineHeight: 1.5
   }
 }
