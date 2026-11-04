@@ -5,7 +5,7 @@ import {
 } from 'recharts'
 import { formatPrice, SECTOR_META } from '../data/markets'
 
-const Tip = ({ active, payload, label }) => {
+const Tip = ({ active, payload, label, symbol, sector }) => {
   if (!active || !payload?.length) return null;
   return (
     <div style={{
@@ -14,7 +14,7 @@ const Tip = ({ active, payload, label }) => {
       fontFamily:'var(--font-mono)', boxShadow:'0 8px 32px rgba(0,0,0,0.5)',
     }}>
       <div style={{ fontSize:'9px', color:'var(--text-dim)', marginBottom:'2px' }}>{label}</div>
-      <div style={{ fontSize:'14px', color:'var(--text-primary)' }}>{formatPrice(payload[0].value)}</div>
+      <div style={{ fontSize:'14px', color:'var(--text-primary)' }}>{formatPrice(payload[0].value, symbol, sector)}</div>
     </div>
   );
 };
@@ -44,8 +44,8 @@ export default function DetailChart({ asset, onClose }) {
           <div style={s.name}>{asset.name}</div>
         </div>
         <div style={s.priceGroup}>
-          <div style={{ ...s.price, color }}>{formatPrice(asset.price)}</div>
-          <div style={{ ...s.change, color }}>{isUp?'▲':'▼'} {formatPrice(Math.abs(asset.price * asset.change / 100))} ({isUp?'+':''}{asset.change.toFixed(2)}%)</div>
+          <div style={{ ...s.price, color }}>{formatPrice(asset.price, asset.symbol, asset.sector)}</div>
+          <div style={{ ...s.change, color }}>{isUp?'▲':'▼'} {formatPrice(Math.abs(asset.price * asset.change / 100), asset.symbol, asset.sector)} ({isUp?'+':''}{asset.change.toFixed(2)}%)</div>
         </div>
         {onClose && (
           <button style={s.closeBtn} onClick={onClose}>✕</button>
@@ -118,9 +118,9 @@ export default function DetailChart({ asset, onClose }) {
               domain={[min*0.998, max*1.002]}
               tick={{ fill:'var(--text-dim)', fontSize:9, fontFamily:'var(--font-mono)' }}
               axisLine={false} tickLine={false}
-              tickFormatter={v => formatPrice(v)} width={68}
+              tickFormatter={v => formatPrice(v, asset.symbol, asset.sector)} width={68}
             />
-            <Tooltip content={<Tip/>}/>
+            <Tooltip content={<Tip sector={asset.sector} symbol={asset.symbol}/>}/>
             <ReferenceLine y={data[0]?.value} stroke="rgba(255,255,255,0.08)" strokeDasharray="3 2"/>
             <Area type="monotone" dataKey="value"
               stroke={color} strokeWidth={2}
@@ -134,8 +134,8 @@ export default function DetailChart({ asset, onClose }) {
       {/* Stats */}
       <div style={s.stats}>
         {[
-          { l:'HIGH',   v: formatPrice(max) },
-          { l:'LOW',    v: formatPrice(min) },
+          { l:'HIGH',   v: formatPrice(max, asset.symbol, asset.sector) },
+          { l:'LOW',    v: formatPrice(min, asset.symbol, asset.sector) },
           { l:'VOLUME', v: asset.volume },
           { l:'MKT CAP',v: asset.marketCap },
           { l:'CHANGE', v: `${asset.change>=0?'+':''}${asset.change.toFixed(2)}%`, c: color },

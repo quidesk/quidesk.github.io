@@ -34,8 +34,12 @@ const INITIAL_POSITIONS = {
   audusd:   { x:0.38, y:0.56 },
   usdcad:   { x:0.50, y:0.56 },
   usdchf:   { x:0.60, y:0.42 },
+  nzdusd:   { x:0.32, y:0.56 },
   eurgbp:   { x:0.42, y:0.50 },
+  gbpjpy:   { x:0.48, y:0.38 },
+  eurjpy:   { x:0.52, y:0.44 },
   usdinr:   { x:0.55, y:0.55 },
+  eurinr:   { x:0.58, y:0.52 },
 }
 
 const ZONES = [
@@ -156,10 +160,10 @@ export default function MarketMap({ allAssets, hotspots, onSelectAsset, convertP
             // attract if far
             fx += (dx / dist) * 0.0001
             fy += (dy / dist) * 0.0001
-          } else if (dist < 0.08) {
-            // repel if too close
-            fx -= (dx / dist) * 0.0003
-            fy -= (dy / dist) * 0.0003
+          } else if (dist < 0.075) {
+            // repel if too close to prevent overlap
+            fx -= (dx / dist) * 0.00035
+            fy -= (dy / dist) * 0.00035
           }
         })
 
@@ -210,10 +214,10 @@ export default function MarketMap({ allAssets, hotspots, onSelectAsset, convertP
     return () => cancelAnimationFrame(animFrameRef.current)
   }, [allAssets.length])
 
-  // Circle radius helper - scale dynamically based on absolute percentage change
+  // Circle radius helper - keep compact and proportional across all screens
   const getAssetRadius = useCallback((asset) => {
-    const baseR = Math.max(16, Math.min(24, INTERNAL_W * 0.022))
-    const extraR = Math.min(28, Math.abs(asset.change) * 4) // +0 to 28px depending on volatility
+    const baseR = 19
+    const extraR = Math.min(3.5, Math.abs(asset.change || 0) * 0.4) // Subtle volatility hint (+0 to 3.5px max)
     return baseR + extraR
   }, [])
 
@@ -409,11 +413,11 @@ export default function MarketMap({ allAssets, hotspots, onSelectAsset, convertP
             >
               {/* Hotspot pulse ring */}
               {isHot && (
-                <circle r={nr+6} fill="none"
+                <circle r={nr+3} fill="none"
                   stroke={ringColor}
                   strokeWidth="1" opacity="0.6">
                   <animate attributeName="r"
-                    from={nr+4} to={nr+18} dur="2s" repeatCount="indefinite"/>
+                    from={nr+2} to={nr+7} dur="2s" repeatCount="indefinite"/>
                   <animate attributeName="opacity"
                     from="0.6" to="0" dur="2s" repeatCount="indefinite"/>
                 </circle>
@@ -534,7 +538,7 @@ const s = {
   wrap: {
     position:'relative', width:'100%', borderRadius:'12px',
     background:'var(--bg-card)', border:'1px solid var(--border-subtle)',
-    overflow:'hidden',
+    overflow:'hidden', touchAction:'manipulation',
   },
   svg: { display:'block', width:'100%', height:'auto' },
   legend: {

@@ -19,7 +19,7 @@ export default function TickerTape({ allAssets, formatLocalPrice, isStale }) {
               <span key={`${a.id}-${i}`} style={{ ...s.item, opacity: stale ? 0.4 : 1 }}>
                 <span style={s.sym}>{a.symbol}</span>
                 <span style={s.price}>
-                  {a.pricePrefix || ''}{formatPrice(a.price).replace('$', a.pricePrefix ? '' : '$')}
+                  {formatPrice(a.price, a.symbol, a.sector)}
                   {formatLocalPrice && formatLocalPrice(a.price) && (
                     <span style={{ fontSize: '11px', color: 'var(--text-dim)', marginLeft: '4px', fontWeight: 400 }}>
                       ({formatLocalPrice(a.price)})

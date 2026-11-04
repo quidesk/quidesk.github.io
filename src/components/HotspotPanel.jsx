@@ -57,7 +57,7 @@ export default function HotspotPanel({ hotspots, allAssets, onSelect }) {
                   {asset.change >= 0 ? '+' : ''}{asset.change.toFixed(2)}%
                 </div>
                 <div style={{ fontFamily:'var(--font-mono)', fontSize:'10px', color:'var(--text-dim)' }}>
-                  {formatPrice(asset.price)}
+                  {formatPrice(asset.price, asset.symbol, asset.sector)}
                 </div>
               </div>
             )}

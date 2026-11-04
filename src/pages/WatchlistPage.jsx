@@ -29,7 +29,7 @@ export default function WatchlistPage({ data, watchlist, allAssets, onToggleWatc
         <div className="fade-up-1" style={s.alertBanner}>
           <Bell size={14} color="var(--accent)" />
           <span style={s.alertText}>
-            {alerts.triggered.slice(0,2).map(a => `${a.symbol} hit ${formatPrice(a.price)}`).join(' · ')}
+            {alerts.triggered.slice(0,2).map(a => `${a.symbol} hit ${formatPrice(a.price, a.symbol, a.sector)}`).join(' · ')}
           </span>
           <button style={s.dismissBtn} onClick={alerts.clearTriggered}>Dismiss</button>
         </div>
@@ -42,7 +42,7 @@ export default function WatchlistPage({ data, watchlist, allAssets, onToggleWatc
             <div key={a.id} style={s.pill}>
               <span style={s.pillSym}>{a.symbol}</span>
               <span style={{ color: a.type==='above'?'var(--bull)':'var(--bear)', fontFamily:'var(--font-mono)', fontSize:10 }}>
-                {a.type==='above'?'▲':'▼'} {formatPrice(a.price)}
+                {a.type==='above'?'▲':'▼'} {formatPrice(a.price, a.symbol, a.sector)}
               </span>
               <button style={s.pillRemove} onClick={() => onRemoveAlert(a.id)}>×</button>
             </div>

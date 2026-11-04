@@ -11,39 +11,57 @@ import {
 } from '../utils/api'
 import { validateEnergyPrices } from '../utils/energyValidator'
 
+function sanitizeHistoryPoints(arr, fallbackPrice) {
+  const safe = (arr || []).filter(v => typeof v === 'number' && Number.isFinite(v) && v > 0);
+  if (safe.length < 2) return [fallbackPrice, fallbackPrice];
+  return safe;
+}
+
 function appendChartPoint(asset) {
   const val = asset.price;
   const h = asset.history || {};
   
-  const updateLast = (arr) => {
-    if (!arr || arr.length === 0) return [];
-    const copy = [...arr];
-    copy[copy.length - 1] = { ...copy[copy.length - 1], value: val };
+  const updateArr = (arr) => {
+    const safe = sanitizeHistoryPoints(arr, val);
+    const copy = [...safe];
+    copy[copy.length - 1] = val;
     return copy;
   };
 
   const history = {
-    '1H': updateLast(h['1H']),
-    '24H': updateLast(h['24H']),
-    '1M': updateLast(h['1M']),
-    '1Y': updateLast(h['1Y'])
+    '1H': updateArr(h['1H']),
+    '24H': updateArr(h['24H']),
+    '1M': updateArr(h['1M']),
+    '1Y': updateArr(h['1Y']),
   };
+
+  const chartData = history['24H'].map((v, i) => ({ time: `${i}:00`, value: v }));
 
   return {
     ...asset,
     history,
-    chartData: history['24H']
-  }
+    chartData,
+  };
+}
+
+// Build initial flat normalized map from MARKET_DATA
+function buildInitialMap() {
+  const map = {};
+  Object.values(MARKET_DATA).flat().forEach(asset => {
+    map[asset.id] = asset;
+  });
+  return map;
 }
 
 export function useMarketData() {
-  const [data, setData]             = useState(MARKET_DATA)
+  // Single normalized store: Record<TickerSymbol, MarketAsset>
+  const [assetMap, setAssetMap] = useState(buildInitialMap)
   const [lastUpdate, setLastUpdate] = useState(new Date())
-  const [isLive, setIsLive]         = useState(true)
+  const [isLive, setIsLive] = useState(true)
+  const [connectionStatus, setConnectionStatus] = useState('connecting') // 'live' | 'connecting' | 'reconnecting'
   const wsRef = useRef(null)
 
   // ── STALENESS GUARD ─────────────────────────────────────────────────────
-  // Configurable max-age (ms) per sector before a price is flagged as stale
   const STALE_MAX_AGE = {
     equities: 30000,
     crypto:   30000,
@@ -53,227 +71,278 @@ export function useMarketData() {
   }
   const priceTimestamps = useRef({}) // { [assetId]: number (Date.now()) }
 
-  // Record timestamp for each updated asset
   function stampPrices(assetIds) {
     const now = Date.now()
     assetIds.forEach(id => { priceTimestamps.current[id] = now })
   }
 
-  // Check if a specific asset's price is stale
   function isStale(assetId, sector) {
     const ts = priceTimestamps.current[assetId]
-    if (!ts) return false // never fetched yet — show seed price, don't dim on first load
+    if (!ts) return false
     const maxAge = STALE_MAX_AGE[sector] || 60000
     return (Date.now() - ts) > maxAge
   }
 
-  // ── CRYPTO: Binance REST primary, CoinGecko fallback ────────────────────
-  useEffect(() => {
-    async function loadCrypto() {
-      try {
-        const prices = await fetchBinancePrices()
-        setData(prev => ({
-          ...prev,
-          crypto: prev.crypto.map(a => {
-            const live = prices.find(p => p.id === a.id)
-            return live ? appendChartPoint({ ...a, ...live }) : a
-          })
-        }))
-        stampPrices(prices.map(p => p.id))
-        console.info('Crypto ✓ Binance')
-      } catch(e) {
-        console.warn('Binance failed, trying CoinGecko:', e.message)
-        try {
-          const prices = await fetchCryptoPrices()
-          setData(prev => ({
-            ...prev,
-            crypto: prev.crypto.map(a => {
-              const live = prices.find(p => p.id === a.id)
-              return live ? appendChartPoint({ ...a, ...live }) : a
-            })
-          }))
-          stampPrices(prices.map(p => p.id))
-          console.info('Crypto ✓ CoinGecko fallback')
-        } catch(e2) {
-          console.warn('Both crypto APIs failed:', e2.message)
+  // Atomic bulk updater for normalized state
+  const updateAssets = useCallback((updates) => {
+    if (!updates || !updates.length) return;
+    setAssetMap(prev => {
+      let changed = false;
+      const next = { ...prev };
+      updates.forEach(u => {
+        if (!u || !u.id) return;
+        const current = next[u.id];
+        if (!current) return;
+
+        // Verify if price or change meaningfully shifted
+        const priceDiff = typeof u.price === 'number' && u.price !== current.price;
+        const changeDiff = typeof u.change === 'number' && u.change !== current.change;
+
+        if (priceDiff || changeDiff || u.volume) {
+          changed = true;
+          const merged = {
+            ...current,
+            ...u,
+            price: typeof u.price === 'number' ? u.price : current.price,
+            change: typeof u.change === 'number' ? u.change : current.change,
+          };
+          next[u.id] = appendChartPoint(merged);
         }
+      });
+      return changed ? next : prev;
+    });
+    setLastUpdate(new Date());
+    setConnectionStatus('live');
+  }, []);
+
+  // ── 1. PRE-HYDRATION LAYER (Static Snapshot on boot) ───────────────────
+  useEffect(() => {
+    async function preHydrate() {
+      try {
+        const base = import.meta.env.BASE_URL || '/'
+        const snapshotUrl = `${base.replace(/\/$/, '')}/market-snapshot.json`
+        const res = await fetch(snapshotUrl, { cache: 'no-cache' })
+        if (res.ok) {
+          const snapshot = await res.json()
+          if (snapshot && snapshot.assets) {
+            setAssetMap(prev => {
+              const next = { ...prev };
+              Object.entries(snapshot.assets).forEach(([id, snapAsset]) => {
+                if (next[id]) {
+                  next[id] = {
+                    ...next[id],
+                    ...snapAsset,
+                    history: snapAsset.history || next[id].history,
+                    chartData: snapAsset.chartData || next[id].chartData,
+                  };
+                } else {
+                  next[id] = snapAsset;
+                }
+              });
+              return next;
+            });
+            if (snapshot.timestamp) {
+              setLastUpdate(new Date(snapshot.timestamp));
+            }
+            stampPrices(Object.keys(snapshot.assets));
+            console.info('[Hydration] ✓ Pre-hydrated state from market-snapshot.json');
+          }
+        }
+      } catch (e) {
+        console.info('[Hydration] Static snapshot bypassed, connecting live feeds:', e.message);
       }
     }
-    loadCrypto()
-    const id = setInterval(loadCrypto, 30000)
-    return () => clearInterval(id)
-  }, [])
+    preHydrate();
+  }, []);
 
-  // ── CRYPTO: Binance WebSocket real-time ──────────────────────────────────
+  // ── 2. CRYPTO: Binance WebSocket (!ticker@arr) + REST fallback ────────
   useEffect(() => {
     const symbols = ['BTC', 'ETH', 'SOL', 'BNB', 'XRP', 'ADA']
     let ws
     try {
       ws = connectBinanceWS(symbols, ({ symbol, price, change }) => {
-        setData(prev => ({
-          ...prev,
-          crypto: prev.crypto.map(a => {
-            if (a.symbol !== symbol) return a
-            return appendChartPoint({ ...a, price, change })
-          })
-        }))
-        // Stamp the specific crypto that got a WS update
-        const wsAsset = data.crypto?.find(a => a.symbol === symbol)
-        if (wsAsset) stampPrices([wsAsset.id])
-        setLastUpdate(new Date())
+        const id = symbol.toLowerCase()
+        updateAssets([{ id, price, change }])
+        stampPrices([id])
       })
       wsRef.current = ws
-    } catch(e) {
-      console.warn('Binance WS failed:', e.message)
+    } catch (e) {
+      console.warn('Binance WS connection error:', e.message)
+      setConnectionStatus('reconnecting')
     }
-    return () => { try { ws?.close() } catch {} }
-  }, [])
 
-  // ── METALS: gold-api.com ─────────────────────────────────────────────────
+    // Polling REST fallback every 30s
+    async function loadCryptoRest() {
+      try {
+        const prices = await fetchBinancePrices()
+        updateAssets(prices)
+        stampPrices(prices.map(p => p.id))
+      } catch (e) {
+        try {
+          const prices = await fetchCryptoPrices()
+          updateAssets(prices)
+          stampPrices(prices.map(p => p.id))
+        } catch (e2) {
+          console.warn('All crypto APIs failed:', e2.message)
+          setConnectionStatus('reconnecting')
+        }
+      }
+    }
+    loadCryptoRest()
+    const id = setInterval(loadCryptoRest, 30000)
+
+    return () => {
+      clearInterval(id)
+      try { ws?.close() } catch {}
+    }
+  }, [updateAssets])
+
+  // ── 3. METALS: gold-api.com live 30s poller ───────────────────────────
   useEffect(() => {
     async function loadMetals() {
       try {
         const metals = await fetchAllMetals()
-        setData(prev => ({
-          ...prev,
-          metals: prev.metals.map(a => {
-            const live = metals.find(m => m.id === a.id)
-            return live ? appendChartPoint({ ...a, price: live.price, change: live.change }) : a
-          })
-        }))
-        stampPrices(metals.map(m => m.id))
-        console.info('Metals ✓', metals.map(m => `${m.id}=$${m.price}`).join(' '))
-      } catch(e) {
-        console.warn('Gold-API failed:', e.message)
+        if (metals && metals.length) {
+          updateAssets(metals)
+          stampPrices(metals.map(m => m.id))
+        }
+      } catch (e) {
+        console.warn('Metals feed failed:', e.message)
       }
     }
     loadMetals()
-    const id = setInterval(loadMetals, 60000)
+    const id = setInterval(loadMetals, 30000)
     return () => clearInterval(id)
-  }, [])
+  }, [updateAssets])
 
-  // ── STOCKS: FMP (CORS-safe, no proxy needed) ─────────────────────────────
+  // ── 4. EQUITIES: Finnhub / FMP live quotes ─────────────────────────────
   useEffect(() => {
-    if (!import.meta.env.VITE_FMP_KEY) {
-      console.warn('VITE_FMP_KEY not set — stocks showing seed prices')
-      return
-    }
+    const hasKey = import.meta.env.VITE_FINNHUB_KEY || import.meta.env.VITE_FMP_KEY
+    if (!hasKey) return
+
     async function loadStocks() {
       try {
         const results = await fetchFMPStocks()
-        const loaded  = Object.entries(results).filter(([, v]) => v?.price > 0)
-        if (loaded.length === 0) throw new Error('No valid prices returned')
-        console.info('Stocks ✓ FMP:', loaded.map(([id, v]) => `${id}=$${v.price}`).join(' '))
-        setData(prev => ({
-          ...prev,
-          equities: prev.equities.map(a => {
-            const q = results[a.id]
-            return q ? appendChartPoint({ ...a, price: q.price, change: q.change, volume: q.volume || a.volume }) : a
-          })
-        }))
-        stampPrices(loaded.map(([id]) => id))
-      } catch(e) {
-        console.warn('FMP stocks failed:', e.message)
+        const updates = Object.entries(results).map(([id, val]) => ({
+          id,
+          price: val.price,
+          change: val.change,
+          volume: val.volume,
+        })).filter(u => u.price > 0)
+
+        if (updates.length > 0) {
+          updateAssets(updates)
+          stampPrices(updates.map(u => u.id))
+        }
+      } catch (e) {
+        console.warn('Equities poller error:', e.message)
       }
     }
     loadStocks()
     const id = setInterval(loadStocks, 60000)
     return () => clearInterval(id)
-  }, [])
+  }, [updateAssets])
 
-  // ── ENERGY: FMP (CORS-safe, same key) ───────────────────────────────────
+  // ── 5. ENERGY: Live Energy / Futures poller ───────────────────────────
   useEffect(() => {
-    if (!import.meta.env.VITE_FMP_KEY) {
-      console.warn('VITE_FMP_KEY not set — energy showing seed prices')
-      return
-    }
+    const hasKey = import.meta.env.VITE_FINNHUB_KEY || import.meta.env.VITE_FMP_KEY
+    if (!hasKey) return
+
     async function loadEnergy() {
       try {
         const results = await fetchFMPEnergy()
-        const loaded  = Object.entries(results).filter(([, v]) => v?.price > 0)
-        if (loaded.length === 0) throw new Error('No valid energy prices')
-        console.info('Energy ✓ FMP:', loaded.map(([id, v]) => `${id}=$${v.price}`).join(' '))
-        setData(prev => ({
-          ...prev,
-          energy: prev.energy.map(a => {
-            const q = results[a.id]
-            return q ? appendChartPoint({ ...a, price: q.price, change: q.change }) : a
-          })
-        }))
-        stampPrices(loaded.map(([id]) => id))
-      } catch(e) {
-        console.warn('FMP energy failed:', e.message)
-      }
+        const updates = Object.entries(results).map(([id, val]) => ({
+          id,
+          price: val.price,
+          change: val.change,
+        })).filter(u => u.price > 0)
 
-      // ── ENERGY FEED CHECK (Issue #3): cross-validate against independent API ──
-      try {
-        const currentPrices = {}
-        data.energy?.forEach(a => { currentPrices[a.id] = a.price })
-        validateEnergyPrices(currentPrices) // fire-and-forget, logs warnings
-      } catch (e) { /* non-critical */ }
+        if (updates.length > 0) {
+          updateAssets(updates)
+          stampPrices(updates.map(u => u.id))
+        }
+      } catch (e) {
+        console.warn('Energy poller error:', e.message)
+      }
     }
     loadEnergy()
     const id = setInterval(loadEnergy, 60000)
     return () => clearInterval(id)
-  }, [])
+  }, [updateAssets])
 
-  // ── FOREX: fawazahmed0 (free, no key, proven CORS-safe) ─────────────────
+  // ── 6. FOREX: Live 60s poller (open.er-api / frankfurter) ──────────────
   useEffect(() => {
     async function loadForex() {
       try {
         const results = await fetchForexPrices()
-        const loaded  = Object.entries(results).filter(([, v]) => v?.price > 0)
-        if (loaded.length === 0) throw new Error('No valid forex prices')
-        console.info('Forex ✓:', loaded.map(([id, v]) => `${id}=${v.price}`).join(' '))
-        setData(prev => ({
-          ...prev,
-          forex: (prev.forex || []).map(a => {
-            const q = results[a.id]
-            return q ? appendChartPoint({ ...a, price: q.price, change: q.change }) : a
-          })
-        }))
-        stampPrices(loaded.map(([id]) => id))
-      } catch(e) {
-        console.warn('Forex failed:', e.message)
+        const updates = Object.entries(results).map(([id, val]) => ({
+          id,
+          price: val.price,
+          change: val.change,
+        })).filter(u => u.price > 0)
+
+        if (updates.length > 0) {
+          updateAssets(updates)
+          stampPrices(updates.map(u => u.id))
+        }
+      } catch (e) {
+        console.warn('Forex poller error:', e.message)
       }
     }
     loadForex()
-    const id = setInterval(loadForex, 10 * 60 * 1000)
+    const id = setInterval(loadForex, 60000) // 60s polling interval
     return () => clearInterval(id)
-  }, [])
+  }, [updateAssets])
 
-  // ── Chart tick every 3s — appends history only, never changes price ──────
-  const tick = useCallback(() => {
-    setData(prev => {
-      const next = {
-        equities: prev.equities.map(appendChartPoint),
-        crypto:   prev.crypto.map(appendChartPoint),
-        metals:   prev.metals.map(appendChartPoint),
-        energy:   prev.energy.map(appendChartPoint),
-        forex:    (prev.forex || []).map(appendChartPoint),
+  // ── 7. MEMOIZED SINGLE SOURCE OF TRUTH SELECTORS ───────────────────────
+  const allAssets = useMemo(() => {
+    return Object.values(assetMap);
+  }, [assetMap]);
+
+  const data = useMemo(() => {
+    const grouped = {
+      equities: [],
+      crypto:   [],
+      metals:   [],
+      energy:   [],
+      forex:    [],
+    };
+    allAssets.forEach(a => {
+      if (grouped[a.sector]) {
+        grouped[a.sector].push(a);
       }
-      return next
-    })
-    setLastUpdate(new Date())
-  }, [])
+    });
+    return grouped;
+  }, [allAssets]);
 
-  useEffect(() => {
-    if (!isLive) return
-    const id = setInterval(tick, 3000)
-    return () => clearInterval(id)
-  }, [isLive, tick])
+  const gainers = useMemo(() => {
+    return allAssets
+      .filter(a => typeof a.change === 'number' && a.change > 0)
+      .sort((a, b) => b.change - a.change)
+      .slice(0, 4);
+  }, [allAssets]);
 
-  // ── SINGLE SOURCE OF TRUTH: memoize allAssets so all UI surfaces
-  //    read the exact same snapshot per render cycle ────────────────────────
-  const allAssets = useMemo(() => [
-    ...(data.equities || []),
-    ...(data.crypto   || []),
-    ...(data.metals   || []),
-    ...(data.energy   || []),
-    ...(data.forex    || []),
-  ], [data])
+  const losers = useMemo(() => {
+    return allAssets
+      .filter(a => typeof a.change === 'number' && a.change < 0)
+      .sort((a, b) => a.change - b.change)
+      .slice(0, 4);
+  }, [allAssets]);
 
-  const hotspots = detectHotspots(allAssets)
+  const hotspots = useMemo(() => {
+    return detectHotspots(allAssets);
+  }, [allAssets]);
 
-  return { data, allAssets, lastUpdate, isLive, setIsLive, hotspots, isStale }
+  return {
+    data,
+    allAssets,
+    gainers,
+    losers,
+    hotspots,
+    lastUpdate,
+    isLive,
+    setIsLive,
+    isStale,
+    connectionStatus,
+  };
 }

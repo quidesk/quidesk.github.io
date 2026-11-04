@@ -175,7 +175,7 @@ export default function ChartsPage({ data }) {
                   {asset.change >= 0 ? '+' : ''}{asset.change.toFixed(2)}%
                 </span>
               </div>
-              <div style={styles.miniPrice}>{formatPrice(asset.price)}</div>
+              <div style={styles.miniPrice}>{formatPrice(asset.price, asset.symbol, asset.sector)}</div>
               <div style={styles.miniChartArea}>
                 <ResponsiveContainer width="100%" height="100%">
                   <LineChart data={asset.chartData} margin={{ top: 2, right: 2, left: 2, bottom: 2 }}>

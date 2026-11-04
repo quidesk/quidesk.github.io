@@ -3,6 +3,9 @@ on:
   push:
     branches: [main]
   workflow_dispatch:
+  schedule:
+    # Refresh live market snapshot and deploy every 30 minutes
+    - cron: '*/30 * * * *'
 permissions:
   contents: read
   pages: write

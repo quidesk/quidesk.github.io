@@ -17,7 +17,7 @@ export default function SectorPage({ sector, assets, watchlistProps, convertPric
   });
 
   const advancing = assets.filter(a => a.change > 0).length;
-  const avgChg = (assets.reduce((s,a) => s+a.change, 0) / assets.length).toFixed(2);
+  const avgChg = assets.length ? (assets.reduce((s,a) => s+a.change, 0) / assets.length).toFixed(2) : '0.00';
 
   return (
     <div style={s.page} className='page-wrap'>
@@ -104,7 +104,7 @@ export default function SectorPage({ sector, assets, watchlistProps, convertPric
                 >
                   <td style={{ ...s.td, color: meta.color, fontWeight:600 }}>{a.symbol}</td>
                   <td style={s.td}>{a.name}</td>
-                  <td style={{ ...s.td, fontFamily:'var(--font-mono)' }}>{formatPrice(a.price)}</td>
+                  <td style={{ ...s.td, fontFamily:'var(--font-mono)' }}>{formatPrice(a.price, a.symbol, a.sector)}</td>
                   <td style={{ ...s.td, fontFamily:'var(--font-mono)', color: a.change>=0?'var(--bull)':'var(--bear)' }}>
                     {a.change>=0?'▲':'▼'} {Math.abs(a.change).toFixed(2)}%
                   </td>

@@ -267,8 +267,8 @@ export default function PortfolioPage({ portfolio, allAssets }) {
                       </span>
                     </td>
                     <td style={{ ...s.td, fontFamily:'var(--font-mono)' }}>{h.qty}</td>
-                    <td style={{ ...s.td, fontFamily:'var(--font-mono)' }}>{formatPrice(h.avgCost)}</td>
-                    <td style={{ ...s.td, fontFamily:'var(--font-mono)' }}>{formatPrice(h.currentPrice)}</td>
+                    <td style={{ ...s.td, fontFamily:'var(--font-mono)' }}>{formatPrice(h.avgCost, h.symbol, h.sector)}</td>
+                    <td style={{ ...s.td, fontFamily:'var(--font-mono)' }}>{formatPrice(h.currentPrice, h.symbol, h.sector)}</td>
                     <td style={{ ...s.td, fontFamily:'var(--font-mono)', color:h.change24h>=0?'var(--bull)':'var(--bear)' }}>
                       {h.change24h>=0?'+':''}{h.change24h.toFixed(2)}%
                     </td>

@@ -189,7 +189,7 @@ export default function ComparePage({ data }) {
                         <span style={{ fontFamily:'var(--font-mono)', fontSize:'9px', color: meta?.color, background:`${meta?.color}15`, border:`1px solid ${meta?.color}30`, borderRadius:'3px', padding:'0 5px', lineHeight:'15px' }}>{meta?.label}</span>
                       </div>
                       <div style={{ fontFamily:'var(--font-mono)', fontSize:'22px', color: isUp ? 'var(--bull)' : 'var(--bear)', marginBottom:'4px' }}>
-                        {formatPrice(a.price)}
+                        {formatPrice(a.price, a.symbol, a.sector)}
                       </div>
                       <div style={{ display:'flex', gap:'16px', flexWrap:'wrap' }}>
                         {[

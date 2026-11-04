@@ -2,7 +2,7 @@ import React, { useState } from 'react'
 import { TrendingUp, TrendingDown, Activity, Zap } from 'lucide-react'
 import MarketCard from '../components/MarketCard'
 import DetailChart from '../components/DetailChart'
-import { formatPrice, formatChange, CATEGORY_META } from '../data/markets'
+import { formatPrice, formatChange, SECTOR_META } from '../data/markets'
 
 export default function Dashboard({ data, setActiveTab, watchlistProps }) {
   const [selectedAsset, setSelectedAsset] = useState(null)
@@ -17,8 +17,15 @@ export default function Dashboard({ data, setActiveTab, watchlistProps }) {
 
   const activeAsset = selectedAsset ? allAssets.find(a => a.id === selectedAsset.id) || selectedAsset : null;
 
-  const gainers = [...allAssets].sort((a, b) => b.change - a.change).slice(0, 3)
-  const losers = [...allAssets].sort((a, b) => a.change - b.change).slice(0, 3)
+  const gainers = allAssets
+    .filter(a => typeof a.change === 'number' && a.change > 0)
+    .sort((a, b) => b.change - a.change)
+    .slice(0, 3)
+
+  const losers = allAssets
+    .filter(a => typeof a.change === 'number' && a.change < 0)
+    .sort((a, b) => a.change - b.change)
+    .slice(0, 3)
 
   const overallSentiment = allAssets.filter(a => a.change > 0).length / allAssets.length
 
@@ -60,10 +67,14 @@ export default function Dashboard({ data, setActiveTab, watchlistProps }) {
             <TrendingUp size={14} color="var(--bull)" />
             <span style={{ ...styles.moverTitle, color: 'var(--bull)' }}>TOP GAINERS</span>
           </div>
-          {gainers.map(a => (
+          {gainers.length === 0 ? (
+            <div style={{ padding: '8px 12px', fontSize: '11px', color: 'var(--text-dim)', fontFamily: 'var(--font-mono)' }}>No gainers</div>
+          ) : gainers.map(a => (
             <div key={a.id} style={styles.moverRow} onClick={() => setSelectedAsset(a)}>
               <span style={styles.moverSymbol}>{a.symbol}</span>
-              <span style={styles.moverPrice}>{formatPrice(a.price)}</span>
+              <span style={styles.moverPrice}>
+                {formatPrice(a.price, a.symbol, a.sector)}
+              </span>
               <span style={{ ...styles.moverChange, color: 'var(--bull)' }}>
                 +{a.change.toFixed(2)}%
               </span>
@@ -75,10 +86,14 @@ export default function Dashboard({ data, setActiveTab, watchlistProps }) {
             <TrendingDown size={14} color="var(--bear)" />
             <span style={{ ...styles.moverTitle, color: 'var(--bear)' }}>TOP LOSERS</span>
           </div>
-          {losers.map(a => (
+          {losers.length === 0 ? (
+            <div style={{ padding: '8px 12px', fontSize: '11px', color: 'var(--text-dim)', fontFamily: 'var(--font-mono)' }}>No losers</div>
+          ) : losers.map(a => (
             <div key={a.id} style={styles.moverRow} onClick={() => setSelectedAsset(a)}>
               <span style={styles.moverSymbol}>{a.symbol}</span>
-              <span style={styles.moverPrice}>{formatPrice(a.price)}</span>
+              <span style={styles.moverPrice}>
+                {formatPrice(a.price, a.symbol, a.sector)}
+              </span>
               <span style={{ ...styles.moverChange, color: 'var(--bear)' }}>
                 {a.change.toFixed(2)}%
               </span>
@@ -116,24 +131,27 @@ export default function Dashboard({ data, setActiveTab, watchlistProps }) {
 
       {/* Category sections */}
       {[
-        { key: 'stocks', assets: data.stocks },
+        { key: 'equities', assets: data.equities },
         { key: 'crypto', assets: data.crypto },
-        { key: 'commodities', assets: data.commodities },
+        { key: 'metals', assets: data.metals },
+        { key: 'energy', assets: data.energy },
+        { key: 'forex', assets: data.forex },
       ].map(({ key, assets }) => {
-        const meta = CATEGORY_META[key]
+        const meta = SECTOR_META[key]
+        if (!meta || !assets) return null
         return (
           <section key={key} style={styles.section}>
             <div style={styles.sectionHeader}>
               <div style={styles.sectionTitleRow}>
                 <span style={{ ...styles.sectionIcon, color: meta.color }}>{meta.icon}</span>
-                <h2 style={{ ...styles.sectionTitle, color: meta.color, textShadow: `0 0 15px ${meta.glow}` }}>
+                <h2 style={{ ...styles.sectionTitle, color: meta.color, textShadow: `0 0 15px ${meta.color}40` }}>
                   {meta.label}
                 </h2>
                 <div style={{ ...styles.sectionLine, background: meta.color }} />
               </div>
               <button
                 style={{ ...styles.viewAllBtn, color: meta.color, borderColor: meta.color }}
-                onClick={() => setActiveTab(key === 'commodities' ? 'commodities' : key)}
+                onClick={() => setActiveTab(key)}
               >
                 VIEW ALL →
               </button>

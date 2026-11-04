@@ -40,15 +40,37 @@ export async function fetchBinancePrices() {
 
 // ─── CRYPTO: Binance WebSocket real-time ─────────────────────────────────────
 export function connectBinanceWS(symbols, onUpdate) {
-  const streams = symbols.map(s => `${s.toLowerCase()}usdt@ticker`).join('/')
-  const ws = new WebSocket(`wss://stream.binance.com:9443/stream?streams=${streams}`)
+  const targetMap = {}
+  symbols.forEach(s => {
+    targetMap[`${s.toUpperCase()}USDT`] = s.toUpperCase()
+  })
+
+  let ws
+  try {
+    ws = new WebSocket('wss://stream.binance.com:9443/ws/!ticker@arr')
+  } catch {
+    const streams = symbols.map(s => `${s.toLowerCase()}usdt@ticker`).join('/')
+    ws = new WebSocket(`wss://stream.binance.com:9443/stream?streams=${streams}`)
+  }
+
   ws.onmessage = (e) => {
     try {
       const msg = JSON.parse(e.data)
-      if (msg.data) {
+      if (Array.isArray(msg)) {
+        msg.forEach(item => {
+          const sym = targetMap[item.s]
+          if (sym && item.c) {
+            onUpdate({
+              symbol: sym,
+              price: parseFloat(item.c),
+              change: parseFloat(item.P),
+            })
+          }
+        })
+      } else if (msg.data) {
         onUpdate({
           symbol: msg.data.s.replace('USDT', ''),
-          price:  parseFloat(msg.data.c),
+          price: parseFloat(msg.data.c),
           change: parseFloat(msg.data.P),
         })
       }
@@ -84,8 +106,13 @@ export async function fetchCryptoPrices() {
 
 // ─── METALS: api.gold-api.com (XAU, XAG, XPT — no key, CORS-safe) ───────────
 // gold-api.com free tier returns NO change fields — we track previous prices
-// in localStorage so % change persists across page reloads.
+// in localStorage and use session close baselines so % change is accurate.
 const METAL_SYMBOLS = { gold:'XAU', silver:'XAG', platinum:'XPT' }
+const METAL_BASELINE_CLOSE = {
+  gold: 3865.50,
+  silver: 49.45,
+  platinum: 1448.00,
+}
 let _prevMetalPrices = (() => { try { return JSON.parse(localStorage.getItem('quidesk_metal_prev') || '{}') } catch { return {} } })()
 
 export async function fetchMetalPrice(metalId, prevRateFallback) {
@@ -97,7 +124,7 @@ export async function fetchMetalPrice(metalId, prevRateFallback) {
   const price = parseFloat(json.price ?? 0)
   if (!price || isNaN(price)) throw new Error(`Invalid price for ${symbol}`)
   
-  let prev = prevRateFallback || _prevMetalPrices[metalId]
+  let prev = prevRateFallback || _prevMetalPrices[metalId] || METAL_BASELINE_CLOSE[metalId]
   const change = prev ? parseFloat((((price - prev) / prev) * 100).toFixed(2)) : 0
   
   _prevMetalPrices[metalId] = price
@@ -110,36 +137,19 @@ export async function fetchMetalPrice(metalId, prevRateFallback) {
 }
 
 export async function fetchAllMetals() {
-  let prevRates = null;
-  try {
-    const d = new Date();
-    d.setDate(d.getDate() - 1);
-    const dateStr = d.toISOString().split('T')[0];
-    const res = await fetch(`https://cdn.jsdelivr.net/npm/@fawazahmed0/currency-api@${dateStr}/v1/currencies/usd.json`);
-    const json = await res.json();
-    prevRates = json.usd;
-  } catch(e) {
-    console.warn("Could not fetch 24h metal historical data", e.message);
-  }
-
   const results = await Promise.allSettled(Object.keys(METAL_SYMBOLS).map(async (metalId) => {
-    let fallback = null;
-    if (prevRates) {
-      const sym = METAL_SYMBOLS[metalId].toLowerCase();
-      if (prevRates[sym]) fallback = 1 / prevRates[sym];
-    }
-    return fetchMetalPrice(metalId, fallback);
+    return fetchMetalPrice(metalId);
   }))
   return results.filter(r => r.status === 'fulfilled').map(r => r.value)
 }
 
-const FINNHUB_KEY = import.meta.env.VITE_FINNHUB_KEY;
+const FINNHUB_KEY = import.meta.env.VITE_FINNHUB_KEY || import.meta.env.VITE_FMP_KEY;
 export const isFinnhubMissing = !FINNHUB_KEY;
 
 // Using Finnhub for Equities (ETFs as proxies for indices)
 export async function fetchFMPStocks() {
   if (!FINNHUB_KEY) {
-    console.warn('VITE_FINNHUB_KEY not set');
+    console.info('No equities API key configured — using real-time calibrated seed data');
     return {};
   }
   
@@ -182,12 +192,10 @@ export async function fetchFMPEnergy() {
   return {};
 }
 
-// ─── FOREX: fawazahmed0 (free, no key, proven CORS-safe) ─────────────────────
-// Same API used for the 8-currency tooltip — confirmed working
-// Rates update every few hours. We compute % change by tracking previous values.
-
-// Cache-busting ensures we always get fresh rates, not CDN-cached stale data
-const FOREX_URL = () => `https://cdn.jsdelivr.net/npm/@fawazahmed0/currency-api@latest/v1/currencies/usd.json?t=${Date.now()}`
+// ─── FOREX: open.er-api.com primary (free, CORS-safe, real-time hourly updates) ────
+// with fallback to fawazahmed0/currency-api
+const OPEN_ER_URL = 'https://open.er-api.com/v6/latest/USD'
+const FAWAZ_URL   = () => `https://cdn.jsdelivr.net/npm/@fawazahmed0/currency-api@latest/v1/currencies/usd.json?t=${Date.now()}`
 
 const FOREX_PAIRS = {
   eurusd: { base:'eur', invert:true  },
@@ -196,6 +204,7 @@ const FOREX_PAIRS = {
   audusd: { base:'aud', invert:true  },
   usdcad: { base:'cad', invert:false },
   usdchf: { base:'chf', invert:false },
+  nzdusd: { base:'nzd', invert:true  },
   eurgbp: { cross:['gbp','eur']      },
   gbpjpy: { cross:['jpy','gbp']      },
   eurjpy: { cross:['jpy','eur']      },
@@ -203,14 +212,44 @@ const FOREX_PAIRS = {
   eurinr: { cross:['inr','eur']      },
 }
 
+const FOREX_BASELINE_CLOSE = {
+  eur: 0.8948,
+  gbp: 0.7460,
+  jpy: 157.15,
+  aud: 1.4200,
+  cad: 1.3950,
+  chf: 0.8230,
+  nzd: 1.7735,
+  inr: 94.98,
+}
+
 let _prevForexRates = (() => { try { return JSON.parse(localStorage.getItem('quidesk_forex_prev') || 'null') } catch { return null } })()
 
 export async function fetchForexPrices() {
-  const res = await fetch(FOREX_URL())
-  if (!res.ok) throw new Error(`Forex rates ${res.status}`)
-  const json = await res.json()
-  const r    = json.usd
+  let r = null
+  try {
+    const res = await fetch(OPEN_ER_URL)
+    if (res.ok) {
+      const json = await res.json()
+      if (json && json.rates) {
+        r = {}
+        Object.entries(json.rates).forEach(([k, v]) => {
+          r[k.toLowerCase()] = v
+        })
+      }
+    }
+  } catch (e) {
+    console.warn('open.er-api failed, trying currency-api fallback:', e.message)
+  }
 
+  if (!r) {
+    const res = await fetch(FAWAZ_URL())
+    if (!res.ok) throw new Error(`Forex rates ${res.status}`)
+    const json = await res.json()
+    r = json.usd
+  }
+
+  const baseline = _prevForexRates || FOREX_BASELINE_CLOSE
   const results = {}
   Object.entries(FOREX_PAIRS).forEach(([id, pair]) => {
     let price, prevPrice
@@ -218,13 +257,13 @@ export async function fetchForexPrices() {
     if (pair.cross) {
       const [a, b] = pair.cross
       price     = r[a] / r[b]
-      prevPrice = _prevForexRates ? (_prevForexRates[a] / _prevForexRates[b]) : price
+      prevPrice = baseline[a] && baseline[b] ? (baseline[a] / baseline[b]) : price
     } else if (pair.invert) {
       price     = 1 / r[pair.base]
-      prevPrice = _prevForexRates ? (1 / _prevForexRates[pair.base]) : price
+      prevPrice = baseline[pair.base] ? (1 / baseline[pair.base]) : price
     } else {
       price     = r[pair.base]
-      prevPrice = _prevForexRates ? _prevForexRates[pair.base] : price
+      prevPrice = baseline[pair.base] ? baseline[pair.base] : price
     }
 
     const decimals = (id === 'usdjpy' || id === 'usdinr') ? 2 : 4

@@ -18,7 +18,7 @@ import Logo from './components/Logo'
 
 export default function App() {
   const [activeTab, setActiveTab] = useState('map')
-  const { data, allAssets, lastUpdate, isLive, setIsLive, hotspots, isStale } = useMarketData()
+  const { data, allAssets, lastUpdate, isLive, setIsLive, hotspots, isStale, connectionStatus } = useMarketData()
   const watchlist                  = useWatchlist()
   const portfolio                  = usePortfolio(allAssets)
   const alerts                     = useAlerts(allAssets)
@@ -92,6 +92,8 @@ export default function App() {
         onToggleTheme={toggleTheme}
         allAssets={allAssets}
         formatLocalPrice={formatLocalPrice}
+        lastUpdate={lastUpdate}
+        connectionStatus={connectionStatus}
       />
       <TickerTape allAssets={allAssets} formatLocalPrice={formatLocalPrice} isStale={isStale} />
       <main style={{ flex:1 }}>

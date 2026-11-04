@@ -33,12 +33,9 @@ export function calcDivergence(priceA, priceB) {
 export async function validateEnergyPrices(currentPrices, threshold = ENERGY_DIVERGENCE_THRESHOLD) {
   const results = [];
 
-  // Attempt to fetch reference prices from a second independent API
-  // Using gold-api.com which also has some commodity endpoints
-  const REFERENCE_ENDPOINTS = {
-    brent: 'https://api.gold-api.com/price/BRENT',
-    wti:   'https://api.gold-api.com/price/WTI',
-  };
+  // Note: External public commodity APIs require authentication.
+  // We keep REFERENCE_ENDPOINTS extensible without spamming 404s to precious metals endpoints.
+  const REFERENCE_ENDPOINTS = {};
 
   for (const [symbol, url] of Object.entries(REFERENCE_ENDPOINTS)) {
     const current = currentPrices[symbol];

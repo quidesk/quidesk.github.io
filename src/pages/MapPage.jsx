@@ -39,9 +39,20 @@ export default function MapPage({ data, allAssets, hotspots, watchlistProps, con
   const [selectedAsset, setSelectedAsset] = useState(null);
   const { news, loading, newsCorrelations, lastFetch, refresh } = newsSignals;
 
-  // Top movers for sidebar
-  const gainers = [...allAssets].sort((a,b) => b.change - a.change).slice(0,4);
-  const losers  = [...allAssets].sort((a,b) => a.change - b.change).slice(0,4);
+  // Top movers strictly filtered by polarity to prevent desynchronization
+  const gainers = React.useMemo(() => {
+    return allAssets
+      .filter(a => typeof a.change === 'number' && a.change > 0)
+      .sort((a, b) => b.change - a.change)
+      .slice(0, 4);
+  }, [allAssets]);
+
+  const losers = React.useMemo(() => {
+    return allAssets
+      .filter(a => typeof a.change === 'number' && a.change < 0)
+      .sort((a, b) => a.change - b.change)
+      .slice(0, 4);
+  }, [allAssets]);
 
   return (
     <div style={s.page} className="page-wrap">
@@ -132,24 +143,28 @@ export default function MapPage({ data, allAssets, hotspots, watchlistProps, con
             </div>
             <div style={s.moversSection}>
               <div style={{ fontFamily:'var(--font-mono)', fontSize:'9px', color:'var(--bull)', letterSpacing:'0.1em', padding:'8px 14px 4px' }}>GAINERS</div>
-              {gainers.map(a => (
+              {gainers.length === 0 ? (
+                <div style={{ fontFamily:'var(--font-mono)', fontSize:'11px', color:'var(--text-dim)', padding:'4px 14px 8px' }}>No gainers</div>
+              ) : gainers.map(a => (
                 <div key={a.id} style={s.moverRow} onClick={() => setSelectedAsset(a)}
                   onMouseEnter={e => e.currentTarget.style.background='var(--bg-card-hover)'}
                   onMouseLeave={e => e.currentTarget.style.background='transparent'}
                 >
                   <span style={s.moverSym}>{a.symbol}</span>
-                  <span style={s.moverPrice}>{a.pricePrefix ? `${a.pricePrefix}${a.price.toLocaleString('en-US',{minimumFractionDigits:2,maximumFractionDigits:a.price>100?2:4})}` : formatPrice(a.price)}</span>
+                  <span style={s.moverPrice}>{formatPrice(a.price, a.symbol, a.sector)}</span>
                   <span style={{ ...s.moverChg, color:'var(--bull)' }}>+{a.change.toFixed(2)}%</span>
                 </div>
               ))}
               <div style={{ fontFamily:'var(--font-mono)', fontSize:'9px', color:'var(--bear)', letterSpacing:'0.1em', padding:'8px 14px 4px', borderTop:'1px solid var(--border-subtle)' }}>LOSERS</div>
-              {losers.map(a => (
+              {losers.length === 0 ? (
+                <div style={{ fontFamily:'var(--font-mono)', fontSize:'11px', color:'var(--text-dim)', padding:'4px 14px 8px' }}>No losers</div>
+              ) : losers.map(a => (
                 <div key={a.id} style={s.moverRow} onClick={() => setSelectedAsset(a)}
                   onMouseEnter={e => e.currentTarget.style.background='var(--bg-card-hover)'}
                   onMouseLeave={e => e.currentTarget.style.background='transparent'}
                 >
                   <span style={s.moverSym}>{a.symbol}</span>
-                  <span style={s.moverPrice}>{a.pricePrefix ? `${a.pricePrefix}${a.price.toLocaleString('en-US',{minimumFractionDigits:2,maximumFractionDigits:a.price>100?2:4})}` : formatPrice(a.price)}</span>
+                  <span style={s.moverPrice}>{formatPrice(a.price, a.symbol, a.sector)}</span>
                   <span style={{ ...s.moverChg, color:'var(--bear)' }}>{a.change.toFixed(2)}%</span>
                 </div>
               ))}

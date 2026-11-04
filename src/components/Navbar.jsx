@@ -28,7 +28,7 @@ const NAV_TABS = [
   { id:'portfolio', label:'Portfolio',   short:'P&L'  },
 ]
 
-export default function Navbar({ active, setActive, isLive, setIsLive, hotspotCount, alertCount, theme, onToggleTheme, allAssets, formatLocalPrice }) {
+export default function Navbar({ active, setActive, isLive, setIsLive, hotspotCount, alertCount, theme, onToggleTheme, allAssets, formatLocalPrice, lastUpdate, connectionStatus }) {
   const [clock, setClock] = useState(new Date())
   const [showGlobalShare, setShowGlobalShare] = useState(false)
 
@@ -117,6 +117,17 @@ export default function Navbar({ active, setActive, isLive, setIsLive, hotspotCo
               }}/>
               {isLive ? 'Live' : 'Paused'}
             </button>
+
+            {lastUpdate && (
+              <div style={{
+                fontFamily: 'var(--font-mono)', fontSize: '10px',
+                color: 'var(--text-dim)', border: '1px solid var(--border-subtle)',
+                borderRadius: '6px', padding: '4px 8px', background: 'var(--bg-surface)',
+                whiteSpace: 'nowrap',
+              }}>
+                Last Updated: <span style={{ color: 'var(--text-secondary)', fontWeight: 600 }}>{lastUpdate.toLocaleTimeString()}</span>
+              </div>
+            )}
 
             <div style={s.clock}>
               <div style={s.clockTime}>

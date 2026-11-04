@@ -151,7 +151,13 @@ export default function AssetCard({ asset, onClick, isWatched, onToggleWatch, co
 
         <div style={{ fontFamily:'var(--font-mono)', fontSize: compact ? '16px' : '20px', fontWeight:500, color: isUp ? 'var(--bull)' : 'var(--bear)', marginBottom: compact ? '6px' : '10px', letterSpacing:'0.02em', display: 'flex', alignItems: 'baseline', gap: '6px', flexWrap: 'wrap' }}>
           <div>
-            {asset.pricePrefix ? `${asset.pricePrefix}${asset.price.toLocaleString('en-US', {minimumFractionDigits:2,maximumFractionDigits:asset.price > 100 ? 2 : 4})}` : formatPrice(asset.price)}
+            {asset.sector === 'forex' 
+              ? formatPrice(asset.price, asset.symbol, asset.sector)
+              : (asset.pricePrefix 
+                  ? `${asset.pricePrefix}${asset.price.toLocaleString('en-US', {minimumFractionDigits:2,maximumFractionDigits:asset.price > 100 ? 2 : 4})}`
+                  : formatPrice(asset.price, asset.symbol, asset.sector)
+                )
+            }
             {asset.unit && (
               <span style={{ fontSize:'11px', color:'var(--text-dim)', marginLeft:'3px' }}>
                 /{asset.unit}
@@ -189,7 +195,12 @@ export default function AssetCard({ asset, onClick, isWatched, onToggleWatch, co
             </span>
           ))}
         </div>
-        <MiniChart data={asset.history ? asset.history[tf] : asset.chartData} positive={isUp} height={compact ? 36 : 48} />
+        <MiniChart
+          data={asset.history ? asset.history[tf] : asset.chartData}
+          positive={isUp}
+          height={compact ? 36 : 48}
+          currentPrice={asset.price}
+        />
 
         {!compact && (
           <div style={{ display:'flex', gap:'14px', marginTop:'8px', paddingTop:'8px', borderTop:'1px solid var(--border-subtle)' }}>

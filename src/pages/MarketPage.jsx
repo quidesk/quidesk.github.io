@@ -1,12 +1,12 @@
 import React, { useState } from 'react'
 import MarketCard from '../components/MarketCard'
 import DetailChart from '../components/DetailChart'
-import { formatPrice, formatChange, CATEGORY_META } from '../data/markets'
+import { formatPrice, formatChange, SECTOR_META } from '../data/markets'
 
 export default function MarketPage({ category, assets, watchlistProps }) {
   const [selectedAsset, setSelectedAsset] = useState(null)
   const [sortKey, setSortKey] = useState('default')
-  const meta = CATEGORY_META[category]
+  const meta = SECTOR_META[category] || {}
 
   const sorted = [...assets].sort((a, b) => {
     if (sortKey === 'price-asc') return a.price - b.price
@@ -127,7 +127,7 @@ export default function MarketPage({ category, assets, watchlistProps }) {
             >
               <div style={styles.tdSymbol}>{asset.symbol}</div>
               <div style={styles.td}>{asset.name}</div>
-              <div style={{ ...styles.td, fontFamily: 'var(--font-mono)' }}>{formatPrice(asset.price)}</div>
+              <div style={{ ...styles.td, fontFamily: 'var(--font-mono)' }}>{formatPrice(asset.price, asset.symbol, asset.sector)}</div>
               <div style={{
                 ...styles.td,
                 fontFamily: 'var(--font-mono)',

@@ -34,3 +34,7 @@ Thumbs.db
 
 # Vite
 *.local
+
+# VerifyQ Snapshots
+snapshots/quidesk-snapshot-*.png
+snapshots/*-test.png

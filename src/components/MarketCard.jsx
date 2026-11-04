@@ -75,13 +75,13 @@ export default function MarketCard({ asset, onClick, isWatched, onToggleWatch })
 
       {/* Price */}
       <div style={styles.price}>
-        {formatPrice(asset.price, asset.symbol)}
+        {formatPrice(asset.price, asset.symbol, asset.sector)}
         {asset.unit && <span style={styles.unit}>/{asset.unit}</span>}
       </div>
 
       {/* Mini chart */}
       <div style={styles.chartWrap}>
-        <MiniChart data={asset.chartData} positive={isPositive} />
+        <MiniChart data={asset.chartData} positive={isPositive} currentPrice={asset.price} />
       </div>
 
       {/* Footer stats */}
