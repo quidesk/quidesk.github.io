@@ -185,6 +185,7 @@ export default function Dashboard({ data, setActiveTab, watchlistProps }) {
                   onClick={setSelectedAsset}
                   isWatched={watchlistProps?.isWatched(asset.id)}
                   onToggleWatch={watchlistProps?.onToggleWatch}
+                  formatLocalPrice={watchlistProps?.formatLocalPrice}
                 />
               ))}
             </div>

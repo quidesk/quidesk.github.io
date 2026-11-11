@@ -2,14 +2,67 @@ import React from 'react';
 import { formatQuoteAge } from '../lib/freshness';
 
 /**
- * FreshnessBadge — Visual indicator of quote latency and source integrity.
+ * FreshnessBadge — Visual indicator of quote latency and session status.
  *
  * Displays:
- * - "STALE" badge when quote age exceeds 15 seconds.
- * - "FALLBACK" badge when secondary/fallback provider is active.
- * - Source tooltip and relative age (e.g. "REST · 18s ago").
+ * - "Close" badge when market session is closed.
+ * - "—" badge when quote is unavailable.
+ * - "STALE" badge when quote age exceeds stale threshold while open.
+ * - "FALLBACK" badge when secondary provider is active.
+ * - "LIVE" / "WS" badge when stream is active.
  */
-export function FreshnessBadge({ level, timestamp, source, compact = false }) {
+export function FreshnessBadge({ level, status, timestamp, source, compact = false }) {
+  if (level === 'closed' || status === 'closed') {
+    return (
+      <span
+        className="freshness-badge badge-closed"
+        title="Market closed — Official session close price"
+        style={{
+          fontFamily: 'var(--font-mono, monospace)',
+          fontSize: '8px',
+          fontWeight: 600,
+          color: 'var(--text-dim, #8b949e)',
+          background: 'rgba(139, 148, 158, 0.12)',
+          border: '1px solid rgba(139, 148, 158, 0.25)',
+          borderRadius: '3px',
+          padding: '0 5px',
+          lineHeight: '14px',
+          letterSpacing: '0.04em',
+          display: 'inline-flex',
+          alignItems: 'center',
+          gap: '4px',
+        }}
+      >
+        <span style={{ width: '4px', height: '4px', borderRadius: '50%', background: 'var(--text-dim, #8b949e)' }} />
+        Close
+      </span>
+    );
+  }
+
+  if (level === 'unavailable' || status === 'unavailable') {
+    return (
+      <span
+        className="freshness-badge badge-unavailable"
+        title="Market data feed unavailable"
+        style={{
+          fontFamily: 'var(--font-mono, monospace)',
+          fontSize: '8px',
+          fontWeight: 600,
+          color: 'var(--text-dim, #8b949e)',
+          background: 'rgba(139, 148, 158, 0.08)',
+          border: '1px solid rgba(139, 148, 158, 0.2)',
+          borderRadius: '3px',
+          padding: '0 4px',
+          lineHeight: '14px',
+          display: 'inline-flex',
+          alignItems: 'center',
+        }}
+      >
+        —
+      </span>
+    );
+  }
+
   if (!level || level === 'fresh') {
     return (
       <span

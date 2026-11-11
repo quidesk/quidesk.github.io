@@ -1,14 +1,14 @@
 import React, { useState, useEffect } from 'react';
 import { Star } from 'lucide-react';
 import { formatChange } from '../data/markets';
-import { formatCardUnitSuffix, formatForexSecondaryValue } from '../utils/formatters';
+import { formatCardUnitSuffix, formatForexSecondaryValue, getAssetPrecision } from '../utils/formatters';
 import MiniChart from './MiniChart';
 import PriceDisplay from './PriceDisplay';
 import { FreshnessBadge, FallbackNotice } from './FreshnessBadge';
 import { getFreshnessLevel } from '../lib/freshness';
 import { useMarketStore } from '../store/marketStore';
 
-export default function MarketCard({ asset: propAsset, onClick, isWatched, onToggleWatch }) {
+export default function MarketCard({ asset: propAsset, onClick, isWatched, onToggleWatch, formatLocalPrice }) {
   const allQuotes = useMarketStore((s) => s.quotes);
   const storeQuote = useMarketStore((s) => {
     const key = (propAsset?.symbol || propAsset?.id || '').toLowerCase();
@@ -21,8 +21,12 @@ export default function MarketCard({ asset: propAsset, onClick, isWatched, onTog
     chartData: propAsset?.chartData || storeQuote?.chartData,
   };
 
-  const changeVal = typeof asset.changePercent === 'number' ? asset.changePercent : (asset.change ?? 0);
-  const isPositive = changeVal >= 0;
+  const hasPrice = typeof asset.price === 'number' && Number.isFinite(asset.price);
+  const changeVal = hasPrice && typeof (asset.changePercent ?? asset.change) === 'number'
+    ? (asset.changePercent ?? asset.change)
+    : null;
+  const isFlat = changeVal !== null && Math.abs(changeVal) < 0.005;
+  const isPositive = changeVal !== null && changeVal >= 0;
   const [flash, setFlash] = useState(null);
   const [prevPrice, setPrevPrice] = useState(asset.price);
 
@@ -35,7 +39,8 @@ export default function MarketCard({ asset: propAsset, onClick, isWatched, onTog
     }
   }, [asset.price, prevPrice]);
 
-  const freshness = getFreshnessLevel(asset);
+  const isClosed = asset.status === 'closed' || asset.tradingPeriod === 'closed';
+  const freshness = isClosed ? 'closed' : getFreshnessLevel(asset);
 
   const flashColor = flash === 'up'
     ? 'rgba(0,255,157,0.15)'
@@ -50,7 +55,14 @@ export default function MarketCard({ asset: propAsset, onClick, isWatched, onTog
   const isForexInr = isForex && (asset.symbol?.endsWith('/INR') || asset.symbol?.endsWith('INR'));
   const pricePrefix = isForexInr ? '₹' : (isForex ? '' : '$');
   const unitSuffix = formatCardUnitSuffix(asset.sector, asset.unit, asset.symbol);
-  const secondaryDisplay = isForex ? formatForexSecondaryValue(asset.symbol, asset.price, allQuotes) : null;
+  const precision = getAssetPrecision(asset.symbol, asset.sector, asset.price);
+
+  const rawSecondary = isForex
+    ? formatForexSecondaryValue(asset.symbol, asset.price, allQuotes)
+    : (formatLocalPrice ? formatLocalPrice(asset.price) : null);
+  const secondaryDisplay = rawSecondary
+    ? (rawSecondary.startsWith('(') ? rawSecondary : `(${rawSecondary})`)
+    : null;
 
   return (
     <div
@@ -102,11 +114,11 @@ export default function MarketCard({ asset: propAsset, onClick, isWatched, onTog
           )}
           <div style={{
             ...styles.badge,
-            color: isPositive ? 'var(--bull)' : 'var(--bear)',
-            background: isPositive ? 'var(--neon-green-dim)' : 'var(--neon-pink-dim)',
-            borderColor: isPositive ? 'var(--bull)' : 'var(--bear)',
+            color: changeVal === null || isFlat ? 'var(--text-dim)' : (isPositive ? 'var(--bull)' : 'var(--bear)'),
+            background: changeVal === null || isFlat ? 'rgba(139, 148, 158, 0.12)' : (isPositive ? 'var(--neon-green-dim)' : 'var(--neon-pink-dim)'),
+            borderColor: changeVal === null || isFlat ? 'rgba(139, 148, 158, 0.25)' : (isPositive ? 'var(--bull)' : 'var(--bear)'),
           }}>
-            {isPositive ? '▲' : '▼'} {formatChange(changeVal)}
+            {changeVal === null ? '—' : isFlat ? '0.00%' : `${isPositive ? '▲' : '▼'} ${formatChange(changeVal)}`}
           </div>
         </div>
       </div>
@@ -119,12 +131,19 @@ export default function MarketCard({ asset: propAsset, onClick, isWatched, onTog
       )}
 
       {/* Price */}
-      <div style={{ ...styles.price, display: 'flex', alignItems: 'baseline', flexWrap: 'wrap', gap: '6px' }}>
+      <div style={{
+        ...styles.price,
+        color: changeVal === null || isFlat ? 'var(--text-primary)' : (isPositive ? 'var(--bull)' : 'var(--bear)'),
+        display: 'flex',
+        alignItems: 'baseline',
+        flexWrap: 'wrap',
+        gap: '6px'
+      }}>
         <div>
           <PriceDisplay
             value={asset.price}
             prefix={pricePrefix}
-            precision={isForex ? (asset.symbol?.includes('JPY') || asset.symbol?.includes('INR') ? 2 : 4) : (asset.price < 1 ? 4 : 2)}
+            precision={precision}
           />
           {unitSuffix && <span style={styles.unit}>{unitSuffix}</span>}
         </div>
@@ -158,8 +177,8 @@ export default function MarketCard({ asset: propAsset, onClick, isWatched, onTog
           <div style={styles.indicator}>
             <div style={{
               ...styles.dot,
-              background: isPositive ? 'var(--bull)' : 'var(--bear)',
-              boxShadow: `0 0 6px ${isPositive ? 'var(--bull)' : 'var(--bear)'}`,
+              background: changeVal === null || isFlat ? 'var(--text-dim)' : (isPositive ? 'var(--bull)' : 'var(--bear)'),
+              boxShadow: changeVal === null || isFlat ? 'none' : `0 0 6px ${isPositive ? 'var(--bull)' : 'var(--bear)'}`,
             }} />
           </div>
         </div>
@@ -167,8 +186,8 @@ export default function MarketCard({ asset: propAsset, onClick, isWatched, onTog
         <div style={{ display: 'flex', justifyContent: 'flex-end', paddingTop: '4px' }}>
           <div style={{
             ...styles.dot,
-            background: isPositive ? 'var(--bull)' : 'var(--bear)',
-            boxShadow: `0 0 6px ${isPositive ? 'var(--bull)' : 'var(--bear)'}`,
+            background: changeVal === null || isFlat ? 'var(--text-dim)' : (isPositive ? 'var(--bull)' : 'var(--bear)'),
+            boxShadow: changeVal === null || isFlat ? 'none' : `0 0 6px ${isPositive ? 'var(--bull)' : 'var(--bear)'}`,
           }} />
         </div>
       )}

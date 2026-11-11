@@ -5,22 +5,25 @@
  * - 'fresh': quote received within stale threshold (<= 15s) from authoritative source
  * - 'stale': quote age between 15s and 60s
  * - 'very_stale': quote age > 60s OR source is 'fallback'
- * - 'unavailable': missing quote or invalid timestamp
+ * - 'closed': market session is closed (official close price, not stale)
+ * - 'unavailable': missing quote, invalid price, or invalid timestamp
  */
 
 /**
  * @typedef {'websocket' | 'rest' | 'cache' | 'fallback'} QuoteSource
- * @typedef {'fresh' | 'stale' | 'very_stale' | 'unavailable'} FreshnessLevel
+ * @typedef {'fresh' | 'stale' | 'very_stale' | 'closed' | 'unavailable'} FreshnessLevel
  *
  * @typedef {Object} Quote
  * @property {number} price
  * @property {number} timestamp - Unix epoch ms
  * @property {QuoteSource} source
  * @property {number} changePercent
+ * @property {string} [status]
+ * @property {string} [tradingPeriod]
  */
 
 /**
- * Calculates the freshness level of a quote based on elapsed age and source.
+ * Calculates the freshness level of a quote based on elapsed age, session status, and source.
  *
  * @param {Quote | null | undefined} quote
  * @param {{ stale?: number, veryStale?: number }} [thresholds]
@@ -30,14 +33,23 @@ export function getFreshnessLevel(
   quote,
   thresholds = { stale: 15000, veryStale: 60000 }
 ) {
-  if (!quote || typeof quote.timestamp !== 'number' || !Number.isFinite(quote.timestamp)) {
+  if (!quote || quote.status === 'unavailable') {
+    return 'unavailable';
+  }
+
+  // Session closed takes precedence over age staleness
+  if (quote.status === 'closed' || quote.tradingPeriod === 'closed') {
+    return 'closed';
+  }
+
+  if (typeof quote.timestamp !== 'number' || !Number.isFinite(quote.timestamp)) {
     return 'unavailable';
   }
 
   const now = Date.now();
   const age = now - quote.timestamp;
 
-  if (quote.source === 'fallback' || age > thresholds.veryStale) {
+  if (quote.source === 'fallback' || age > thresholds.veryStale || quote.status === 'stale') {
     return 'very_stale';
   }
   if (age > thresholds.stale) {

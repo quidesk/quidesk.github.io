@@ -24,7 +24,9 @@ export default function TickerTape({ allAssets = [], formatLocalPrice, isStale }
       <div style={s.track}>
         <div style={s.scroll}>
           {items.map((a, i) => {
-            const up = a.change >= 0;
+            const changeVal = typeof a.change === 'number' && Number.isFinite(a.change) ? a.change : null;
+            const isFlat = changeVal !== null && Math.abs(changeVal) < 0.005;
+            const up = changeVal !== null && changeVal >= 0;
             const stale = isStale && isStale(a.id, a.sector);
             const isFx = (a.sector || '').toLowerCase() === 'forex';
             const isFxInr = isFx && (a.symbol?.endsWith('INR') || a.symbol?.endsWith('/INR'));
@@ -50,8 +52,8 @@ export default function TickerTape({ allAssets = [], formatLocalPrice, isStale }
                     </span>
                   )}
                 </span>
-                <span style={{ ...s.chg, color: up ? 'var(--bull)' : 'var(--bear)' }}>
-                  {up ? '▲' : '▼'}{Math.abs(a.change).toFixed(2)}%
+                <span style={{ ...s.chg, color: changeVal === null || isFlat ? 'var(--text-dim)' : (up ? 'var(--bull)' : 'var(--bear)') }}>
+                  {changeVal === null ? '—' : (isFlat ? '0.00%' : `${up ? '▲' : '▼'}${Math.abs(changeVal).toFixed(2)}%`)}
                 </span>
                 <span style={s.sep} />
               </span>

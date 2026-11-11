@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { Star, Share2 } from 'lucide-react';
 import { formatChange, SECTOR_META } from '../data/markets';
-import { formatForexSecondaryValue, formatCardUnitSuffix } from '../utils/formatters';
+import { formatForexSecondaryValue, formatCardUnitSuffix, getAssetPrecision } from '../utils/formatters';
 import MiniChart from './MiniChart';
 import CurrencyTooltip from './CurrencyTooltip';
 import ShareModal from './ShareModal';
@@ -61,13 +61,18 @@ export default function AssetCard({
     );
   }
 
-  const changeVal = typeof asset.changePercent === 'number' ? asset.changePercent : (asset.change ?? 0);
-  const isUp = changeVal >= 0;
+  const hasPrice = typeof asset.price === 'number' && Number.isFinite(asset.price);
+  const changeVal = hasPrice && typeof (asset.changePercent ?? asset.change) === 'number'
+    ? (asset.changePercent ?? asset.change)
+    : null;
+  const isFlat = changeVal !== null && Math.abs(changeVal) < 0.005;
+  const isUp = changeVal !== null && changeVal >= 0;
   const meta = SECTOR_META[asset.sector] || {};
   
-  // Staleness and source evaluation
-  const freshness = getFreshnessLevel(asset);
-  const isStale = (propIsStale && propIsStale(asset.id, asset.sector)) || (freshness !== 'fresh');
+  // Session status and staleness evaluation
+  const isClosed = asset.status === 'closed' || asset.tradingPeriod === 'closed';
+  const freshness = isClosed ? 'closed' : getFreshnessLevel(asset);
+  const isStale = !isClosed && ((propIsStale && propIsStale(asset.id, asset.sector)) || (freshness === 'stale' || freshness === 'very_stale'));
 
   const isForex = (asset.sector || '').toLowerCase() === 'forex' || (
     asset.symbol && asset.symbol.includes('/') &&
@@ -76,6 +81,7 @@ export default function AssetCard({
   const isForexInr = isForex && (asset.symbol?.endsWith('/INR') || asset.symbol?.endsWith('INR'));
   const pricePrefix = isForexInr ? '₹' : (isForex ? '' : '$');
   const unitSuffix = formatCardUnitSuffix(asset.sector, asset.unit, asset.symbol);
+  const precision = getAssetPrecision(asset.symbol, asset.sector, asset.price);
 
   const rawSecondary = isForex
     ? formatForexSecondaryValue(asset.symbol, asset.price, allQuotes)
@@ -163,8 +169,19 @@ export default function AssetCard({
             )}
           </div>
           <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-            <span className={isUp ? 'badge badge-bull' : 'badge badge-bear'}>
-              {isUp ? '▲' : '▼'} {formatChange(changeVal)}
+            <span
+              className={changeVal === null ? 'badge' : isFlat ? 'badge' : (isUp ? 'badge badge-bull' : 'badge badge-bear')}
+              style={
+                changeVal === null || isFlat
+                  ? {
+                      color: 'var(--text-dim, #8b949e)',
+                      background: 'rgba(139, 148, 158, 0.12)',
+                      border: '1px solid rgba(139, 148, 158, 0.25)',
+                    }
+                  : {}
+              }
+            >
+              {changeVal === null ? '—' : isFlat ? '0.00%' : `${isUp ? '▲' : '▼'} ${formatChange(changeVal)}`}
             </span>
             <button
               style={{
@@ -216,12 +233,23 @@ export default function AssetCard({
         )}
 
         {/* Price Display with Consistent Decimal Precision */}
-        <div style={{ fontFamily: 'var(--font-mono)', fontSize: compact ? '16px' : '20px', fontWeight: 500, color: isUp ? 'var(--bull)' : 'var(--bear)', marginBottom: compact ? '6px' : '10px', letterSpacing: '0.02em', display: 'flex', alignItems: 'baseline', gap: '6px', flexWrap: 'wrap' }}>
+        <div style={{
+          fontFamily: 'var(--font-mono)',
+          fontSize: compact ? '16px' : '20px',
+          fontWeight: 500,
+          color: changeVal === null || isFlat ? 'var(--text-primary)' : (isUp ? 'var(--bull)' : 'var(--bear)'),
+          marginBottom: compact ? '6px' : '10px',
+          letterSpacing: '0.02em',
+          display: 'flex',
+          alignItems: 'baseline',
+          gap: '6px',
+          flexWrap: 'wrap'
+        }}>
           <div>
             <PriceDisplay
               value={asset.price}
               prefix={pricePrefix}
-              precision={isForex ? (asset.symbol?.includes('JPY') || asset.symbol?.includes('INR') ? 2 : 4) : (asset.price < 1 ? 4 : 2)}
+              precision={precision}
             />
             {unitSuffix && (
               <span style={{ fontSize: '11px', color: 'var(--text-dim)', marginLeft: '3px' }}>
@@ -268,7 +296,13 @@ export default function AssetCard({
               </div>
             )}
             <div style={{ marginLeft: 'auto', display: 'flex', alignItems: 'center' }}>
-              <div style={{ width: '6px', height: '6px', borderRadius: '50%', background: isUp ? 'var(--bull)' : 'var(--bear)', boxShadow: isUp ? '0 0 5px var(--bull)' : '0 0 5px var(--bear)' }} />
+              <div style={{
+                width: '6px',
+                height: '6px',
+                borderRadius: '50%',
+                background: changeVal === null || isFlat ? 'var(--text-dim)' : (isUp ? 'var(--bull)' : 'var(--bear)'),
+                boxShadow: changeVal === null || isFlat ? 'none' : (isUp ? '0 0 5px var(--bull)' : '0 0 5px var(--bear)')
+              }} />
             </div>
           </div>
         )}

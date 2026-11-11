@@ -104,6 +104,9 @@ export default function MarketPage({ category, assets, watchlistProps }) {
             key={asset.id}
             asset={asset}
             onClick={setSelectedAsset}
+            isWatched={watchlistProps?.isWatched(asset.id)}
+            onToggleWatch={watchlistProps?.onToggleWatch}
+            formatLocalPrice={watchlistProps?.formatLocalPrice}
           />
         ))}
       </div>
