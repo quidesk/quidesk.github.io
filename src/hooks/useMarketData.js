@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef, useCallback, useMemo } from 'react';
-import { fetchWorkerQuotes } from '../utils/api';
+import { fetchWorkerQuotes, fetchWorkerHealth } from '../utils/api';
 import { useMarketStore } from '../store/marketStore';
 import { STATIC_ASSETS_METADATA, detectHotspots } from '../data/markets';
 import { selectGainers, selectLosers } from '../selectors/marketSelectors';
@@ -50,6 +50,7 @@ export function useMarketData() {
   const workerError = useMarketStore((s) => s.workerError);
   const applySnapshot = useMarketStore((s) => s.applySnapshot);
   const setWorkerError = useMarketStore((s) => s.setWorkerError);
+  const setHealth = useMarketStore((s) => s.setHealth);
 
   const [isLive, setIsLive] = useState(true);
   const [backoffDelay, setBackoffDelay] = useState(BASE_POLL_INTERVAL_MS);
@@ -76,14 +77,28 @@ export function useMarketData() {
         applySnapshot(payload);
         setBackoffDelay(BASE_POLL_INTERVAL_MS); // Reset backoff on success
       }
+      if (typeof fetchWorkerHealth === 'function') {
+        fetchWorkerHealth()
+          .then((h) => {
+            if (h) setHealth(h);
+          })
+          .catch(() => null);
+      }
     } catch (err) {
       if (err.name === 'AbortError') return;
       console.warn('[useMarketData] Worker feed fetch failed:', err.message);
       setWorkerError(err.message);
+      if (typeof fetchWorkerHealth === 'function') {
+        fetchWorkerHealth()
+          .then((h) => {
+            if (h) setHealth(h);
+          })
+          .catch(() => null);
+      }
       // Exponential backoff
       setBackoffDelay((prev) => Math.min(prev * 2, MAX_BACKOFF_MS));
     }
-  }, [applySnapshot, setWorkerError]);
+  }, [applySnapshot, setWorkerError, setHealth]);
 
   // Main polling loop
   useEffect(() => {

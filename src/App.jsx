@@ -20,6 +20,37 @@ import { Share2 } from 'lucide-react'
 
 const VALID_TABS = ['map', 'equities', 'crypto', 'metals', 'energy', 'forex', 'compare', 'watchlist', 'portfolio'];
 
+const BUILD_SHA = typeof __BUILD_SHA__ !== 'undefined'
+  ? __BUILD_SHA__
+  : (import.meta.env?.VITE_BUILD_SHA || 'dev');
+const BUILD_TIME = typeof __BUILD_TIME__ !== 'undefined'
+  ? __BUILD_TIME__
+  : (import.meta.env?.VITE_BUILD_TIME || '');
+
+function formatBuildIdentity(sha, iso) {
+  if (!iso) return `build ${sha}`;
+  const date = new Date(iso);
+  if (Number.isNaN(date.getTime())) return `build ${sha}`;
+  const stamp = date.toLocaleTimeString('en-US', {
+    hour: '2-digit',
+    minute: '2-digit',
+    timeZoneName: 'short',
+  });
+  return `build ${sha} · ${stamp}`;
+}
+
+function formatHealthTimestamp(ts) {
+  if (!ts) return '—';
+  const date = new Date(ts);
+  if (Number.isNaN(date.getTime())) return '—';
+  return date.toLocaleTimeString('en-US', {
+    hour: '2-digit',
+    minute: '2-digit',
+    second: '2-digit',
+    timeZoneName: 'short',
+  });
+}
+
 const SEO_META = {
   map: {
     title: 'Quidesk — Live Market Intelligence Terminal | Crypto, Stocks, Metals & Energy',
@@ -89,6 +120,7 @@ export default function App() {
   const { convertPrice, formatLocalPrice } = useCurrencyRates();
   const { theme, toggle: toggleTheme } = useTheme();
   const newsSignals = useNewsSignals();
+  const [showFeedHealth, setShowFeedHealth] = useState(false);
 
   // Sync URL hash and dynamic document metadata for deep-linking SEO
   useEffect(() => {
@@ -267,7 +299,63 @@ export default function App() {
             <span style={fS.brand}>QUIDESK</span>
           </div>
           <span style={fS.text}>Market intelligence terminal · For informational purposes only</span>
-          <span style={fS.text}>Last tick: {lastUpdate.toLocaleTimeString()}</span>
+          <div style={fS.metaRow}>
+            {(() => {
+              const entries = Object.entries(sourcesHealth || {});
+              const okCount = entries.filter(([, v]) => v?.ok).length;
+              const allOk = entries.length > 0 && okCount === entries.length && isWorkerOnline;
+              const dotColor = !isWorkerOnline
+                ? 'var(--bear)'
+                : (entries.length === 0 ? 'var(--text-dim)' : (allOk ? 'var(--bull)' : 'var(--amber)'));
+              return (
+                <div style={fS.healthWrap}>
+                  <button
+                    type="button"
+                    style={fS.healthChip}
+                    onClick={() => setShowFeedHealth((v) => !v)}
+                    aria-expanded={showFeedHealth}
+                    aria-controls="footer-feed-health"
+                    title="Inspect /v1/health per-source telemetry"
+                  >
+                    <span style={{ ...fS.healthDot, background: dotColor }} />
+                    <span>
+                      Feed {entries.length > 0 ? `${okCount}/${entries.length} ok` : (isWorkerOnline ? 'syncing' : 'offline')}
+                    </span>
+                  </button>
+                  {showFeedHealth && (
+                    <div id="footer-feed-health" style={fS.healthPanel}>
+                      <div style={fS.healthHeader}>/v1/health · Upstream Sources</div>
+                      {entries.length === 0 ? (
+                        <div style={fS.healthRow}>No source telemetry yet</div>
+                      ) : (
+                        entries.map(([name, info]) => (
+                          <div key={name} style={fS.healthRow}>
+                            <span style={{ ...fS.healthDot, background: info?.ok ? 'var(--bull)' : 'var(--bear)' }} />
+                            <span style={fS.healthName}>{name}</span>
+                            <span style={{ color: info?.ok ? 'var(--bull)' : 'var(--bear)' }}>
+                              {info?.ok ? 'ok' : 'down'}
+                            </span>
+                            <span style={fS.healthDim}>
+                              {typeof info?.latencyMs === 'number' ? `${info.latencyMs}ms` : '—'}
+                            </span>
+                            <span style={fS.healthDim}>
+                              lastOk: {formatHealthTimestamp(info?.lastOk)}
+                            </span>
+                          </div>
+                        ))
+                      )}
+                    </div>
+                  )}
+                </div>
+              );
+            })()}
+            <span style={fS.text} title={BUILD_TIME ? `Built ${BUILD_TIME}` : undefined}>
+              {formatBuildIdentity(BUILD_SHA, BUILD_TIME)}
+            </span>
+            <span style={fS.text}>
+              Last tick: {lastUpdate ? formatHealthTimestamp(lastUpdate) : '—'}
+            </span>
+          </div>
         </div>
       </footer>
     </div>
@@ -349,5 +437,72 @@ const fS = {
   },
   text: {
     fontFamily:'var(--font-mono)', fontSize:'10px', color:'var(--text-dim)',
+  },
+  metaRow: {
+    display: 'flex',
+    alignItems: 'center',
+    gap: '12px',
+    flexWrap: 'wrap',
+  },
+  healthWrap: {
+    position: 'relative',
+    display: 'inline-flex',
+    alignItems: 'center',
+  },
+  healthChip: {
+    display: 'inline-flex',
+    alignItems: 'center',
+    gap: '6px',
+    padding: '3px 8px',
+    borderRadius: '4px',
+    border: '1px solid var(--border-mid)',
+    background: 'var(--bg-panel)',
+    color: 'var(--text-secondary)',
+    fontFamily: 'var(--font-mono)',
+    fontSize: '10px',
+    cursor: 'pointer',
+  },
+  healthDot: {
+    width: '6px',
+    height: '6px',
+    borderRadius: '50%',
+    flexShrink: 0,
+  },
+  healthPanel: {
+    position: 'absolute',
+    bottom: 'calc(100% + 8px)',
+    right: 0,
+    minWidth: '300px',
+    padding: '10px 12px',
+    borderRadius: '6px',
+    border: '1px solid var(--border-mid)',
+    background: 'var(--bg-panel)',
+    boxShadow: '0 8px 24px rgba(0, 0, 0, 0.35)',
+    zIndex: 60,
+    display: 'flex',
+    flexDirection: 'column',
+    gap: '6px',
+    fontFamily: 'var(--font-mono)',
+    fontSize: '10px',
+  },
+  healthHeader: {
+    fontWeight: 700,
+    color: 'var(--text-secondary)',
+    borderBottom: '1px solid var(--border-subtle)',
+    paddingBottom: '4px',
+  },
+  healthRow: {
+    display: 'flex',
+    alignItems: 'center',
+    gap: '8px',
+    color: 'var(--text-primary)',
+    whiteSpace: 'nowrap',
+  },
+  healthName: {
+    minWidth: '58px',
+    fontWeight: 600,
+  },
+  healthDim: {
+    color: 'var(--text-dim)',
   },
 }

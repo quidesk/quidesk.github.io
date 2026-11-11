@@ -32,6 +32,8 @@ export const useMarketStore = create((set, get) => ({
   generatedAt: null,
   oldestQuoteTs: null,
   sourcesHealth: {},
+  healthTimestamp: null,
+  healthStatus: null,
   lastSync: null,
   isSyncing: false,
   isWorkerOnline: true,
@@ -98,4 +100,18 @@ export const useMarketStore = create((set, get) => ({
 
   setSyncing: (isSyncing) => set({ isSyncing }),
   setWorkerError: (err) => set({ isWorkerOnline: false, workerError: err }),
+  setHealth: (healthPayload) => {
+    if (!healthPayload || typeof healthPayload !== 'object') return;
+    set((state) => {
+      const incomingSources = healthPayload.sources && typeof healthPayload.sources === 'object'
+        ? healthPayload.sources
+        : null;
+      const hasIncomingSources = incomingSources && Object.keys(incomingSources).length > 0;
+      return {
+        sourcesHealth: hasIncomingSources ? incomingSources : state.sourcesHealth,
+        healthTimestamp: healthPayload.timestamp || state.healthTimestamp,
+        healthStatus: healthPayload.status || state.healthStatus,
+      };
+    });
+  },
 }));

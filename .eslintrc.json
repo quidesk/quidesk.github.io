@@ -1,6 +1,10 @@
 {
   "extends": ["eslint:recommended", "plugin:react/recommended", "plugin:react-hooks/recommended"],
   "env": { "browser": true, "es2022": true, "node": true },
+  "globals": {
+    "__BUILD_SHA__": "readonly",
+    "__BUILD_TIME__": "readonly"
+  },
   "parserOptions": { "sourceType": "module", "ecmaVersion": 2022, "ecmaFeatures": { "jsx": true } },
   "settings": { "react": { "version": "detect" } },
   "rules": {

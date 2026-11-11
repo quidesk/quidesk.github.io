@@ -21,7 +21,9 @@ let _lastQuotesCache = null;
  */
 export function getCorsOrigin(origin, env) {
   if (!origin) return null;
-  const configured = env?.ALLOWED_ORIGINS ? env.ALLOWED_ORIGINS.split(',').map(s => s.trim()) : ALLOWED_ORIGINS_DEFAULT;
+  const configured = env?.ALLOWED_ORIGINS
+    ? env.ALLOWED_ORIGINS.split(',').map(s => s.trim()).filter(Boolean)
+    : ALLOWED_ORIGINS_DEFAULT;
   if (configured.includes(origin)) return origin;
   // Support wildcard or localhost variations in dev
   if (origin.startsWith('http://localhost:') || origin.startsWith('http://127.0.0.1:')) return origin;
@@ -40,14 +42,14 @@ export function withHeaders(response, origin, cacheControl) {
   headers.set('Content-Type', 'application/json; charset=utf-8');
   headers.set('X-Content-Type-Options', 'nosniff');
   headers.set('X-Frame-Options', 'DENY');
+  headers.set('Vary', 'Origin');
 
   if (origin) {
     headers.set('Access-Control-Allow-Origin', origin);
     headers.set('Access-Control-Allow-Methods', 'GET, OPTIONS');
     headers.set('Access-Control-Allow-Headers', 'Content-Type, Accept');
-    headers.set('Vary', 'Origin');
   } else {
-    headers.set('Access-Control-Allow-Origin', '*');
+    headers.delete('Access-Control-Allow-Origin');
   }
 
   if (cacheControl) {
@@ -71,14 +73,18 @@ export default {
 
     // Handle CORS Preflight OPTIONS
     if (request.method === 'OPTIONS') {
+      const headers = {
+        'Access-Control-Allow-Methods': 'GET, OPTIONS',
+        'Access-Control-Allow-Headers': 'Content-Type, Accept',
+        'Access-Control-Max-Age': '86400',
+        'Vary': 'Origin',
+      };
+      if (allowedOrigin) {
+        headers['Access-Control-Allow-Origin'] = allowedOrigin;
+      }
       return new Response(null, {
-        status: 204,
-        headers: {
-          'Access-Control-Allow-Origin': allowedOrigin || '*',
-          'Access-Control-Allow-Methods': 'GET, OPTIONS',
-          'Access-Control-Allow-Headers': 'Content-Type, Accept',
-          'Access-Control-Max-Age': '86400',
-        },
+        status: allowedOrigin || !origin ? 204 : 403,
+        headers,
       });
     }
 
