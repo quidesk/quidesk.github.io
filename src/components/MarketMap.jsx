@@ -1,13 +1,13 @@
-import React, { useState, useRef, useEffect, useCallback } from 'react'
-import { formatPrice, CORRELATIONS, SECTOR_META, formatChangeBubble } from '../data/markets'
-import CurrencyTooltip from './CurrencyTooltip'
+import React, { useState, useRef, useEffect, useCallback } from 'react';
+import { formatPrice, CORRELATIONS, SECTOR_META, formatChangeBubble } from '../data/markets';
+import CurrencyTooltip from './CurrencyTooltip';
 
 // Fixed internal SVG coordinate system — CSS width:100% + height:auto scales it
-const INTERNAL_W = 900
-const INTERNAL_H = 504
+export const INTERNAL_W = 900;
+export const INTERNAL_H = 504;
 
 // Initial positions as fractions of canvas
-const INITIAL_POSITIONS = {
+export const INITIAL_POSITIONS = {
   spx:      { x:0.10, y:0.14 },
   ndx:      { x:0.20, y:0.09 },
   dow:      { x:0.07, y:0.26 },
@@ -28,7 +28,6 @@ const INITIAL_POSITIONS = {
   brent:    { x:0.78, y:0.79 },
   ng:       { x:0.86, y:0.68 },
   hoil:     { x:0.61, y:0.79 },
-  rbob:     { x:0.61, y:0.79 },
   // Forex — center horizontal band
   eurusd:   { x:0.38, y:0.46 },
   gbpusd:   { x:0.46, y:0.42 },
@@ -42,235 +41,301 @@ const INITIAL_POSITIONS = {
   eurjpy:   { x:0.53, y:0.44 },
   usdinr:   { x:0.57, y:0.55 },
   eurinr:   { x:0.61, y:0.52 },
-}
+};
 
-const ZONES = [
+export const ZONES = [
   { id:'equities', label:'EQUITIES', cx:0.17, cy:0.26, rx:0.20, ry:0.26, color:'#4d9eff' },
   { id:'crypto',   label:'CRYPTO',   cx:0.81, cy:0.26, rx:0.20, ry:0.26, color:'#a78bfa' },
   { id:'metals',   label:'METALS',   cx:0.17, cy:0.76, rx:0.20, ry:0.18, color:'#f0a500' },
   { id:'energy',   label:'ENERGY',   cx:0.75, cy:0.76, rx:0.22, ry:0.18, color:'#f97316' },
   { id:'forex',    label:'FOREX',    cx:0.50, cy:0.50, rx:0.16, ry:0.12, color:'#22d3ee' },
-]
+];
 
-const ZONE_HOME = {
+export const ZONE_HOME = {
   equities: { x:0.17, y:0.26 },
   crypto:   { x:0.81, y:0.26 },
   metals:   { x:0.17, y:0.76 },
   energy:   { x:0.75, y:0.76 },
   forex:    { x:0.50, y:0.50 },
+};
+
+export function getAssetRadius(asset) {
+  const baseR = 19;
+  const extraR = Math.min(3.5, Math.abs(asset?.change || 0) * 0.4);
+  return baseR + extraR;
 }
 
-function initNodeState(allAssets) {
-  const state = {}
+export function initNodeState(allAssets) {
+  const state = {};
   allAssets.forEach(asset => {
-    const p = INITIAL_POSITIONS[asset.id] || { x: Math.random()*0.8+0.1, y: Math.random()*0.8+0.1 }
+    const p = INITIAL_POSITIONS[asset.id] || { x: 0.5, y: 0.5 };
     state[asset.id] = {
-      x: p.x, y: p.y,
-      vx: (Math.random()-0.5)*0.001,
-      vy: (Math.random()-0.5)*0.001,
-    }
-  })
-  return state
+      x: p.x,
+      y: p.y,
+      vx: 0,
+      vy: 0,
+    };
+  });
+  return state;
 }
 
-export default function MarketMap({ allAssets, hotspots, onSelectAsset, convertPrice, newsCorrelations, isStale }) {
-  const [hovered, setHovered]           = useState(null)
-  const [selected, setSelected]         = useState(null)
-  const [containerW, setContainerW]     = useState(900)
-  const [nodePositions, setNodePositions] = useState({})
-  const [currencyPos, setCurrencyPos]   = useState({ x:0, y:0 })
-  const [conversions, setConversions]   = useState([])
-  const [showCurrency, setShowCurrency] = useState(false)
-  const containerRef  = useRef(null)
-  const animFrameRef  = useRef(null)
-  const positionsRef  = useRef({})
-  const assetsRef     = useRef(allAssets)
-  const currTimerRef  = useRef(null)
-  const hoveredRef    = useRef(null)
+/**
+ * Pure physics simulation step function.
+ * Implements true ellipse containment clamping: ((x - cx)/effRx)^2 + ((y - cy)/effRy)^2 <= 1.0
+ * with node radius padding and 30px header clearance, plus iterative collision resolution.
+ */
+export function stepMarketMapSimulation(pos, assets, zones = ZONES, internalW = INTERNAL_W, internalH = INTERNAL_H, options = {}) {
+  const next = {};
+  const getRadius = options.getAssetRadius || getAssetRadius;
 
-  // Keep refs in sync
-  useEffect(() => { assetsRef.current = allAssets }, [allAssets])
-  useEffect(() => { hoveredRef.current = hovered }, [hovered])
+  assets.forEach(asset => {
+    const p = pos[asset.id];
+    if (!p) return;
+
+    let fx = 0;
+    let fy = 0;
+
+    // 1. Home zone attraction
+    const home = ZONE_HOME[asset.sector] || { x: 0.5, y: 0.5 };
+    const hdx = home.x - p.x;
+    const hdy = home.y - p.y;
+    fx += hdx * 0.0008;
+    fy += hdy * 0.0008;
+
+    // 2. Intra-zone collision avoidance
+    assets.forEach(other => {
+      if (other.id === asset.id || other.sector !== asset.sector) return;
+      const op = pos[other.id];
+      if (!op) return;
+      const dx = (op.x - p.x) * internalW;
+      const dy = (op.y - p.y) * internalH;
+      const dist = Math.sqrt(dx * dx + dy * dy) || 1;
+      const minDist = getRadius(asset) + getRadius(other) + 6;
+      if (dist < minDist) {
+        const overlap = (minDist - dist) / minDist;
+        fx -= (dx / dist) * overlap * 0.003;
+        fy -= (dy / dist) * overlap * 0.003;
+      }
+    });
+
+    // 3. Damping and velocity
+    const damping = 0.80;
+    const nvx = (p.vx + fx) * damping;
+    const nvy = (p.vy + fy) * damping;
+
+    let nx = p.x + nvx;
+    let ny = p.y + nvy;
+
+    // 4. True Ellipse Clamping with 30px Header Clearance
+    const z = zones.find(zone => zone.id === asset.sector);
+    if (z) {
+      const nr = getRadius(asset);
+      const padX = (nr + 4) / internalW;
+      const padY = (nr + 4) / internalH;
+      const effRx = Math.max(0.01, z.rx - padX);
+      const effRy = Math.max(0.01, z.ry - padY);
+      const headerClearance = (30 + nr) / internalH;
+      const minY = (z.cy - z.ry) + headerClearance;
+      const maxY = (z.cy + z.ry) - padY;
+
+      // Vertical bounds
+      ny = Math.max(minY, Math.min(maxY, ny));
+
+      // Ellipse formula: ((x - cx) / effRx)^2 + ((y - cy) / effRy)^2 <= 1.0
+      const dx = nx - z.cx;
+      const dy = ny - z.cy;
+      const normDistSq = ((dx / effRx) ** 2) + ((dy / effRy) ** 2);
+
+      if (normDistSq > 1.0) {
+        const scale = 1.0 / Math.sqrt(normDistSq);
+        nx = z.cx + dx * scale;
+        ny = z.cy + dy * scale;
+
+        // If radial scale brought ny above minY, re-clamp ny and solve for max allowable dx
+        if (ny < minY) {
+          ny = minY;
+          const dySlice = Math.abs(minY - z.cy);
+          const yRatio = Math.min(1.0, dySlice / effRy);
+          const maxDx = effRx * Math.sqrt(Math.max(0, 1.0 - yRatio * yRatio));
+          nx = Math.max(z.cx - maxDx, Math.min(z.cx + maxDx, nx));
+        }
+      }
+    } else {
+      const pad = 0.06;
+      nx = Math.max(pad, Math.min(1 - pad, nx));
+      ny = Math.max(pad, Math.min(1 - pad, ny));
+    }
+
+    next[asset.id] = { x: nx, y: ny, vx: nvx, vy: nvy };
+  });
+
+  // Collision separation pass to guarantee 0 overlaps
+  for (let iter = 0; iter < 2; iter++) {
+    for (let i = 0; i < assets.length; i++) {
+      const a1 = assets[i];
+      const p1 = next[a1.id];
+      if (!p1) continue;
+      for (let j = i + 1; j < assets.length; j++) {
+        const a2 = assets[j];
+        if (a1.sector !== a2.sector) continue;
+        const p2 = next[a2.id];
+        if (!p2) continue;
+
+        const dx = (p2.x - p1.x) * internalW;
+        const dy = (p2.y - p1.y) * internalH;
+        const dist = Math.sqrt(dx * dx + dy * dy) || 1;
+        const minDist = getRadius(a1) + getRadius(a2) + 2;
+
+        if (dist < minDist) {
+          const overlap = minDist - dist;
+          const sepX = (dx / dist) * (overlap * 0.5) / internalW;
+          const sepY = (dy / dist) * (overlap * 0.5) / internalH;
+          p1.x -= sepX;
+          p1.y -= sepY;
+          p2.x += sepX;
+          p2.y += sepY;
+
+          // Re-clamp both to ellipse
+          [a1, a2].forEach(a => {
+            const z = zones.find(zone => zone.id === a.sector);
+            if (!z) return;
+            const p = next[a.id];
+            const nr = getRadius(a);
+            const effRx = Math.max(0.01, z.rx - (nr + 4) / internalW);
+            const effRy = Math.max(0.01, z.ry - (nr + 4) / internalH);
+            const minY = (z.cy - z.ry) + ((30 + nr) / internalH);
+            const maxY = (z.cy + z.ry) - ((nr + 4) / internalH);
+            p.y = Math.max(minY, Math.min(maxY, p.y));
+            const edx = p.x - z.cx;
+            const edy = p.y - z.cy;
+            const ndSq = ((edx / effRx) ** 2) + ((edy / effRy) ** 2);
+            if (ndSq > 1.0) {
+              const s = 1.0 / Math.sqrt(ndSq);
+              p.x = z.cx + edx * s;
+              p.y = z.cy + edy * s;
+              if (p.y < minY) {
+                p.y = minY;
+                const dySlice = Math.abs(minY - z.cy);
+                const yRatio = Math.min(1.0, dySlice / effRy);
+                const maxDx = effRx * Math.sqrt(Math.max(0, 1.0 - yRatio * yRatio));
+                p.x = Math.max(z.cx - maxDx, Math.min(z.cx + maxDx, p.x));
+              }
+            }
+          });
+        }
+      }
+    }
+  }
+
+  return next;
+}
+
+export default function MarketMap({ allAssets, hotspots = [], onSelectAsset, convertPrice, newsCorrelations, isStale }) {
+  const [hovered, setHovered] = useState(null);
+  const [selected, setSelected] = useState(null);
+  const [, setContainerW] = useState(900);
+  const [nodePositions, setNodePositions] = useState({});
+  const [currencyPos, setCurrencyPos] = useState({ x: 0, y: 0 });
+  const [conversions, setConversions] = useState([]);
+  const [showCurrency, setShowCurrency] = useState(false);
+
+  const containerRef = useRef(null);
+  const animFrameRef = useRef(null);
+  const positionsRef = useRef({});
+  const assetsRef = useRef(allAssets);
+  const currTimerRef = useRef(null);
+
+  useEffect(() => { assetsRef.current = allAssets; }, [allAssets]);
 
   // Init node positions
   useEffect(() => {
     if (allAssets.length && Object.keys(positionsRef.current).length === 0) {
-      const init = initNodeState(allAssets)
-      positionsRef.current = init
-      setNodePositions({ ...init })
+      const init = initNodeState(allAssets);
+      positionsRef.current = init;
+      setNodePositions({ ...init });
     }
-  }, [allAssets])
+  }, [allAssets]);
 
   // Resize observer
   useEffect(() => {
     const ro = new ResizeObserver(entries => {
-      const e = entries[0]
+      const e = entries[0];
       if (e) {
-        setContainerW(e.contentRect.width)
+        setContainerW(e.contentRect.width);
       }
-    })
-    if (containerRef.current) ro.observe(containerRef.current)
-    return () => ro.disconnect()
-  }, [])
+    });
+    if (containerRef.current) ro.observe(containerRef.current);
+    return () => ro.disconnect();
+  }, []);
 
-  // Circle radius helper
-  const getAssetRadius = useCallback((asset) => {
-    const baseR = 19
-    const extraR = Math.min(3.5, Math.abs(asset.change || 0) * 0.4)
-    return baseR + extraR
-  }, [])
-
-  // Physics animation loop with quadrant clamping and collision resolution
+  // Physics animation loop throttled to <= 30fps
   useEffect(() => {
-    if (!allAssets.length) return
+    if (!allAssets.length) return;
 
-    function animate() {
-      const assets = assetsRef.current
-      const pos    = positionsRef.current
-      if (!assets.length || !Object.keys(pos).length) {
-        animFrameRef.current = requestAnimationFrame(animate)
-        return
-      }
+    let lastTime = 0;
+    const FRAME_MS = 33; // ~30 fps cap to minimize main thread overhead
 
-      const next = {}
-
-      assets.forEach(asset => {
-        const p = pos[asset.id]
-        if (!p) return
-
-        let fx = 0
-        let fy = 0
-        const isUp = asset.change >= 0
-
-        // 1. HOME ZONE ATTRACTION — pull toward sector home
-        const home = ZONE_HOME[asset.sector] || { x:0.5, y:0.5 }
-        const hdx  = home.x - p.x
-        const hdy  = home.y - p.y
-        fx += hdx * 0.0009
-        fy += hdy * 0.0009
-
-        // 2. INTRA-ZONE COLLISION AVOIDANCE — prevent nodes in same zone from overlapping
-        assets.forEach(other => {
-          if (other.id === asset.id || other.sector !== asset.sector) return
-          const op = pos[other.id]
-          if (!op) return
-          const dx = (op.x - p.x) * INTERNAL_W
-          const dy = (op.y - p.y) * INTERNAL_H
-          const dist = Math.sqrt(dx * dx + dy * dy) || 1
-          const minDistance = (getAssetRadius(asset) + getAssetRadius(other) + 6)
-          if (dist < minDistance) {
-            const overlap = (minDistance - dist) / minDistance
-            fx -= (dx / dist) * overlap * 0.0025
-            fy -= (dy / dist) * overlap * 0.0025
-          }
-        })
-
-        // 3. BULL/BEAR CLUSTERING
-        assets.forEach(other => {
-          if (other.id === asset.id || other.sector !== asset.sector) return
-          const op = pos[other.id]
-          if (!op) return
-          const otherUp = other.change >= 0
-          if (otherUp !== isUp) return
-          const dx = op.x - p.x
-          const dy = op.y - p.y
-          const dist = Math.sqrt(dx*dx + dy*dy) || 0.001
-          if (dist > 0.25) {
-            fx += (dx / dist) * 0.00008
-            fy += (dy / dist) * 0.00008
-          }
-        })
-
-        // 4. MOMENTUM — stronger movers drift with subtle vitality
-        const momentum = Math.min(0.0004, Math.abs(asset.change) * 0.00002)
-        fx += (Math.random()-0.5) * momentum
-        fy += (Math.random()-0.5) * momentum
-
-        // 5. DAMPING
-        const damping = 0.82
-        const nvx = (p.vx + fx) * damping
-        const nvy = (p.vy + fy) * damping
-
-        // 6. STRICT QUADRANT CLAMPING — keep every node inside its category container
-        let nx = p.x + nvx
-        let ny = p.y + nvy
-        const z = ZONES.find(zone => zone.id === asset.sector)
-
-        if (z) {
-          const nr = getAssetRadius(asset)
-          const padX = (nr + 6) / INTERNAL_W
-          const padY = (nr + 6) / INTERNAL_H
-          const headerOffset = 26 / INTERNAL_H // keep clear of category title
-
-          const minX = (z.cx - z.rx) + padX
-          const maxX = (z.cx + z.rx) - padX
-          const minY = (z.cy - z.ry) + headerOffset
-          const maxY = (z.cy + z.ry) - padY
-
-          nx = Math.max(minX, Math.min(maxX, nx))
-          ny = Math.max(minY, Math.min(maxY, ny))
-        } else {
-          const pad = 0.06
-          nx = Math.max(pad, Math.min(1 - pad, nx))
-          ny = Math.max(pad, Math.min(1 - pad, ny))
+    function animate(now) {
+      if (now - lastTime >= FRAME_MS) {
+        lastTime = now;
+        const assets = assetsRef.current;
+        const pos = positionsRef.current;
+        if (assets.length && Object.keys(pos).length) {
+          const next = stepMarketMapSimulation(pos, assets, ZONES, INTERNAL_W, INTERNAL_H, { getAssetRadius });
+          positionsRef.current = next;
+          setNodePositions(next);
         }
-
-        next[asset.id] = { x: nx, y: ny, vx: nvx, vy: nvy }
-      })
-
-      positionsRef.current = next
-      setNodePositions({ ...next })
-      animFrameRef.current = requestAnimationFrame(animate)
+      }
+      animFrameRef.current = requestAnimationFrame(animate);
     }
 
-    animFrameRef.current = requestAnimationFrame(animate)
-    return () => cancelAnimationFrame(animFrameRef.current)
-  }, [allAssets.length, getAssetRadius])
+    animFrameRef.current = requestAnimationFrame(animate);
+    return () => cancelAnimationFrame(animFrameRef.current);
+  }, [allAssets.length]);
 
-  const activeId   = hovered || selected
-  const hotspotIds = new Set(hotspots.map(h => h.assetId))
+  const activeId = hovered || selected;
+  const hotspotIds = new Set(hotspots.map(h => h.assetId));
 
   const visibleCorrs = CORRELATIONS.filter(c => {
-    if (activeId) return c.a === activeId || c.b === activeId
-    return Math.abs(c.r) > 0.85
-  })
+    if (activeId) return c.a === activeId || c.b === activeId;
+    return Math.abs(c.r) > 0.85;
+  });
 
   function getPos(id) {
-    const p = nodePositions[id]
-    if (!p) return null
-    return { x: p.x * INTERNAL_W, y: p.y * INTERNAL_H }
+    const p = nodePositions[id];
+    if (!p) return null;
+    return { x: p.x * INTERNAL_W, y: p.y * INTERNAL_H };
   }
 
   function handleNodeEnter(asset) {
-    setHovered(asset.id)
-    clearTimeout(currTimerRef.current)
-    const isFx = (asset.sector || '').toLowerCase() === 'forex'
-    if (convertPrice && !isFx) setConversions(convertPrice(asset.price))
-    else setConversions([])
+    setHovered(asset.id);
+    clearTimeout(currTimerRef.current);
+    const isFx = (asset.sector || '').toLowerCase() === 'forex';
+    if (convertPrice && !isFx) setConversions(convertPrice(asset.price));
+    else setConversions([]);
 
     currTimerRef.current = setTimeout(() => {
-      const pos = nodePositions[asset.id]
-      if (!pos || !containerRef.current || isFx) return
-      const rect  = containerRef.current.getBoundingClientRect()
-      const scale = INTERNAL_W > 0 ? rect.width / INTERNAL_W : 1
-      const absX  = rect.left + pos.x * INTERNAL_W * scale
-      const absY  = rect.top  + pos.y * INTERNAL_H * scale
+      const pos = nodePositions[asset.id];
+      if (!pos || !containerRef.current || isFx) return;
+      const rect = containerRef.current.getBoundingClientRect();
+      const scale = INTERNAL_W > 0 ? rect.width / INTERNAL_W : 1;
+      const absX = rect.left + pos.x * INTERNAL_W * scale;
+      const absY = rect.top + pos.y * INTERNAL_H * scale;
       
-      const nr = getAssetRadius(asset)
-      
-      const tipX  = absX + nr * scale + 8 > window.innerWidth - 300
+      const nr = getAssetRadius(asset);
+      const tipX = absX + nr * scale + 8 > window.innerWidth - 300
         ? absX - 296
-        : absX + nr * scale + 8
-      const tipY  = Math.min(absY - 10, window.innerHeight - 340)
-      setCurrencyPos({ x: tipX, y: tipY })
-      setShowCurrency(true)
-    }, 400)
+        : absX + nr * scale + 8;
+      const tipY = Math.min(absY - 10, window.innerHeight - 340);
+      setCurrencyPos({ x: tipX, y: tipY });
+      setShowCurrency(true);
+    }, 400);
   }
 
   function handleNodeLeave() {
-    setHovered(null)
-    clearTimeout(currTimerRef.current)
-    setShowCurrency(false)
+    setHovered(null);
+    clearTimeout(currTimerRef.current);
+    setShowCurrency(false);
   }
 
   return (
@@ -280,21 +345,18 @@ export default function MarketMap({ allAssets, hotspots, onSelectAsset, convertP
         style={s.svg}
       >
         <defs>
-          {/* Frosted glass highlight */}
           <radialGradient id="orbHighlight" cx="35%" cy="30%" r="60%">
             <stop offset="0%" stopColor="rgba(255,255,255,0.35)" />
             <stop offset="50%" stopColor="rgba(255,255,255,0.08)" />
             <stop offset="100%" stopColor="rgba(255,255,255,0)" />
           </radialGradient>
 
-          {/* Soft edge depth */}
           <radialGradient id="orbDepth" cx="50%" cy="50%" r="50%">
             <stop offset="0%" stopColor="rgba(0,0,0,0)" />
             <stop offset="75%" stopColor="rgba(0,0,0,0)" />
             <stop offset="100%" stopColor="rgba(0,0,0,0.25)" />
           </radialGradient>
 
-          {/* Glow filter */}
           <filter id="ringGlow" x="-50%" y="-50%" width="200%" height="200%">
             <feGaussianBlur stdDeviation="3" result="blur"/>
             <feMerge>
@@ -303,65 +365,66 @@ export default function MarketMap({ allAssets, hotspots, onSelectAsset, convertP
             </feMerge>
           </filter>
 
-          {/* Liquid wave path */}
           <path id="liquidWave" d="M -90 0 C -75 -6, -60 -6, -45 0 C -30 6, -15 6, 0 0 C 15 -6, 30 -6, 45 0 C 60 6, 75 6, 90 0 V 60 H -90 Z" />
         </defs>
 
         {/* Zone boundaries — rounded category containers */}
         {ZONES.map(z => {
-          const x = (z.cx - z.rx) * INTERNAL_W
-          const y = (z.cy - z.ry) * INTERNAL_H
-          const w = z.rx * 2 * INTERNAL_W
-          const h = z.ry * 2 * INTERNAL_H
+          const x = (z.cx - z.rx) * INTERNAL_W;
+          const y = (z.cy - z.ry) * INTERNAL_H;
+          const w = z.rx * 2 * INTERNAL_W;
+          const h = z.ry * 2 * INTERNAL_H;
           return (
             <g key={z.id}>
               <rect
                 x={x} y={y} width={w} height={h}
-                rx="12" ry="12"
+                rx="14" ry="14"
                 fill="none"
                 stroke={z.color}
                 strokeWidth="0.6"
-                opacity="0.2"
+                opacity="0.22"
                 strokeDasharray="4 3"
               />
               <text
-                x={x + 10} y={y + 14}
+                x={x + 12} y={y + 16}
                 fontSize="9" fontFamily="var(--font-mono)" fontWeight="600"
-                fill={z.color} opacity="0.5"
-                letterSpacing="0.06em"
+                fill={z.color} opacity="0.6"
+                letterSpacing="0.08em"
               >
                 {z.label}
               </text>
             </g>
-          )
+          );
         })}
 
-        {/* Correlation lines */}
+        {/* Correlation lines — labeled illustrative */}
         {visibleCorrs.map((c, i) => {
-          const pa = getPos(c.a)
-          const pb = getPos(c.b)
-          if (!pa || !pb) return null
-          const isActive = activeId && (c.a===activeId || c.b===activeId)
+          const pa = getPos(c.a);
+          const pb = getPos(c.b);
+          if (!pa || !pb) return null;
+          const isActive = activeId && (c.a === activeId || c.b === activeId);
           const color = c.r > 0.6
             ? 'rgba(34,212,122,0.5)'
             : c.r < 0
             ? 'rgba(240,64,96,0.5)'
-            : 'rgba(100,116,139,0.25)'
+            : 'rgba(100,116,139,0.25)';
           return (
-            <line key={i}
+            <line key={`corr-${i}`}
               x1={pa.x} y1={pa.y} x2={pb.x} y2={pb.y}
               stroke={color}
-              strokeWidth={isActive ? Math.abs(c.r)*2.5 : 0.7}
-              opacity={isActive ? Math.abs(c.r)*0.9 : 0.3}
-            />
-          )
+              strokeWidth={isActive ? Math.abs(c.r) * 2.5 : 0.7}
+              opacity={isActive ? Math.abs(c.r) * 0.9 : 0.3}
+            >
+              <title>{`Illustrative Correlation: ${c.a.toUpperCase()} ↔ ${c.b.toUpperCase()} (r=${c.r})`}</title>
+            </line>
+          );
         })}
 
         {/* News-driven correlation lines */}
         {(newsCorrelations || []).map((c, i) => {
-          const pa = getPos(c.a)
-          const pb = getPos(c.b)
-          if (!pa || !pb) return null
+          const pa = getPos(c.a);
+          const pb = getPos(c.b);
+          if (!pa || !pb) return null;
           return (
             <g key={`news-${i}`}>
               <line
@@ -372,46 +435,44 @@ export default function MarketMap({ allAssets, hotspots, onSelectAsset, convertP
                 opacity={Math.min(0.7, c.strength * 0.8)}
               />
             </g>
-          )
+          );
         })}
 
         {/* Asset nodes — Frosted Glass Orbs */}
         {allAssets.map(asset => {
-          const pos = getPos(asset.id)
-          if (!pos) return null
+          const pos = getPos(asset.id);
+          if (!pos) return null;
           
-          const nr        = getAssetRadius(asset)
-          const meta      = SECTOR_META[asset.sector] || {}
-          const isUp      = asset.change >= 0
-          const isHot     = hotspotIds.has(asset.id)
-          const isAct     = activeId === asset.id
-          const absChg    = Math.abs(asset.change)
-          const intensity = Math.min(1, absChg / 8)
+          const nr = getAssetRadius(asset);
+          const meta = SECTOR_META[asset.sector] || {};
+          const isUp = asset.change >= 0;
+          const isHot = hotspotIds.has(asset.id);
+          const isAct = activeId === asset.id;
+          const absChg = Math.abs(asset.change);
+          const intensity = Math.min(1, absChg / 8);
 
           // Sentiment ring color
           const ringColor = isUp
-            ? `rgba(52,211,153,${0.5 + intensity*0.5})`
-            : `rgba(248,113,113,${0.5 + intensity*0.5})`
-          const ringWidth = 1.5 + intensity * 2.5
-          const sectorColor = meta.color || '#6b7280'
+            ? `rgba(52,211,153,${0.5 + intensity * 0.5})`
+            : `rgba(248,113,113,${0.5 + intensity * 0.5})`;
+          const ringWidth = 1.5 + intensity * 2.5;
+          const sectorColor = meta.color || '#6b7280';
 
-          // Clean symbol formatting:
-          // Keep full Forex pair (EUR/USD, USD/JPY, GBP/JPY, USD/INR)
-          // Only strip /USD or USDT for metals or crypto
-          const isForexNode = (asset.sector || '').toLowerCase() === 'forex'
-          let dSym = asset.symbol || ''
+          // Forex nodes show full pair (e.g. EUR/USD, USD/JPY) at 8.5px font
+          const isForexNode = (asset.sector || '').toLowerCase() === 'forex';
+          let dSym = asset.symbol || '';
           if (isForexNode) {
-            dSym = asset.symbol
+            dSym = asset.symbol;
           } else if (asset.sector === 'metals' || asset.sector === 'crypto') {
-            dSym = dSym.replace('/USD', '').replace('USDT', '').replace('USD', '')
+            dSym = dSym.replace('/USD', '').replace('USDT', '').replace('USD', '');
           } else {
-            if (dSym.includes('/')) dSym = dSym.split('/')[0]
-            if (dSym.endsWith('USDT')) dSym = dSym.replace('USDT', '')
+            if (dSym.includes('/')) dSym = dSym.split('/')[0];
+            if (dSym.endsWith('USDT')) dSym = dSym.replace('USDT', '');
           }
-          if (!isForexNode && dSym.length > 5) dSym = dSym.substring(0, 5)
+          if (!isForexNode && dSym.length > 5) dSym = dSym.substring(0, 5);
 
-          const stale = isStale && isStale(asset.id, asset.sector)
-          const staleOpacity = stale ? 0.3 : 1
+          const stale = isStale && isStale(asset.id, asset.sector);
+          const staleOpacity = stale ? 0.3 : 1;
 
           return (
             <g key={asset.id}
@@ -420,24 +481,24 @@ export default function MarketMap({ allAssets, hotspots, onSelectAsset, convertP
               onMouseEnter={() => handleNodeEnter(asset)}
               onMouseLeave={handleNodeLeave}
               onClick={() => {
-                setSelected(p => p===asset.id ? null : asset.id)
-                if (onSelectAsset) onSelectAsset(asset)
+                setSelected(p => p === asset.id ? null : asset.id);
+                if (onSelectAsset) onSelectAsset(asset);
               }}
             >
               {/* Hotspot pulse ring */}
               {isHot && (
-                <circle r={nr+3} fill="none"
+                <circle r={nr + 3} fill="none"
                   stroke={ringColor}
                   strokeWidth="1" opacity="0.6">
                   <animate attributeName="r"
-                    from={nr+2} to={nr+7} dur="2s" repeatCount="indefinite"/>
+                    from={nr + 2} to={nr + 7} dur="2s" repeatCount="indefinite"/>
                   <animate attributeName="opacity"
                     from="0.6" to="0" dur="2s" repeatCount="indefinite"/>
                 </circle>
               )}
 
               {/* Sentiment glow ring */}
-              <circle r={nr+2} fill="none"
+              <circle r={nr + 2} fill="none"
                 stroke={ringColor}
                 strokeWidth={ringWidth}
                 opacity={isAct ? 1 : 0.7}
@@ -472,7 +533,7 @@ export default function MarketMap({ allAssets, hotspots, onSelectAsset, convertP
               </g>
 
               {/* Sector accent */}
-              <circle r={nr-3} fill="none"
+              <circle r={nr - 3} fill="none"
                 stroke={sectorColor}
                 strokeWidth="0.6" opacity="0.3"
               />
@@ -485,7 +546,7 @@ export default function MarketMap({ allAssets, hotspots, onSelectAsset, convertP
 
               {/* Active selection ring */}
               {isAct && (
-                <circle r={nr+1} fill="none"
+                <circle r={nr + 1} fill="none"
                   stroke="rgba(255,255,255,0.3)" strokeWidth="1"
                   strokeDasharray="3 2" opacity="0.8">
                   <animateTransform attributeName="transform" type="rotate"
@@ -494,49 +555,28 @@ export default function MarketMap({ allAssets, hotspots, onSelectAsset, convertP
               )}
 
               {/* Text: Symbol */}
-              <text textAnchor="middle" dominantBaseline="central" y={-nr*0.2}
-                fontSize={isForexNode ? 8.5 : (dSym.length>4 ? Math.max(7, nr/3.4) : Math.max(9, nr/2.6))}
+              <text textAnchor="middle" dominantBaseline="central" y={-nr * 0.2}
+                fontSize={isForexNode ? 8.5 : (dSym.length > 4 ? Math.max(7, nr / 3.4) : Math.max(9, nr / 2.6))}
                 fontFamily="var(--font-mono)" fontWeight="700"
                 fill="rgba(255,255,255,0.95)"
-                style={{ userSelect:'none' }}
+                letterSpacing="0.02em"
               >
                 {dSym}
               </text>
 
               {/* Text: Change % */}
-              <text y={nr*0.32} textAnchor="middle" dominantBaseline="central"
-                fontSize={Math.max(6.5, nr/3.2)} fontFamily="var(--font-mono)" fontWeight="700"
-                fill={isUp ? 'rgba(52,211,153,0.95)' : 'rgba(248,113,113,0.95)'}
-                style={{ userSelect:'none' }}
+              <text textAnchor="middle" dominantBaseline="central" y={nr * 0.35}
+                fontSize={Math.max(8, nr / 2.8)}
+                fontFamily="var(--font-mono)" fontWeight="600"
+                fill={isUp ? 'var(--bull)' : 'var(--bear)'}
               >
                 {formatChangeBubble(asset.change)}
               </text>
             </g>
-          )
+          );
         })}
       </svg>
 
-      {/* Legend */}
-      <div style={s.legend}>
-        <div style={s.legendItem}>
-          <span style={{ ...s.legendDot, background:'rgba(30,180,80,0.8)' }}/>
-          <span style={s.legendLabel}>Bullish ↑</span>
-        </div>
-        <div style={s.legendItem}>
-          <span style={{ ...s.legendDot, background:'rgba(200,40,60,0.8)' }}/>
-          <span style={s.legendLabel}>Bearish ↓</span>
-        </div>
-        <div style={s.legendItem}>
-          <span style={{ ...s.legendLine, background:'rgba(34,212,122,0.6)' }}/>
-          <span style={s.legendLabel}>Correlated</span>
-        </div>
-        <div style={s.legendItem}>
-          <span style={{ ...s.legendLine, background:'rgba(240,64,96,0.6)' }}/>
-          <span style={s.legendLabel}>Inverse</span>
-        </div>
-      </div>
-
-      {/* 8-currency tooltip */}
       <CurrencyTooltip
         conversions={conversions}
         visible={showCurrency}
@@ -544,25 +584,21 @@ export default function MarketMap({ allAssets, hotspots, onSelectAsset, convertP
         y={currencyPos.y}
       />
     </div>
-  )
+  );
 }
 
 const s = {
   wrap: {
-    position:'relative', width:'100%', borderRadius:'12px',
-    background:'var(--bg-card)', border:'1px solid var(--border-subtle)',
-    overflow:'hidden', touchAction:'manipulation',
+    position: 'relative',
+    width: '100%',
+    background: 'var(--bg-card)',
+    borderRadius: '12px',
+    border: '1px solid var(--border-subtle)',
+    overflow: 'hidden',
   },
-  svg: { display:'block', width:'100%', height:'auto' },
-  legend: {
-    position:'absolute', bottom:'10px', left:'12px',
-    display:'flex', gap:'12px', flexWrap:'wrap',
+  svg: {
+    display: 'block',
+    width: '100%',
+    height: 'auto',
   },
-  legendItem: { display:'flex', alignItems:'center', gap:'5px' },
-  legendDot:  { width:'8px', height:'8px', borderRadius:'50%' },
-  legendLine: { width:'16px', height:'2px', borderRadius:'1px' },
-  legendLabel: {
-    fontFamily:'var(--font-mono)', fontSize:'9px',
-    color:'var(--text-dim)', letterSpacing:'0.06em',
-  },
-}
+};

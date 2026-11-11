@@ -5,10 +5,11 @@ import DetailChart from '../components/DetailChart';
 import AssetCard from '../components/AssetCard';
 import PriceDisplay from '../components/PriceDisplay';
 import { formatPrice, SECTOR_META } from '../data/markets';
+import { getAssetPrecision } from '../utils/formatters';
 import NewsSignals from '../components/NewsSignals';
 import { computeMarketPulse } from '../utils/marketPulse';
 import { useMarketPulse } from '../selectors/marketPulse';
-import { selectGainers, selectLosers } from '../selectors/marketSelectors';
+import { selectGainers, selectLosers, selectSectorAverages } from '../selectors/marketSelectors';
 
 function NarrativeStrip({ allAssets, hotspots }) {
   const pulse = computeMarketPulse(allAssets, hotspots);
@@ -41,9 +42,10 @@ export default function MapPage({ data, allAssets, hotspots, watchlistProps, con
   const [selectedAsset, setSelectedAsset] = useState(null);
   const { news, loading, newsCorrelations, lastFetch, refresh } = newsSignals;
 
-  // Top movers strictly filtered by polarity to prevent desynchronization
+  // Top movers and sector averages strictly derived from pure selectors
   const gainers = React.useMemo(() => selectGainers(allAssets, 4), [allAssets]);
   const losers = React.useMemo(() => selectLosers(allAssets, 4), [allAssets]);
+  const sectorAverages = React.useMemo(() => selectSectorAverages(allAssets), [allAssets]);
 
   return (
     <div style={s.page} className="page-wrap">
@@ -64,17 +66,18 @@ export default function MapPage({ data, allAssets, hotspots, watchlistProps, con
             {/* Market map legend with clear spacing between icon, label, and percentage */}
             <div style={{ display: 'flex', gap: '10px', flexWrap: 'wrap', alignItems: 'center' }}>
               {Object.entries(SECTOR_META).map(([k, m]) => {
-                const sectorAssets = allAssets.filter(a => a.sector === k);
-                const sectorAvg = sectorAssets.length
-                  ? (sectorAssets.reduce((s, a) => s + (a.changePercent ?? a.change), 0) / sectorAssets.length).toFixed(2)
-                  : '0.00';
-                const isUp = parseFloat(sectorAvg) >= 0;
+                const sData = sectorAverages[k];
+                const avgNum = sData ? sData.avgChange : 0;
+                const isFlat = Math.abs(avgNum) < 0.005;
+                const isUp = avgNum >= 0;
+                const displayAvg = isFlat ? '0.00%' : `${isUp ? '+' : ''}${avgNum.toFixed(2)}%`;
+                const pillColor = isFlat ? 'var(--text-dim)' : (isUp ? 'var(--bull)' : 'var(--bear)');
                 return (
                   <div key={k} style={s.sectorPill}>
                     <span style={{ color: m.color, fontSize: '12px', display: 'inline-flex', alignItems: 'center' }}>{m.icon}</span>
                     <span style={{ fontFamily: 'var(--font-mono)', fontSize: '11px', color: 'var(--text-secondary)', marginLeft: '4px', marginRight: '6px' }}>{m.label}</span>
-                    <span style={{ fontFamily: 'var(--font-mono)', fontSize: '11px', fontWeight: 600, color: isUp ? 'var(--bull)' : 'var(--bear)' }}>
-                      {isUp ? '+' : ''}{sectorAvg}%
+                    <span style={{ fontFamily: 'var(--font-mono)', fontSize: '11px', fontWeight: 600, color: pillColor }}>
+                      {displayAvg}
                     </span>
                   </div>
                 );
@@ -110,7 +113,7 @@ export default function MapPage({ data, allAssets, hotspots, watchlistProps, con
                     <PriceDisplay
                       value={a.price}
                       prefix={a.sector === 'forex' ? (a.symbol?.endsWith('INR') ? '₹' : '') : '$'}
-                      precision={a.sector === 'forex' ? (a.symbol?.includes('JPY') || a.symbol?.includes('INR') ? 2 : 4) : (a.price < 1 ? 4 : 2)}
+                      precision={getAssetPrecision(a.symbol, a.sector, a.price)}
                     />
                   </span>
                   <span style={{ ...s.moverChg, color:'var(--bull)' }}>
@@ -125,7 +128,7 @@ export default function MapPage({ data, allAssets, hotspots, watchlistProps, con
                     <PriceDisplay
                       value={a.price}
                       prefix={a.sector === 'forex' ? (a.symbol?.endsWith('INR') ? '₹' : '') : '$'}
-                      precision={a.sector === 'forex' ? (a.symbol?.includes('JPY') || a.symbol?.includes('INR') ? 2 : 4) : (a.price < 1 ? 4 : 2)}
+                      precision={getAssetPrecision(a.symbol, a.sector, a.price)}
                     />
                   </span>
                   <span style={{ ...s.moverChg, color:'var(--bear)' }}>
