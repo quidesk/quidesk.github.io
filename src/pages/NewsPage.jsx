@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react'
 import { ExternalLink, RefreshCw, Newspaper } from 'lucide-react'
+import { sanitizeUrl } from '../utils/security'
 
 // Free news sources (no key required)
 const NEWS_FEEDS = [
@@ -12,7 +13,7 @@ const NEWS_FEEDS = [
       id: n.id || n.title,
       title: n.title,
       description: n.description || '',
-      url: n.url,
+      url: sanitizeUrl(n.url),
       source: n.author?.name || 'CoinGecko',
       publishedAt: n.updated_at ? new Date(n.updated_at * 1000) : new Date(),
       category: 'crypto',

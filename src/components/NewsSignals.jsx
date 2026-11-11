@@ -1,6 +1,7 @@
 import React, { useState } from 'react'
 import { RefreshCw, ExternalLink, Radio, Share2 } from 'lucide-react'
 import ShareModal from './ShareModal'
+import { sanitizeUrl } from '../utils/security'
 
 const SECTOR_LABELS = {
   crypto:   { label:'Crypto',    color:'#a78bfa' },
@@ -147,7 +148,7 @@ export default function NewsSignals({ news, loading, lastFetch, onRefresh, layou
                 onMouseLeave={e => e.currentTarget.style.background = isHorz ? 'var(--bg-card)' : (item.isSponsored ? 'rgba(255, 255, 255, 0.03)' : 'transparent')}
               >
                 <a
-                  href={item.link}
+                  href={sanitizeUrl(item.link)}
                   target="_blank"
                   rel="noopener noreferrer"
                   style={{ display: 'flex', flex: 1, textDecoration: 'none', minWidth: 0, gap: '10px' }}

@@ -1,16 +1,21 @@
 {
   "name": "quidesk",
   "version": "1.0.0",
+  "type": "module",
   "private": true,
   "description": "Quidesk — The trader's desk. All-in-one market intelligence terminal with live heatmaps, correlation maps, hotspot detection and cross-asset comparison.",
   "scripts": {
     "dev": "vite",
     "snapshot": "node scripts/generate-snapshot.mjs",
+    "og": "node scripts/generate-og.mjs",
     "verifyq": "node scripts/verifyq.mjs",
     "build": "node scripts/generate-snapshot.mjs && vite build",
     "preview": "vite preview",
     "lint": "eslint src --ext js,jsx --report-unused-disable-directives --max-warnings 0",
-    "test": "vitest run"
+    "test": "vitest run",
+    "cf:whoami": "wrangler whoami",
+    "cf:dev": "wrangler pages dev dist",
+    "cf:deploy": "wrangler pages deploy dist"
   },
   "dependencies": {
     "d3-geo": "^3.1.1",
@@ -20,7 +25,9 @@
     "react": "^18.3.1",
     "react-dom": "^18.3.1",
     "react-simple-maps": "^3.0.0",
-    "recharts": "^2.12.7"
+    "recharts": "^2.12.7",
+    "swr": "^2.5.1",
+    "zustand": "^5.0.16"
   },
   "devDependencies": {
     "@types/react": "^18.3.1",
@@ -34,6 +41,7 @@
     "puppeteer-core": "^25.16.0",
     "vite": "^5.3.4",
     "vitest": "^4.1.11",
+    "wrangler": "^4.159.0",
     "yahoo-finance2": "^4.0.2"
   }
 }

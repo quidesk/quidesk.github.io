@@ -3,12 +3,91 @@
         xmlns:image="http://www.google.com/schemas/sitemap-image/1.1">
   <url>
     <loc>https://quidesk.github.io/</loc>
-    <lastmod>2026-03-18</lastmod>
-    <changefreq>daily</changefreq>
+    <lastmod>2026-11-11</lastmod>
+    <changefreq>hourly</changefreq>
     <priority>1.0</priority>
     <image:image>
       <image:loc>https://quidesk.github.io/og-image.png</image:loc>
-      <image:title>Quidesk Live Market Intelligence Terminal</image:title>
+      <image:title>Quidesk — Live Market Intelligence Terminal Master Sovereign Edition</image:title>
+      <image:caption>Real-time financial intelligence tracking equities, crypto, metals, energy and forex with OSINT news signals.</image:caption>
     </image:image>
+  </url>
+  <url>
+    <loc>https://quidesk.github.io/#map</loc>
+    <lastmod>2026-11-11</lastmod>
+    <changefreq>hourly</changefreq>
+    <priority>0.9</priority>
+    <image:image>
+      <image:loc>https://quidesk.github.io/og-image.png</image:loc>
+      <image:title>Live 3D Market Heatmap &amp; Cross-Asset Correlation Map</image:title>
+    </image:image>
+  </url>
+  <url>
+    <loc>https://quidesk.github.io/#equities</loc>
+    <lastmod>2026-11-11</lastmod>
+    <changefreq>hourly</changefreq>
+    <priority>0.9</priority>
+    <image:image>
+      <image:loc>https://quidesk.github.io/og-image.png</image:loc>
+      <image:title>Equities Market Terminal — S&amp;P 500, QQQ, AAPL, NVDA, TSLA</image:title>
+    </image:image>
+  </url>
+  <url>
+    <loc>https://quidesk.github.io/#crypto</loc>
+    <lastmod>2026-11-11</lastmod>
+    <changefreq>always</changefreq>
+    <priority>0.9</priority>
+    <image:image>
+      <image:loc>https://quidesk.github.io/og-image.png</image:loc>
+      <image:title>Real-Time Crypto Intelligence — Bitcoin, Ethereum, Solana, XRP</image:title>
+    </image:image>
+  </url>
+  <url>
+    <loc>https://quidesk.github.io/#metals</loc>
+    <lastmod>2026-11-11</lastmod>
+    <changefreq>hourly</changefreq>
+    <priority>0.8</priority>
+    <image:image>
+      <image:loc>https://quidesk.github.io/og-image.png</image:loc>
+      <image:title>Live Precious Metals Spot Tracker — Gold (XAU), Silver (XAG), Platinum</image:title>
+    </image:image>
+  </url>
+  <url>
+    <loc>https://quidesk.github.io/#energy</loc>
+    <lastmod>2026-11-11</lastmod>
+    <changefreq>hourly</changefreq>
+    <priority>0.8</priority>
+    <image:image>
+      <image:loc>https://quidesk.github.io/og-image.png</image:loc>
+      <image:title>Energy Commodities Market — WTI Crude Oil, Brent Crude, Natural Gas</image:title>
+    </image:image>
+  </url>
+  <url>
+    <loc>https://quidesk.github.io/#forex</loc>
+    <lastmod>2026-11-11</lastmod>
+    <changefreq>hourly</changefreq>
+    <priority>0.8</priority>
+    <image:image>
+      <image:loc>https://quidesk.github.io/og-image.png</image:loc>
+      <image:title>Foreign Exchange Rates — EUR/USD, GBP/USD, USD/JPY Spot Ticker</image:title>
+    </image:image>
+  </url>
+  <url>
+    <loc>https://quidesk.github.io/#compare</loc>
+    <lastmod>2026-11-11</lastmod>
+    <changefreq>daily</changefreq>
+    <priority>0.7</priority>
+  </url>
+  <url>
+    <loc>https://quidesk.github.io/#watchlist</loc>
+    <lastmod>2026-11-11</lastmod>
+    <changefreq>daily</changefreq>
+    <priority>0.7</priority>
+  </url>
+  <url>
+    <loc>https://quidesk.github.io/#portfolio</loc>
+    <lastmod>2026-11-11</lastmod>
+    <changefreq>daily</changefreq>
+    <priority>0.7</priority>
   </url>
 </urlset>

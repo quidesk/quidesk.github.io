@@ -1,8 +1,19 @@
-import React from 'react'
-import { formatPrice, formatChange } from '../data/markets'
+import React, { useMemo } from 'react'
+import { formatUsdPrice, formatForexSecondaryValue } from '../utils/formatters'
 
-export default function TickerTape({ allAssets, formatLocalPrice, isStale }) {
+export default function TickerTape({ allAssets = [], formatLocalPrice, isStale }) {
   const items = [...allAssets, ...allAssets];
+
+  const ratesMap = useMemo(() => {
+    const map = {};
+    if (Array.isArray(allAssets)) {
+      for (const item of allAssets) {
+        if (item.symbol) map[item.symbol] = item.price;
+        if (item.id) map[item.id] = item.price;
+      }
+    }
+    return map;
+  }, [allAssets]);
 
   return (
     <div style={s.wrap}>
@@ -15,14 +26,27 @@ export default function TickerTape({ allAssets, formatLocalPrice, isStale }) {
           {items.map((a, i) => {
             const up = a.change >= 0;
             const stale = isStale && isStale(a.id, a.sector);
+            const isFx = (a.sector || '').toLowerCase() === 'forex';
+            const isFxInr = isFx && (a.symbol?.endsWith('INR') || a.symbol?.endsWith('/INR'));
+            const rawSecondary = isFx
+              ? formatForexSecondaryValue(a.symbol, a.price, ratesMap)
+              : (formatLocalPrice ? formatLocalPrice(a.price) : null);
+            const secondaryDisplay = rawSecondary
+              ? (rawSecondary.startsWith('(') ? rawSecondary : `(${rawSecondary})`)
+              : null;
+
+            const priceDisplay = isFxInr
+              ? `₹${formatUsdPrice(a.symbol, a.price, a.sector)}`
+              : formatUsdPrice(a.symbol, a.price, a.sector);
+
             return (
               <span key={`${a.id}-${i}`} style={{ ...s.item, opacity: stale ? 0.4 : 1 }}>
                 <span style={s.sym}>{a.symbol}</span>
                 <span style={s.price}>
-                  {formatPrice(a.price, a.symbol, a.sector)}
-                  {formatLocalPrice && formatLocalPrice(a.price) && (
+                  {priceDisplay}
+                  {secondaryDisplay && (
                     <span style={{ fontSize: '11px', color: 'var(--text-dim)', marginLeft: '4px', fontWeight: 400 }}>
-                      ({formatLocalPrice(a.price)})
+                      {secondaryDisplay}
                     </span>
                   )}
                 </span>
@@ -54,7 +78,7 @@ const s = {
     height:'100%',
     background:'rgba(34,212,122,0.04)',
     position: 'relative',
-    zIndex: 2, // ensure label stays above scroll track
+    zIndex: 2,
   },
   dot: {
     width:'5px', height:'5px', borderRadius:'50%',
@@ -71,11 +95,11 @@ const s = {
     display:'inline-flex', alignItems:'center',
     animation:'tickerScroll 90s linear infinite',
     whiteSpace:'nowrap',
-    paddingLeft: '16px', // issue 5 fix: breathing room so first item doesn't clip
+    paddingLeft: '16px',
   },
   item: {
     display:'inline-flex', alignItems:'center', gap:'6px',
-    padding:'0 8px', // issue 5 fix: increase padding from 2px to 8px
+    padding:'0 8px',
     flexShrink: 0,
     whiteSpace: 'nowrap',
   },

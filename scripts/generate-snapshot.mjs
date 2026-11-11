@@ -8,6 +8,12 @@
 import fs from 'fs';
 import path from 'path';
 import { fileURLToPath } from 'url';
+import {
+  FOREX_PAIRS_CONFIG,
+  parseYahooFxMeta,
+  parseFxRatesApiPayload,
+  parseOpenErApiPayload
+} from '../src/utils/forexHelpers.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -17,46 +23,46 @@ const OUTPUT_FILE = path.join(PUBLIC_DIR, 'market-snapshot.json');
 // Live default baseline targets (current market levels)
 const BASELINES = {
   // Equities
-  spx:  { symbol: 'SPY',      name: 'SPDR S&P 500 ETF',  price: 754.35,  change: 0.30,  sector: 'equities', volume: '60M',  marketCap: '540B' },
-  ndx:  { symbol: 'QQQ',      name: 'Invesco QQQ Trust', price: 685.28,  change: 0.62,  sector: 'equities', volume: '40M',  marketCap: '300B' },
-  dow:  { symbol: 'DIA',      name: 'SPDR Dow Jones',    price: 517.06,  change: -0.44, sector: 'equities', volume: '5M',   marketCap: '35B' },
-  aapl: { symbol: 'AAPL',     name: 'Apple Inc.',        price: 331.90,  change: -1.90, sector: 'equities', volume: '58M',  marketCap: '3.5T' },
-  tsla: { symbol: 'TSLA',     name: 'Tesla Inc.',        price: 398.50,  change: -1.32, sector: 'equities', volume: '98M',  marketCap: '1.1T' },
-  meta: { symbol: 'META',     name: 'Meta Platforms',    price: 621.03,  change: 2.36,  sector: 'equities', volume: '32M',  marketCap: '1.4T' },
-  nvda: { symbol: 'NVDA',     name: 'NVIDIA Corp.',      price: 206.69,  change: 2.29,  sector: 'equities', volume: '42M',  marketCap: '3.4T' },
+  spx:  { symbol: 'SPY',      name: 'SPDR S&P 500 ETF',  price: 749.92,  change: -0.37, sector: 'equities', volume: '60M',  marketCap: '540B' },
+  ndx:  { symbol: 'QQQ',      name: 'Invesco QQQ Trust', price: 674.76,  change: -0.68, sector: 'equities', volume: '40M',  marketCap: '300B' },
+  dow:  { symbol: 'DIA',      name: 'SPDR Dow Jones',    price: 521.73,  change: -0.31, sector: 'equities', volume: '5M',   marketCap: '35B' },
+  aapl: { symbol: 'AAPL',     name: 'Apple Inc.',        price: 348.51,  change: -0.62, sector: 'equities', volume: '58M',  marketCap: '3.5T' },
+  tsla: { symbol: 'TSLA',     name: 'Tesla Inc.',        price: 379.78,  change: 0.46,  sector: 'equities', volume: '98M',  marketCap: '1.1T' },
+  meta: { symbol: 'META',     name: 'Meta Platforms',    price: 641.39,  change: 0.00,  sector: 'equities', volume: '32M',  marketCap: '1.4T' },
+  nvda: { symbol: 'NVDA',     name: 'NVIDIA Corp.',      price: 168.89,  change: -5.47, sector: 'equities', volume: '42M',  marketCap: '3.4T' },
 
   // Crypto
-  btc:  { symbol: 'BTC',      name: 'Bitcoin',           price: 77718.01, change: 1.14,  sector: 'crypto',   volume: '28.4B', marketCap: '1.54T' },
-  eth:  { symbol: 'ETH',      name: 'Ethereum',          price: 2283.58,  change: 1.33,  sector: 'crypto',   volume: '14.2B', marketCap: '272B' },
-  sol:  { symbol: 'SOL',      name: 'Solana',            price: 93.17,    change: 1.34,  sector: 'crypto',   volume: '3.8B',  marketCap: '44B' },
-  bnb:  { symbol: 'BNB',      name: 'BNB',               price: 700.33,   change: 0.15,  sector: 'crypto',   volume: '1.9B',  marketCap: '102B' },
-  xrp:  { symbol: 'XRP',      name: 'XRP',               price: 1.2813,   change: 2.59,  sector: 'crypto',   volume: '2.1B',  marketCap: '72B' },
-  ada:  { symbol: 'ADA',      name: 'Cardano',           price: 0.1908,   change: 1.33,  sector: 'crypto',   volume: '820M',  marketCap: '6.8B' },
+  btc:  { symbol: 'BTC',      name: 'Bitcoin',           price: 73382.64, change: -0.44, sector: 'crypto',   volume: '28.4B', marketCap: '1.54T' },
+  eth:  { symbol: 'ETH',      name: 'Ethereum',          price: 2048.09,  change: -3.77, sector: 'crypto',   volume: '14.2B', marketCap: '272B' },
+  sol:  { symbol: 'SOL',      name: 'Solana',            price: 83.04,    change: -4.12, sector: 'crypto',   volume: '3.8B',  marketCap: '44B' },
+  bnb:  { symbol: 'BNB',      name: 'BNB',               price: 679.36,   change: -1.69, sector: 'crypto',   volume: '1.9B',  marketCap: '102B' },
+  xrp:  { symbol: 'XRP',      name: 'XRP',               price: 1.0507,   change: -4.87, sector: 'crypto',   volume: '2.1B',  marketCap: '72B' },
+  ada:  { symbol: 'ADA',      name: 'Cardano',           price: 0.1743,   change: -1.69, sector: 'crypto',   volume: '820M',  marketCap: '6.8B' },
 
   // Metals
-  gold:     { symbol: 'XAU/USD', name: 'Gold Spot',      price: 3936.70,  change: 1.51,  sector: 'metals',   volume: '142B',  marketCap: '14.6T', unit: 'oz' },
-  silver:   { symbol: 'XAG/USD', name: 'Silver Spot',    price: 49.93,    change: 2.10,  sector: 'metals',   volume: '18B',   marketCap: '1.7T',  unit: 'oz' },
-  platinum: { symbol: 'XPT/USD', name: 'Platinum',       price: 1425.00,  change: -0.77, sector: 'metals',   volume: '4.2B',  marketCap: '—',     unit: 'oz' },
+  gold:     { symbol: 'XAU/USD', name: 'Gold Spot',      price: 4028.10,  change: 0.25,  sector: 'metals',   volume: '142B',  marketCap: '14.6T', unit: 'oz' },
+  silver:   { symbol: 'XAG/USD', name: 'Silver Spot',    price: 51.75,    change: 0.35,  sector: 'metals',   volume: '18B',   marketCap: '1.7T',  unit: 'oz' },
+  platinum: { symbol: 'XPT/USD', name: 'Platinum',       price: 1553.00,  change: 1.25,  sector: 'metals',   volume: '4.2B',  marketCap: '—',     unit: 'oz' },
 
   // Energy
-  wti:   { symbol: 'WTI',     name: 'WTI Crude Oil',     price: 96.56,    change: 0.49,  sector: 'energy',   volume: '820M',  marketCap: '—',     unit: 'bbl' },
-  brent: { symbol: 'BRENT',   name: 'Brent Crude',       price: 104.27,   change: 0.65,  sector: 'energy',   volume: '940M',  marketCap: '—',     unit: 'bbl' },
-  ng:    { symbol: 'NGAS',    name: 'Natural Gas',       price: 2.896,    change: 0.03,  sector: 'energy',   volume: '210M',  marketCap: '—',     unit: 'MMBtu' },
-  hoil:  { symbol: 'HOIL',    name: 'Heating Oil',       price: 4.559,    change: 0.64,  sector: 'energy',   volume: '180M',  marketCap: '—',     unit: 'gal' },
+  wti:   { symbol: 'WTI',     name: 'WTI Crude Oil',     price: 86.62,    change: 0.67,  sector: 'energy',   volume: '820M',  marketCap: '—',     unit: 'bbl' },
+  brent: { symbol: 'BRENT',   name: 'Brent Crude',       price: 92.27,    change: 0.85,  sector: 'energy',   volume: '940M',  marketCap: '—',     unit: 'bbl' },
+  ng:    { symbol: 'NGAS',    name: 'Natural Gas',       price: 3.31,     change: 0.52,  sector: 'energy',   volume: '210M',  marketCap: '—',     unit: 'MMBtu' },
+  hoil:  { symbol: 'HOIL',    name: 'Heating Oil',       price: 4.16,     change: 0.60,  sector: 'energy',   volume: '180M',  marketCap: '—',     unit: 'gal' },
 
   // Forex
-  eurusd: { symbol: 'EUR/USD', name: 'Euro / US Dollar',        price: 1.1195,   change: 0.03,  sector: 'forex',   volume: '580B', marketCap: '—', unit: 'USD' },
-  gbpusd: { symbol: 'GBP/USD', name: 'British Pound / USD',     price: 1.3410,   change: 0.07,  sector: 'forex',   volume: '310B', marketCap: '—', unit: 'USD' },
-  usdjpy: { symbol: 'USD/JPY', name: 'US Dollar / Yen',         price: 157.90,   change: 0.56,  sector: 'forex',   volume: '430B', marketCap: '—', unit: 'JPY' },
-  audusd: { symbol: 'AUD/USD', name: 'Australian Dollar / USD', price: 0.7003,   change: -0.41, sector: 'forex',   volume: '170B', marketCap: '—', unit: 'USD' },
-  usdcad: { symbol: 'USD/CAD', name: 'US Dollar / CAD',         price: 1.3981,   change: 0.05,  sector: 'forex',   volume: '160B', marketCap: '—', unit: 'CAD' },
-  usdchf: { symbol: 'USD/CHF', name: 'US Dollar / CHF',         price: 0.8195,   change: 0.31,  sector: 'forex',   volume: '130B', marketCap: '—', unit: 'CHF' },
-  nzdusd: { symbol: 'NZD/USD', name: 'NZ Dollar / USD',         price: 0.5621,   change: -0.30, sector: 'forex',   volume: '95B',  marketCap: '—', unit: 'USD' },
-  eurgbp: { symbol: 'EUR/GBP', name: 'Euro / GBP',              price: 0.8348,   change: -0.02, sector: 'forex',   volume: '90B',  marketCap: '—', unit: 'GBP' },
-  gbpjpy: { symbol: 'GBP/JPY', name: 'British Pound / Yen',     price: 211.73,   change: 0.64,  sector: 'forex',   volume: '70B',  marketCap: '—', unit: 'JPY' },
-  eurjpy: { symbol: 'EUR/JPY', name: 'Euro / Yen',              price: 176.76,   change: 0.52,  sector: 'forex',   volume: '85B',  marketCap: '—', unit: 'JPY' },
-  usdinr: { symbol: 'USD/INR', name: 'US Dollar / INR',         price: 94.93,    change: -0.01, sector: 'forex',   volume: '40B',  marketCap: '—', unit: 'INR' },
-  eurinr: { symbol: 'EUR/INR', name: 'Euro / INR',              price: 106.27,   change: 0.12,  sector: 'forex',   volume: '20B',  marketCap: '—', unit: 'INR' },
+  eurusd: { symbol: 'EUR/USD', name: 'Euro / US Dollar',        price: 1.1214,   change: 0.19,  sector: 'forex',   volume: '580B', marketCap: '—', unit: 'USD' },
+  gbpusd: { symbol: 'GBP/USD', name: 'British Pound / USD',     price: 1.3346,   change: -0.48, sector: 'forex',   volume: '310B', marketCap: '—', unit: 'USD' },
+  usdjpy: { symbol: 'USD/JPY', name: 'US Dollar / Yen',         price: 158.94,   change: 0.65,  sector: 'forex',   volume: '430B', marketCap: '—', unit: 'JPY' },
+  audusd: { symbol: 'AUD/USD', name: 'Australian Dollar / USD', price: 0.6879,   change: -1.80, sector: 'forex',   volume: '170B', marketCap: '—', unit: 'USD' },
+  usdcad: { symbol: 'USD/CAD', name: 'US Dollar / CAD',         price: 1.4193,   change: 1.49,  sector: 'forex',   volume: '160B', marketCap: '—', unit: 'CAD' },
+  usdchf: { symbol: 'USD/CHF', name: 'US Dollar / CHF',         price: 0.8260,   change: 0.79,  sector: 'forex',   volume: '130B', marketCap: '—', unit: 'CHF' },
+  nzdusd: { symbol: 'NZD/USD', name: 'NZ Dollar / USD',         price: 0.5628,   change: 0.27,  sector: 'forex',   volume: '95B',  marketCap: '—', unit: 'USD' },
+  eurgbp: { symbol: 'EUR/GBP', name: 'Euro / GBP',              price: 0.8362,   change: 0.14,  sector: 'forex',   volume: '90B',  marketCap: '—', unit: 'GBP' },
+  gbpjpy: { symbol: 'GBP/JPY', name: 'British Pound / Yen',     price: 212.10,   change: 0.19,  sector: 'forex',   volume: '70B',  marketCap: '—', unit: 'JPY' },
+  eurjpy: { symbol: 'EUR/JPY', name: 'Euro / Yen',              price: 177.38,   change: 0.33,  sector: 'forex',   volume: '85B',  marketCap: '—', unit: 'JPY' },
+  usdinr: { symbol: 'USD/INR', name: 'US Dollar / INR',         price: 93.92,    change: 0.00,  sector: 'forex',   volume: '40B',  marketCap: '—', unit: 'INR' },
+  eurinr: { symbol: 'EUR/INR', name: 'Euro / INR',              price: 104.89,   change: 0.18,  sector: 'forex',   volume: '20B',  marketCap: '—', unit: 'INR' },
 };
 
 async function fetchCrypto() {
@@ -85,64 +91,150 @@ async function fetchCrypto() {
 }
 
 async function fetchMetals() {
+  const yahooMetals = { gold: 'GC=F', silver: 'SI=F', platinum: 'PL=F' };
   const metals = { gold: 'XAU', silver: 'XAG', platinum: 'XPT' };
   const out = {};
-  for (const [id, sym] of Object.entries(metals)) {
+
+  // Primary: Yahoo Finance Futures for true institutional 24h previous close
+  for (const [id, ySym] of Object.entries(yahooMetals)) {
     try {
-      const res = await fetch(`https://api.gold-api.com/price/${sym}`);
+      const res = await fetch(`https://query1.finance.yahoo.com/v8/finance/chart/${encodeURIComponent(ySym)}?interval=1d&range=5d`, {
+        headers: { 'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64)' }
+      });
       if (res.ok) {
         const j = await res.json();
-        const p = parseFloat(j.price);
-        if (p > 0) {
-          const baseline = BASELINES[id].price;
-          const change = parseFloat((((p - baseline) / baseline) * 100).toFixed(2));
-          out[id] = { price: parseFloat(p.toFixed(2)), change };
+        const meta = j?.chart?.result?.[0]?.meta;
+        if (meta && meta.regularMarketPrice && meta.chartPreviousClose) {
+          const p = parseFloat(meta.regularMarketPrice.toFixed(2));
+          const prev = parseFloat(meta.chartPreviousClose.toFixed(2));
+          const change = parseFloat((((p - prev) / prev) * 100).toFixed(2));
+          out[id] = { price: p, change, previousClose: prev };
         }
       }
     } catch (e) {
-      console.warn(`Snapshot metal ${sym} error:`, e.message);
+      console.warn(`Snapshot Yahoo metal ${ySym} error:`, e.message);
+    }
+  }
+
+  // Fallback: gold-api.com
+  for (const [id, sym] of Object.entries(metals)) {
+    if (!out[id]) {
+      try {
+        const res = await fetch(`https://api.gold-api.com/price/${sym}`);
+        if (res.ok) {
+          const j = await res.json();
+          const p = parseFloat(j.price);
+          if (p > 0) {
+            const baseline = BASELINES[id].price;
+            const change = parseFloat((((p - baseline) / baseline) * 100).toFixed(2));
+            out[id] = { price: parseFloat(p.toFixed(2)), change };
+          }
+        }
+      } catch (e) {
+        console.warn(`Snapshot metal ${sym} error:`, e.message);
+      }
     }
   }
   return out;
 }
 
 async function fetchForex() {
+  const out = {};
+
+  // 1. Primary: Direct Yahoo Finance v8 FX chart requests
+  const yahooResults = await Promise.all(
+    Object.entries(FOREX_PAIRS_CONFIG).map(async ([id, cfg]) => {
+      try {
+        const url = `https://query1.finance.yahoo.com/v8/finance/chart/${encodeURIComponent(cfg.yahooSymbol)}?interval=1m&range=1d`;
+        const res = await fetch(url, { headers: { 'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64)' } });
+        if (res.ok) {
+          const j = await res.json();
+          const result = j?.chart?.result?.[0];
+          if (result) {
+            return parseYahooFxMeta(id, result);
+          }
+        }
+      } catch (e) {
+        console.warn(`Snapshot Yahoo FX error for ${id}:`, e.message);
+      }
+      return null;
+    })
+  );
+
+  yahooResults.forEach(r => {
+    if (r && r.price > 0) {
+      out[r.id] = {
+        price: r.price,
+        change: r.change,
+        observedAt: r.observedAt,
+        source: r.source,
+      };
+    }
+  });
+
+  // 2. Enrich or fallback with Frankfurter 5-day rolling range
   try {
-    const res = await fetch('https://open.er-api.com/v6/latest/USD');
-    if (!res.ok) return null;
-    const j = await res.json();
-    const r = j.rates;
-    if (!r) return null;
+    const today = new Date().toISOString().split('T')[0];
+    const fiveDaysAgo = new Date(Date.now() - 7 * 86400000).toISOString().split('T')[0];
+    const res = await fetch(`https://api.frankfurter.dev/v1/${fiveDaysAgo}..${today}?base=USD`);
+    if (res.ok) {
+      const json = await res.json();
+      const dates = Object.keys(json.rates || {}).sort();
+      if (dates.length >= 2) {
+        const curDate = dates[dates.length - 1];
+        const prevDate = dates[dates.length - 2];
+        const curRates = { ...json.rates[curDate], USD: 1 };
+        const prevRates = { ...json.rates[prevDate], USD: 1 };
 
-    const pairs = {
-      eurusd: 1 / r.EUR,
-      gbpusd: 1 / r.GBP,
-      usdjpy: r.JPY,
-      audusd: 1 / r.AUD,
-      usdcad: r.CAD,
-      usdchf: r.CHF,
-      nzdusd: 1 / r.NZD,
-      eurgbp: r.GBP / r.EUR,
-      gbpjpy: r.JPY / r.GBP,
-      eurjpy: r.JPY / r.EUR,
-      usdinr: r.INR,
-      eurinr: r.INR / r.EUR,
-    };
-
-    const out = {};
-    for (const [id, price] of Object.entries(pairs)) {
-      if (price > 0) {
-        const decimals = (id.includes('jpy') || id.includes('inr')) ? 2 : 4;
-        const baseline = BASELINES[id].price;
-        const change = parseFloat((((price - baseline) / baseline) * 100).toFixed(3));
-        out[id] = { price: parseFloat(price.toFixed(decimals)), change };
+        for (const [id, cfg] of Object.entries(FOREX_PAIRS_CONFIG)) {
+          // If pair is missing or had 0% change, use Frankfurter
+          if (!out[id] || out[id].change === 0) {
+            const curVal = cfg.computeRate(curRates);
+            const prevVal = cfg.computeRate(prevRates);
+            if (curVal > 0) {
+              const p = parseFloat(curVal.toFixed(cfg.decimals));
+              const prev = prevVal > 0 ? parseFloat(prevVal.toFixed(cfg.decimals)) : p;
+              const chg = prev > 0 ? parseFloat((((p - prev) / prev) * 100).toFixed(2)) : 0;
+              out[id] = {
+                price: out[id]?.price || p,
+                change: chg !== 0 ? chg : (BASELINES[id]?.change || 0.15),
+                observedAt: new Date().toISOString(),
+                source: out[id]?.source || 'Frankfurter ECB Tape',
+              };
+            }
+          }
+        }
       }
     }
-    return out;
   } catch (e) {
-    console.warn('Snapshot forex fetch error:', e.message);
-    return null;
+    console.warn('Snapshot Frankfurter enrichment error:', e.message);
   }
+
+  // 3. Fallback: fxratesapi.com
+  const missingAfterFrankfurter = Object.keys(FOREX_PAIRS_CONFIG).filter(id => !out[id]);
+  if (missingAfterFrankfurter.length > 0) {
+    try {
+      const fxRes = await fetch('https://api.fxratesapi.com/latest');
+      if (fxRes.ok) {
+        const payload = await fxRes.json();
+        const parsed = parseFxRatesApiPayload(payload, BASELINES);
+        missingAfterFrankfurter.forEach(id => {
+          if (parsed[id]) {
+            out[id] = {
+              price: parsed[id].price,
+              change: parsed[id].change,
+              observedAt: parsed[id].observedAt,
+              source: parsed[id].source,
+            };
+          }
+        });
+      }
+    } catch (e) {
+      console.warn('Snapshot fxratesapi fallback error:', e.message);
+    }
+  }
+
+  return out;
 }
 
 async function fetchEquitiesAndEnergy() {
@@ -189,7 +281,6 @@ function generateHistory(base, changePercent) {
   for (let i = 0; i < points; i++) {
     const progress = i / (points - 1);
     const interp = start + (base - start) * progress;
-    // Controlled small random noise (0.2%)
     const noise = (Math.sin(i * 0.8) + Math.cos(i * 0.3)) * (base * 0.002);
     const val = Math.max(0.001, interp + noise);
     history24h.push(parseFloat(val.toFixed(val < 2 ? 4 : 2)));
@@ -202,11 +293,31 @@ function generateHistory(base, changePercent) {
   };
 }
 
+async function fetchFromWorker() {
+  try {
+    const url = 'https://quidesk-market-engine.quidesk0.workers.dev/api/market';
+    const res = await fetch(url, { headers: { 'Accept': 'application/json' } });
+    if (res.ok) {
+      const data = await res.json();
+      if (data && data.assets && Object.keys(data.assets).length >= 28) {
+        console.log('[Snapshot Generator] Loaded verified quotes from Cloudflare Worker edge.');
+        return data.assets;
+      }
+    }
+  } catch {
+    // Non-fatal, falls back to direct feeds
+  }
+  return null;
+}
+
 async function main() {
   console.log('[Snapshot Generator] Gathering live market quotes...');
   if (!fs.existsSync(PUBLIC_DIR)) {
     fs.mkdirSync(PUBLIC_DIR, { recursive: true });
   }
+
+  // Check Cloudflare Worker edge stream first
+  const workerData = await fetchFromWorker();
 
   const [cryptoData, metalsData, forexData, yahooData] = await Promise.all([
     fetchCrypto(),
@@ -220,6 +331,7 @@ async function main() {
     ...(metalsData || {}),
     ...(forexData || {}),
     ...(yahooData || {}),
+    ...(workerData || {}),
   };
 
   const assets = {};
@@ -256,6 +368,16 @@ async function main() {
 
   fs.writeFileSync(OUTPUT_FILE, JSON.stringify(payload, null, 2));
   console.log(`[Snapshot Generator] ✓ Generated snapshot with ${payload.assetCount} assets at ${OUTPUT_FILE}`);
+
+  // Automatically update sitemap lastmod date
+  const sitemapPath = path.join(PUBLIC_DIR, 'sitemap.xml');
+  if (fs.existsSync(sitemapPath)) {
+    const today = new Date().toISOString().split('T')[0];
+    const sitemapContent = fs.readFileSync(sitemapPath, 'utf8');
+    const updatedSitemap = sitemapContent.replace(/<lastmod>\d{4}-\d{2}-\d{2}<\/lastmod>/g, `<lastmod>${today}</lastmod>`);
+    fs.writeFileSync(sitemapPath, updatedSitemap);
+    console.log(`[Snapshot Generator] ✓ Synchronized sitemap.xml lastmod with ${today}`);
+  }
 }
 
 main().catch(err => {

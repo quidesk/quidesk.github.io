@@ -1,15 +1,12 @@
-import { useState, useEffect, useRef, useCallback, useMemo } from 'react'
-import { MARKET_DATA, detectHotspots } from '../data/markets'
-import {
-  fetchBinancePrices,
-  connectBinanceWS,
-  fetchCryptoPrices,
-  fetchAllMetals,
-  fetchFMPStocks,
-  fetchFMPEnergy,
-  fetchForexPrices,
-} from '../utils/api'
-import { validateEnergyPrices } from '../utils/energyValidator'
+import { useState, useEffect, useRef, useCallback, useMemo } from 'react';
+import useSWR from 'swr';
+import { MARKET_DATA, detectHotspots, generateDeterministicSparkline } from '../data/markets';
+import { connectBinanceWS, fetchBinancePrices, fetchCryptoPrices, fetchAllMetals, fetchForexPrices } from '../utils/api';
+import { useMarketStore, syncAllUI } from '../store/marketStore';
+import { getFreshnessLevel } from '../lib/freshness';
+import { fetchMarketStream } from '../services/marketStream';
+
+const POLL_INTERVAL_MS = 5000;
 
 function sanitizeHistoryPoints(arr, fallbackPrice) {
   const safe = (arr || []).filter(v => typeof v === 'number' && Number.isFinite(v) && v > 0);
@@ -19,23 +16,26 @@ function sanitizeHistoryPoints(arr, fallbackPrice) {
 
 function appendChartPoint(asset) {
   const val = asset.price;
-  const h = asset.history || {};
-  
-  const updateArr = (arr) => {
-    const safe = sanitizeHistoryPoints(arr, val);
-    const copy = [...safe];
-    copy[copy.length - 1] = val;
-    return copy;
-  };
+  const chg = asset.changePercent ?? asset.change ?? 0;
+  const h = asset.history;
+
+  let points;
+  if (h && h['24H'] && h['24H'].length > 2) {
+    const safe = sanitizeHistoryPoints(h['24H'], val);
+    points = [...safe];
+    points[points.length - 1] = val;
+  } else {
+    points = generateDeterministicSparkline(asset.symbol || asset.id, val, chg, 48);
+  }
 
   const history = {
-    '1H': updateArr(h['1H']),
-    '24H': updateArr(h['24H']),
-    '1M': updateArr(h['1M']),
-    '1Y': updateArr(h['1Y']),
+    '1H': points.slice(-12),
+    '24H': points,
+    '1M': points,
+    '1Y': points,
   };
 
-  const chartData = history['24H'].map((v, i) => ({ time: `${i}:00`, value: v }));
+  const chartData = points.map((v, i) => ({ time: `${i}:00`, value: v }));
 
   return {
     ...asset,
@@ -47,257 +47,183 @@ function appendChartPoint(asset) {
 // Build initial flat normalized map from MARKET_DATA
 function buildInitialMap() {
   const map = {};
+  const now = Date.now();
   Object.values(MARKET_DATA).flat().forEach(asset => {
-    map[asset.id] = asset;
+    map[asset.id] = {
+      ...asset,
+      changePercent: asset.change,
+      timestamp: now,
+      source: 'cache',
+    };
   });
   return map;
 }
 
-export function useMarketData() {
-  // Single normalized store: Record<TickerSymbol, MarketAsset>
-  const [assetMap, setAssetMap] = useState(buildInitialMap)
-  const [lastUpdate, setLastUpdate] = useState(new Date())
-  const [isLive, setIsLive] = useState(true)
-  const [connectionStatus, setConnectionStatus] = useState('connecting') // 'live' | 'connecting' | 'reconnecting'
-  const wsRef = useRef(null)
-
-  // ── STALENESS GUARD ─────────────────────────────────────────────────────
-  const STALE_MAX_AGE = {
-    equities: 30000,
-    crypto:   30000,
-    forex:    60000,
-    metals:   60000,
-    energy:   60000,
-  }
-  const priceTimestamps = useRef({}) // { [assetId]: number (Date.now()) }
-
-  function stampPrices(assetIds) {
-    const now = Date.now()
-    assetIds.forEach(id => { priceTimestamps.current[id] = now })
+/**
+ * Universal Market Data Fetcher for Static Frontend Architecture.
+ *
+ * In a static SPA deployed on GitHub Pages, market quotes are fetched from
+ * /market-snapshot.json (populated with verified live Yahoo Finance, Binance,
+ * and Gold-API rates) with fallback to live client-side third-party APIs.
+ */
+async function fetchMarketSnapshot() {
+  // 1. Primary: Query Cloudflare Worker edge aggregator if online
+  try {
+    const workerQuotes = await fetchMarketStream();
+    if (workerQuotes && Object.keys(workerQuotes).length >= 28) {
+      return workerQuotes;
+    }
+  } catch (err) {
+    console.warn('[useMarketData] Edge worker query notice:', err.message);
   }
 
-  function isStale(assetId, sector) {
-    const ts = priceTimestamps.current[assetId]
-    if (!ts) return false
-    const maxAge = STALE_MAX_AGE[sector] || 60000
-    return (Date.now() - ts) > maxAge
-  }
+  // 2. Secondary: Query pre-hydrated static snapshot
+  const base = import.meta.env?.BASE_URL || '/';
+  const snapshotUrl = `${base.replace(/\/$/, '')}/market-snapshot.json?_t=${Date.now()}`;
 
-  // Atomic bulk updater for normalized state
-  const updateAssets = useCallback((updates) => {
-    if (!updates || !updates.length) return;
-    setAssetMap(prev => {
-      let changed = false;
-      const next = { ...prev };
-      updates.forEach(u => {
-        if (!u || !u.id) return;
-        const current = next[u.id];
-        if (!current) return;
+  try {
+    const res = await fetch(snapshotUrl, { cache: 'no-cache' });
+    if (res.ok) {
+      const json = await res.json();
+      if (json && json.assets) {
+        const snapTs = json.timestamp ? Date.parse(json.timestamp) : Date.now();
+        const quoteMap = {};
 
-        // Verify if price or change meaningfully shifted
-        const priceDiff = typeof u.price === 'number' && u.price !== current.price;
-        const changeDiff = typeof u.change === 'number' && u.change !== current.change;
-
-        if (priceDiff || changeDiff || u.volume) {
-          changed = true;
-          const merged = {
-            ...current,
-            ...u,
-            price: typeof u.price === 'number' ? u.price : current.price,
-            change: typeof u.change === 'number' ? u.change : current.change,
+        Object.entries(json.assets).forEach(([id, a]) => {
+          const obsTs = a.observedAt ? Date.parse(a.observedAt) : snapTs;
+          const isFallback = a.source?.toLowerCase().includes('fallback');
+          quoteMap[id] = {
+            ...a,
+            id,
+            changePercent: a.change,
+            timestamp: isNaN(obsTs) ? Date.now() : obsTs,
+            source: isFallback ? 'fallback' : 'rest',
           };
-          next[u.id] = appendChartPoint(merged);
-        }
-      });
-      return changed ? next : prev;
+        });
+        return quoteMap;
+      }
+    }
+  } catch (err) {
+    console.warn('[useMarketData] Static snapshot fetch notice:', err.message);
+  }
+
+  // Fallback: If snapshot is unavailable, query live client-side feeds
+  const [crypto, metals, forex] = await Promise.allSettled([
+    fetchBinancePrices().catch(() => fetchCryptoPrices()),
+    fetchAllMetals(),
+    fetchForexPrices(),
+  ]);
+
+  const fallbackMap = {};
+  const now = Date.now();
+
+  if (crypto.status === 'fulfilled' && Array.isArray(crypto.value)) {
+    crypto.value.forEach(c => {
+      fallbackMap[c.id] = { ...c, timestamp: c.timestamp || now, source: c.source || 'rest' };
     });
-    setLastUpdate(new Date());
-    setConnectionStatus('live');
-  }, []);
+  }
+  if (metals.status === 'fulfilled' && Array.isArray(metals.value)) {
+    metals.value.forEach(m => {
+      fallbackMap[m.id] = { ...m, timestamp: m.timestamp || now, source: m.source || 'rest' };
+    });
+  }
+  if (forex.status === 'fulfilled' && forex.value) {
+    Object.entries(forex.value).forEach(([id, f]) => {
+      fallbackMap[id] = { ...f, timestamp: f.timestamp || now, source: f.source || 'fallback' };
+    });
+  }
 
-  // ── 1. PRE-HYDRATION LAYER (Static Snapshot on boot) ───────────────────
+  return fallbackMap;
+}
+
+/**
+ * useMarketData Hook
+ *
+ * Can be called:
+ * 1. Without arguments: returns full dashboard market state, synchronized across all cards.
+ * 2. With symbol argument (e.g. useMarketData('SPY') or useMarketData('btc')):
+ *    returns { data: Quote, error, isLoading, isValidating }
+ */
+export function useMarketData(assetSymbol) {
+  const storeQuotes = useMarketStore((s) => s.quotes);
+  const lastSync = useMarketStore((s) => s.lastSync);
+  const isSyncing = useMarketStore((s) => s.isSyncing);
+  const applySnapshot = useMarketStore((s) => s.applySnapshot);
+  const applyTick = useMarketStore((s) => s.applyTick);
+
+  const [isLive, setIsLive] = useState(true);
+  const wsRef = useRef(null);
+
+  // Initialize store with baseline data if empty
   useEffect(() => {
-    async function preHydrate() {
-      try {
-        const base = import.meta.env.BASE_URL || '/'
-        const snapshotUrl = `${base.replace(/\/$/, '')}/market-snapshot.json`
-        const res = await fetch(snapshotUrl, { cache: 'no-cache' })
-        if (res.ok) {
-          const snapshot = await res.json()
-          if (snapshot && snapshot.assets) {
-            setAssetMap(prev => {
-              const next = { ...prev };
-              Object.entries(snapshot.assets).forEach(([id, snapAsset]) => {
-                if (next[id]) {
-                  next[id] = {
-                    ...next[id],
-                    ...snapAsset,
-                    history: snapAsset.history || next[id].history,
-                    chartData: snapAsset.chartData || next[id].chartData,
-                  };
-                } else {
-                  next[id] = snapAsset;
-                }
-              });
-              return next;
-            });
-            if (snapshot.timestamp) {
-              setLastUpdate(new Date(snapshot.timestamp));
-            }
-            stampPrices(Object.keys(snapshot.assets));
-            console.info('[Hydration] ✓ Pre-hydrated state from market-snapshot.json');
-          }
-        }
-      } catch (e) {
-        console.info('[Hydration] Static snapshot bypassed, connecting live feeds:', e.message);
-      }
+    if (Object.keys(storeQuotes).length === 0) {
+      applySnapshot(buildInitialMap());
     }
-    preHydrate();
-  }, []);
+  }, [applySnapshot, storeQuotes]);
 
-  // ── 2. CRYPTO: Binance WebSocket (!ticker@arr) + REST fallback ────────
+  // SWR Polling Strategy: Refreshes atomically every 5 seconds
+  const { data: swrData, error, isValidating, mutate } = useSWR(
+    'market-snapshot-feed',
+    fetchMarketSnapshot,
+    {
+      refreshInterval: POLL_INTERVAL_MS,
+      refreshWhenHidden: false,
+      refreshWhenOffline: false,
+      revalidateOnFocus: true,
+      focusThrottleInterval: 5000,
+      keepPreviousData: true,
+      dedupingInterval: 2000,
+      onSuccess: (newQuotes) => {
+        if (newQuotes && Object.keys(newQuotes).length > 0) {
+          applySnapshot(newQuotes);
+        }
+      },
+    }
+  );
+
+  // Binance Real-Time WebSocket for Crypto Ticks
   useEffect(() => {
-    const symbols = ['BTC', 'ETH', 'SOL', 'BNB', 'XRP', 'ADA']
-    let ws
+    const symbols = ['BTC', 'ETH', 'SOL', 'BNB', 'XRP', 'ADA'];
+    let ws;
     try {
-      ws = connectBinanceWS(symbols, ({ symbol, price, change }) => {
-        const id = symbol.toLowerCase()
-        updateAssets([{ id, price, change }])
-        stampPrices([id])
-      })
-      wsRef.current = ws
+      ws = connectBinanceWS(symbols, ({ symbol, price, change, timestamp, source }) => {
+        const id = symbol.toLowerCase();
+        applyTick(id, {
+          id,
+          symbol,
+          price,
+          change,
+          changePercent: change,
+          timestamp: timestamp || Date.now(),
+          source: source || 'websocket',
+        });
+      });
+      wsRef.current = ws;
     } catch (e) {
-      console.warn('Binance WS connection error:', e.message)
-      setConnectionStatus('reconnecting')
+      console.warn('[useMarketData] Binance WS error:', e.message);
     }
-
-    // Polling REST fallback every 30s
-    async function loadCryptoRest() {
-      try {
-        const prices = await fetchBinancePrices()
-        updateAssets(prices)
-        stampPrices(prices.map(p => p.id))
-      } catch (e) {
-        try {
-          const prices = await fetchCryptoPrices()
-          updateAssets(prices)
-          stampPrices(prices.map(p => p.id))
-        } catch (e2) {
-          console.warn('All crypto APIs failed:', e2.message)
-          setConnectionStatus('reconnecting')
-        }
-      }
-    }
-    loadCryptoRest()
-    const id = setInterval(loadCryptoRest, 30000)
 
     return () => {
-      clearInterval(id)
-      try { ws?.close() } catch {}
-    }
-  }, [updateAssets])
+      try { ws?.close(); } catch {}
+    };
+  }, [applyTick]);
 
-  // ── 3. METALS: gold-api.com live 30s poller ───────────────────────────
-  useEffect(() => {
-    async function loadMetals() {
-      try {
-        const metals = await fetchAllMetals()
-        if (metals && metals.length) {
-          updateAssets(metals)
-          stampPrices(metals.map(m => m.id))
-        }
-      } catch (e) {
-        console.warn('Metals feed failed:', e.message)
-      }
-    }
-    loadMetals()
-    const id = setInterval(loadMetals, 30000)
-    return () => clearInterval(id)
-  }, [updateAssets])
-
-  // ── 4. EQUITIES: Finnhub / FMP live quotes ─────────────────────────────
-  useEffect(() => {
-    const hasKey = import.meta.env.VITE_FINNHUB_KEY || import.meta.env.VITE_FMP_KEY
-    if (!hasKey) return
-
-    async function loadStocks() {
-      try {
-        const results = await fetchFMPStocks()
-        const updates = Object.entries(results).map(([id, val]) => ({
-          id,
-          price: val.price,
-          change: val.change,
-          volume: val.volume,
-        })).filter(u => u.price > 0)
-
-        if (updates.length > 0) {
-          updateAssets(updates)
-          stampPrices(updates.map(u => u.id))
-        }
-      } catch (e) {
-        console.warn('Equities poller error:', e.message)
-      }
-    }
-    loadStocks()
-    const id = setInterval(loadStocks, 60000)
-    return () => clearInterval(id)
-  }, [updateAssets])
-
-  // ── 5. ENERGY: Live Energy / Futures poller ───────────────────────────
-  useEffect(() => {
-    const hasKey = import.meta.env.VITE_FINNHUB_KEY || import.meta.env.VITE_FMP_KEY
-    if (!hasKey) return
-
-    async function loadEnergy() {
-      try {
-        const results = await fetchFMPEnergy()
-        const updates = Object.entries(results).map(([id, val]) => ({
-          id,
-          price: val.price,
-          change: val.change,
-        })).filter(u => u.price > 0)
-
-        if (updates.length > 0) {
-          updateAssets(updates)
-          stampPrices(updates.map(u => u.id))
-        }
-      } catch (e) {
-        console.warn('Energy poller error:', e.message)
-      }
-    }
-    loadEnergy()
-    const id = setInterval(loadEnergy, 60000)
-    return () => clearInterval(id)
-  }, [updateAssets])
-
-  // ── 6. FOREX: Live 60s poller (open.er-api / frankfurter) ──────────────
-  useEffect(() => {
-    async function loadForex() {
-      try {
-        const results = await fetchForexPrices()
-        const updates = Object.entries(results).map(([id, val]) => ({
-          id,
-          price: val.price,
-          change: val.change,
-        })).filter(u => u.price > 0)
-
-        if (updates.length > 0) {
-          updateAssets(updates)
-          stampPrices(updates.map(u => u.id))
-        }
-      } catch (e) {
-        console.warn('Forex poller error:', e.message)
-      }
-    }
-    loadForex()
-    const id = setInterval(loadForex, 60000) // 60s polling interval
-    return () => clearInterval(id)
-  }, [updateAssets])
-
-  // ── 7. MEMOIZED SINGLE SOURCE OF TRUTH SELECTORS ───────────────────────
+  // ── Global Dashboard Selectors (unconditional for React Hooks rules) ─────
   const allAssets = useMemo(() => {
-    return Object.values(assetMap);
-  }, [assetMap]);
+    const baseMap = buildInitialMap();
+    const uniqueMap = {};
+    Object.values(baseMap).forEach(a => {
+      uniqueMap[a.id] = a;
+    });
+
+    Object.values(storeQuotes).forEach(q => {
+      if (q && q.id && uniqueMap[q.id]) {
+        uniqueMap[q.id] = { ...uniqueMap[q.id], ...q };
+      }
+    });
+
+    return Object.values(uniqueMap).map(a => appendChartPoint(a));
+  }, [storeQuotes]);
 
   const data = useMemo(() => {
     const grouped = {
@@ -333,16 +259,40 @@ export function useMarketData() {
     return detectHotspots(allAssets);
   }, [allAssets]);
 
+  const isStale = useCallback((assetId, sector) => {
+    const quote = storeQuotes[assetId.toLowerCase()] || storeQuotes[assetId];
+    if (!quote) return false;
+    return getFreshnessLevel(quote) !== 'fresh';
+  }, [storeQuotes]);
+
+  const connectionStatus = error ? 'reconnecting' : (isValidating || isSyncing ? 'connecting' : 'live');
+
+  // If a specific asset symbol is requested, return the single-asset SWR shape
+  if (assetSymbol) {
+    const key = assetSymbol.toLowerCase();
+    const quote = storeQuotes[key] || storeQuotes[assetSymbol] || null;
+    return {
+      data: quote,
+      error,
+      isLoading: !quote,
+      isValidating,
+      mutate,
+    };
+  }
+
   return {
     data,
     allAssets,
     gainers,
     losers,
     hotspots,
-    lastUpdate,
+    lastUpdate: lastSync ? new Date(lastSync) : new Date(),
     isLive,
     setIsLive,
     isStale,
     connectionStatus,
+    refresh: mutate,
   };
 }
+
+export default useMarketData;

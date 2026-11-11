@@ -1,11 +1,13 @@
-import React, { useState } from 'react'
-import { TrendingUp, TrendingDown, Activity, Zap } from 'lucide-react'
-import MarketCard from '../components/MarketCard'
-import DetailChart from '../components/DetailChart'
-import { formatPrice, formatChange, SECTOR_META } from '../data/markets'
+import React, { useState } from 'react';
+import { TrendingUp, TrendingDown, Activity, Zap } from 'lucide-react';
+import MarketCard from '../components/MarketCard';
+import DetailChart from '../components/DetailChart';
+import PriceDisplay from '../components/PriceDisplay';
+import { formatPrice, formatChange, SECTOR_META } from '../data/markets';
+import { useMarketPulse } from '../selectors/marketPulse';
 
 export default function Dashboard({ data, setActiveTab, watchlistProps }) {
-  const [selectedAsset, setSelectedAsset] = useState(null)
+  const [selectedAsset, setSelectedAsset] = useState(null);
 
   const allAssets = [
     ...(data.equities || []),
@@ -13,21 +15,24 @@ export default function Dashboard({ data, setActiveTab, watchlistProps }) {
     ...(data.metals || []),
     ...(data.energy || []),
     ...(data.forex || [])
-  ]
+  ];
 
   const activeAsset = selectedAsset ? allAssets.find(a => a.id === selectedAsset.id) || selectedAsset : null;
 
+  // Derive pulse and counts atomically from the central Zustand store
+  const { advancingPct, risingCount, fallingCount, totalAssets } = useMarketPulse();
+
   const gainers = allAssets
-    .filter(a => typeof a.change === 'number' && a.change > 0)
-    .sort((a, b) => b.change - a.change)
-    .slice(0, 3)
+    .filter(a => typeof (a.changePercent ?? a.change) === 'number' && (a.changePercent ?? a.change) > 0)
+    .sort((a, b) => (b.changePercent ?? b.change) - (a.changePercent ?? a.change))
+    .slice(0, 3);
 
   const losers = allAssets
-    .filter(a => typeof a.change === 'number' && a.change < 0)
-    .sort((a, b) => a.change - b.change)
-    .slice(0, 3)
+    .filter(a => typeof (a.changePercent ?? a.change) === 'number' && (a.changePercent ?? a.change) < 0)
+    .sort((a, b) => (a.changePercent ?? a.change) - (b.changePercent ?? b.change))
+    .slice(0, 3);
 
-  const overallSentiment = allAssets.filter(a => a.change > 0).length / allAssets.length
+  const overallSentiment = totalAssets > 0 ? (risingCount / totalAssets) : 0.5;
 
   return (
     <div style={styles.container}>
@@ -38,7 +43,7 @@ export default function Dashboard({ data, setActiveTab, watchlistProps }) {
             <span style={styles.heroAccent}>◈</span> MARKET INTELLIGENCE
           </h1>
           <p style={styles.heroSub}>
-            Real-time tracking across equities, crypto & commodities
+            Real-time tracking across equities, crypto, commodities & foreign exchange
           </p>
         </div>
         <div style={styles.sentimentBox}>
@@ -55,7 +60,7 @@ export default function Dashboard({ data, setActiveTab, watchlistProps }) {
             />
           </div>
           <div style={styles.sentimentValue}>
-            {overallSentiment > 0.6 ? '⬆ BULLISH' : overallSentiment < 0.4 ? '⬇ BEARISH' : '↔ NEUTRAL'}
+            {overallSentiment > 0.6 ? '⬆ BULLISH' : overallSentiment < 0.4 ? '⬇ BEARISH' : '↔ NEUTRAL'} ({advancingPct}% advancing)
           </div>
         </div>
       </div>
@@ -69,17 +74,25 @@ export default function Dashboard({ data, setActiveTab, watchlistProps }) {
           </div>
           {gainers.length === 0 ? (
             <div style={{ padding: '8px 12px', fontSize: '11px', color: 'var(--text-dim)', fontFamily: 'var(--font-mono)' }}>No gainers</div>
-          ) : gainers.map(a => (
-            <div key={a.id} style={styles.moverRow} onClick={() => setSelectedAsset(a)}>
-              <span style={styles.moverSymbol}>{a.symbol}</span>
-              <span style={styles.moverPrice}>
-                {formatPrice(a.price, a.symbol, a.sector)}
-              </span>
-              <span style={{ ...styles.moverChange, color: 'var(--bull)' }}>
-                +{a.change.toFixed(2)}%
-              </span>
-            </div>
-          ))}
+          ) : gainers.map(a => {
+            const chg = a.changePercent ?? a.change;
+            const isForex = a.sector === 'forex' || a.symbol?.includes('/');
+            return (
+              <div key={a.id} style={styles.moverRow} onClick={() => setSelectedAsset(a)}>
+                <span style={styles.moverSymbol}>{a.symbol}</span>
+                <span style={styles.moverPrice}>
+                  <PriceDisplay
+                    value={a.price}
+                    prefix={isForex ? '' : '$'}
+                    precision={isForex ? (a.symbol?.includes('JPY') || a.symbol?.includes('INR') ? 2 : 4) : (a.price < 1 ? 4 : 2)}
+                  />
+                </span>
+                <span style={{ ...styles.moverChange, color: 'var(--bull)' }}>
+                  +{chg.toFixed(2)}%
+                </span>
+              </div>
+            );
+          })}
         </div>
         <div style={styles.moverPanel}>
           <div style={styles.moverHeader}>
@@ -88,17 +101,25 @@ export default function Dashboard({ data, setActiveTab, watchlistProps }) {
           </div>
           {losers.length === 0 ? (
             <div style={{ padding: '8px 12px', fontSize: '11px', color: 'var(--text-dim)', fontFamily: 'var(--font-mono)' }}>No losers</div>
-          ) : losers.map(a => (
-            <div key={a.id} style={styles.moverRow} onClick={() => setSelectedAsset(a)}>
-              <span style={styles.moverSymbol}>{a.symbol}</span>
-              <span style={styles.moverPrice}>
-                {formatPrice(a.price, a.symbol, a.sector)}
-              </span>
-              <span style={{ ...styles.moverChange, color: 'var(--bear)' }}>
-                {a.change.toFixed(2)}%
-              </span>
-            </div>
-          ))}
+          ) : losers.map(a => {
+            const chg = a.changePercent ?? a.change;
+            const isForex = a.sector === 'forex' || a.symbol?.includes('/');
+            return (
+              <div key={a.id} style={styles.moverRow} onClick={() => setSelectedAsset(a)}>
+                <span style={styles.moverSymbol}>{a.symbol}</span>
+                <span style={styles.moverPrice}>
+                  <PriceDisplay
+                    value={a.price}
+                    prefix={isForex ? '' : '$'}
+                    precision={isForex ? (a.symbol?.includes('JPY') || a.symbol?.includes('INR') ? 2 : 4) : (a.price < 1 ? 4 : 2)}
+                  />
+                </span>
+                <span style={{ ...styles.moverChange, color: 'var(--bear)' }}>
+                  {chg.toFixed(2)}%
+                </span>
+              </div>
+            );
+          })}
         </div>
         <div style={styles.moverPanel}>
           <div style={styles.moverHeader}>
@@ -106,10 +127,10 @@ export default function Dashboard({ data, setActiveTab, watchlistProps }) {
             <span style={{ ...styles.moverTitle, color: 'var(--neon-cyan)' }}>MARKET OVERVIEW</span>
           </div>
           {[
-            { label: 'TOTAL ASSETS', value: allAssets.length },
-            { label: 'ADVANCING', value: allAssets.filter(a => a.change > 0).length, color: 'var(--bull)' },
-            { label: 'DECLINING', value: allAssets.filter(a => a.change < 0).length, color: 'var(--bear)' },
-            { label: 'CATEGORIES', value: '3 ACTIVE' },
+            { label: 'TOTAL ASSETS', value: totalAssets || allAssets.length },
+            { label: 'ADVANCING', value: risingCount, color: 'var(--bull)' },
+            { label: 'DECLINING', value: fallingCount, color: 'var(--bear)' },
+            { label: 'CATEGORIES', value: '5 ACTIVE' },
           ].map(({ label, value, color }) => (
             <div key={label} style={styles.overviewRow}>
               <span style={styles.overviewLabel}>{label}</span>
@@ -137,8 +158,8 @@ export default function Dashboard({ data, setActiveTab, watchlistProps }) {
         { key: 'energy', assets: data.energy },
         { key: 'forex', assets: data.forex },
       ].map(({ key, assets }) => {
-        const meta = SECTOR_META[key]
-        if (!meta || !assets) return null
+        const meta = SECTOR_META[key];
+        if (!meta || !assets) return null;
         return (
           <section key={key} style={styles.section}>
             <div style={styles.sectionHeader}>
@@ -168,10 +189,10 @@ export default function Dashboard({ data, setActiveTab, watchlistProps }) {
               ))}
             </div>
           </section>
-        )
+        );
       })}
     </div>
-  )
+  );
 }
 
 const styles = {
@@ -255,41 +276,39 @@ const styles = {
   moverHeader: {
     display: 'flex',
     alignItems: 'center',
-    gap: '6px',
+    gap: '8px',
     marginBottom: '12px',
-    paddingBottom: '8px',
-    borderBottom: '1px solid var(--border-subtle)',
   },
   moverTitle: {
     fontFamily: 'var(--font-display)',
-    fontSize: '10px',
+    fontSize: '11px',
     letterSpacing: '1.5px',
+    fontWeight: 700,
   },
   moverRow: {
     display: 'flex',
+    justifyContent: 'space-between',
     alignItems: 'center',
-    padding: '6px 0',
-    cursor: 'pointer',
+    padding: '8px 0',
     borderBottom: '1px solid var(--border-subtle)',
-    gap: '8px',
+    cursor: 'pointer',
+    transition: 'background 0.15s ease',
   },
   moverSymbol: {
     fontFamily: 'var(--font-display)',
-    fontSize: '11px',
+    fontSize: '12px',
+    fontWeight: 700,
     color: 'var(--text-primary)',
-    flex: 1,
-    letterSpacing: '0.5px',
   },
   moverPrice: {
     fontFamily: 'var(--font-mono)',
-    fontSize: '11px',
+    fontSize: '12px',
     color: 'var(--text-secondary)',
   },
   moverChange: {
     fontFamily: 'var(--font-mono)',
     fontSize: '11px',
-    minWidth: '55px',
-    textAlign: 'right',
+    fontWeight: 700,
   },
   overviewRow: {
     display: 'flex',
@@ -298,33 +317,33 @@ const styles = {
     borderBottom: '1px solid var(--border-subtle)',
   },
   overviewLabel: {
-    fontFamily: 'var(--font-display)',
-    fontSize: '9px',
+    fontFamily: 'var(--font-mono)',
+    fontSize: '10px',
     color: 'var(--text-dim)',
     letterSpacing: '1px',
   },
   overviewVal: {
     fontFamily: 'var(--font-mono)',
-    fontSize: '12px',
+    fontSize: '11px',
+    fontWeight: 700,
   },
   detailSection: {
-    animation: 'fadeInUp 0.3s ease',
+    background: 'var(--bg-panel)',
+    border: '1px solid var(--border-glow)',
+    borderRadius: '8px',
+    padding: '20px',
   },
   detailHeader: {
     display: 'flex',
     justifyContent: 'flex-end',
-    marginBottom: '8px',
+    marginBottom: '12px',
   },
   detailClose: {
-    fontFamily: 'var(--font-display)',
-    fontSize: '10px',
+    fontFamily: 'var(--font-mono)',
+    fontSize: '11px',
     color: 'var(--text-dim)',
-    letterSpacing: '1px',
     cursor: 'pointer',
-    padding: '4px 8px',
-    border: '1px solid var(--border-subtle)',
-    borderRadius: '3px',
-    transition: 'all 0.15s',
+    letterSpacing: '1px',
   },
   section: {
     display: 'flex',
@@ -333,13 +352,13 @@ const styles = {
   },
   sectionHeader: {
     display: 'flex',
-    alignItems: 'center',
     justifyContent: 'space-between',
+    alignItems: 'center',
   },
   sectionTitleRow: {
     display: 'flex',
     alignItems: 'center',
-    gap: '10px',
+    gap: '12px',
     flex: 1,
   },
   sectionIcon: {
@@ -347,32 +366,30 @@ const styles = {
   },
   sectionTitle: {
     fontFamily: 'var(--font-display)',
-    fontSize: '14px',
+    fontSize: '16px',
+    letterSpacing: '2px',
     fontWeight: 700,
-    letterSpacing: '3px',
-    flexShrink: 0,
   },
   sectionLine: {
+    flex: 1,
     height: '1px',
     opacity: 0.2,
-    flex: 1,
+    marginLeft: '12px',
   },
   viewAllBtn: {
-    background: 'none',
+    background: 'transparent',
     border: '1px solid',
-    borderRadius: '3px',
-    fontFamily: 'var(--font-display)',
-    fontSize: '9px',
-    letterSpacing: '1.5px',
-    padding: '5px 12px',
+    borderRadius: '4px',
+    padding: '4px 12px',
+    fontFamily: 'var(--font-mono)',
+    fontSize: '10px',
+    letterSpacing: '1px',
     cursor: 'pointer',
-    opacity: 0.7,
-    transition: 'opacity 0.15s',
-    flexShrink: 0,
+    transition: 'all 0.2s ease',
   },
   grid: {
     display: 'grid',
-    gridTemplateColumns: 'repeat(auto-fill, minmax(220px, 1fr))',
-    gap: '14px',
+    gridTemplateColumns: 'repeat(auto-fill, minmax(260px, 1fr))',
+    gap: '16px',
   },
-}
+};

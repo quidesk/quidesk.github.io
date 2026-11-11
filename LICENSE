@@ -1,0 +1,29 @@
+PROPRIETARY AND CONFIDENTIAL
+COPYRIGHT (C) 2026 QUIDESK. ALL RIGHTS RESERVED.
+
+This software and associated documentation files (the "Software"), including source
+code, architecture, interfaces, and algorithms, are the proprietary intellectual
+property of Quidesk.
+
+1. PROHIBITION OF CLONING AND COPYING:
+   Unauthorized copying, cloning, reproduction, distribution, sublicensing,
+   mirroring, or public display of this Software, in whole or in part, via any
+   medium or platform (including but not limited to GitHub, Git repositories,
+   cloud hosting, or web mirrors) is strictly prohibited.
+
+2. REVERSE ENGINEERING AND DECOMPILATION:
+   You may not decompile, disassemble, reverse engineer, extract source maps, or
+   attempt to derive the source code, design systems, or internal architecture of
+   the Software.
+
+3. DIGITAL MILLENNIUM COPYRIGHT ACT (DMCA) NOTICE:
+   Any unauthorized clone, fork, fork-derivative, or scraping of this repository or
+   its deployed web application constitutes copyright infringement and will be
+   met with immediate DMCA takedown requests to hosting providers (including GitHub,
+   Cloudflare, Vercel, AWS) and appropriate legal action.
+
+4. NO IMPLIED LICENSE:
+   Public hosting, display, or availability of compiled client-side assets does not
+   grant any license or transfer of intellectual property rights.
+
+For inquiries or commercial licensing permissions, contact: support@quidesk.com

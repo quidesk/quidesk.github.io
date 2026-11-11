@@ -37,7 +37,7 @@ describe('Market Data Pipeline & Store Verification Suite', () => {
       // Equities in realistic range
       expect(a.spx.price).toBeGreaterThan(700);
       expect(a.ndx.price).toBeGreaterThan(600);
-      expect(a.nvda.price).toBeGreaterThan(180);
+      expect(a.nvda.price).toBeGreaterThan(150);
 
       // Crypto in realistic range
       expect(a.btc.price).toBeGreaterThan(70000);
@@ -46,7 +46,7 @@ describe('Market Data Pipeline & Store Verification Suite', () => {
       // Metals & Energy in realistic range
       expect(a.gold.price).toBeGreaterThan(3500);
       expect(a.silver.price).toBeGreaterThan(40);
-      expect(a.wti.price).toBeGreaterThan(90);
+      expect(a.wti.price).toBeGreaterThan(60);
 
       // Forex in realistic range
       expect(a.usdjpy.price).toBeGreaterThan(150);

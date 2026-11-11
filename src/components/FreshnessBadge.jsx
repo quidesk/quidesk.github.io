@@ -1,0 +1,97 @@
+import React from 'react';
+import { formatQuoteAge } from '../lib/freshness';
+
+/**
+ * FreshnessBadge — Visual indicator of quote latency and source integrity.
+ *
+ * Displays:
+ * - "STALE" badge when quote age exceeds 15 seconds.
+ * - "FALLBACK" badge when secondary/fallback provider is active.
+ * - Source tooltip and relative age (e.g. "REST · 18s ago").
+ */
+export function FreshnessBadge({ level, timestamp, source, compact = false }) {
+  if (!level || level === 'fresh') {
+    return (
+      <span
+        title={`Live feed: ${source || 'direct'} (${formatQuoteAge(timestamp)})`}
+        style={{
+          fontFamily: 'var(--font-mono, monospace)',
+          fontSize: '8px',
+          color: 'var(--bull, #22d47a)',
+          background: 'rgba(34, 212, 122, 0.1)',
+          border: '1px solid rgba(34, 212, 122, 0.25)',
+          borderRadius: '3px',
+          padding: '0 4px',
+          lineHeight: '14px',
+          display: 'inline-flex',
+          alignItems: 'center',
+          gap: '3px',
+        }}
+      >
+        <span style={{ width: '4px', height: '4px', borderRadius: '50%', background: 'var(--bull, #22d47a)' }} />
+        {source === 'websocket' ? 'WS' : 'LIVE'}
+      </span>
+    );
+  }
+
+  const isFallback = source === 'fallback' || level === 'very_stale';
+  const label = isFallback ? 'FALLBACK' : 'STALE';
+  const color = isFallback ? 'var(--neon-pink, #ff2d6b)' : 'var(--amber, #f59e0b)';
+  const bg = isFallback ? 'rgba(255, 45, 107, 0.12)' : 'rgba(245, 158, 11, 0.12)';
+  const border = isFallback ? 'rgba(255, 45, 107, 0.3)' : 'rgba(245, 158, 11, 0.3)';
+
+  return (
+    <span
+      className={`freshness-badge badge-${level}`}
+      title={`Age: ${formatQuoteAge(timestamp)} | Source: ${source || 'unknown'}`}
+      style={{
+        fontFamily: 'var(--font-mono, monospace)',
+        fontSize: '8px',
+        fontWeight: 600,
+        color,
+        background: bg,
+        border: `1px solid ${border}`,
+        borderRadius: '3px',
+        padding: '0 5px',
+        lineHeight: '14px',
+        letterSpacing: '0.04em',
+        display: 'inline-flex',
+        alignItems: 'center',
+        gap: '4px',
+      }}
+    >
+      <span style={{ width: '4px', height: '4px', borderRadius: '50%', background: color }} />
+      {label}
+      {!compact && timestamp && (
+        <span style={{ opacity: 0.75, fontSize: '7.5px' }}>
+          ({formatQuoteAge(timestamp)})
+        </span>
+      )}
+    </span>
+  );
+}
+
+export function FallbackNotice({ source }) {
+  return (
+    <div
+      className="fallback-notice"
+      style={{
+        fontFamily: 'var(--font-mono, monospace)',
+        fontSize: '9px',
+        color: 'var(--amber, #f59e0b)',
+        background: 'rgba(245, 158, 11, 0.08)',
+        border: '1px solid rgba(245, 158, 11, 0.25)',
+        borderRadius: '4px',
+        padding: '2px 6px',
+        marginTop: '4px',
+        display: 'flex',
+        alignItems: 'center',
+        gap: '4px',
+      }}
+    >
+      <span>⚠️ Fallback: {source || 'secondary'}</span>
+    </div>
+  );
+}
+
+export default FreshnessBadge;

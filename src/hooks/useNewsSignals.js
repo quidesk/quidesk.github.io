@@ -1,7 +1,7 @@
 import { useState, useEffect, useRef } from 'react'
+import { sanitizeUrl } from '../utils/security'
 
 // Free RSS to JSON API (highly reliable, returns native JSON)
-// Bypassing cache by appending a timestamp to the feed URL if needed
 const RSS_API = 'https://api.rss2json.com/v1/api.json?rss_url='
 
 const FEEDS = [
@@ -15,36 +15,71 @@ const FEEDS = [
   { url: 'https://www.investing.com/rss/news_1.rss', source: 'Investing.com', sector: 'forex', color: '#22d3ee' }
 ]
 
-// Asset keyword map — used to draw canvas correlation lines
+/**
+ * Strict regex boundary map for OSINT news matching.
+ * Prohibits false-positive matches (e.g. 'down', 'slowdown', 'shadow' matching DOW,
+ * or generic 'Elon' / 'EV' matching TSLA).
+ */
+export const ASSET_REGEX_MAP = {
+  btc:  /\b(bitcoin|btc|satoshi)\b/i,
+  eth:  /\b(ethereum|eth|ether)\b/i,
+  sol:  /\b(solana|sol)\b/i,
+  bnb:  /\b(binance\s*coin|bnb|binance)\b/i,
+  xrp:  /\b(ripple|xrp)\b/i,
+  ada:  /\b(cardano|ada)\b/i,
+  spx:  /\b(s&p\s*500|sp500|spy)\b/i,
+  ndx:  /\b(nasdaq(\s*100)?|ndx|qqq)\b/i,
+  dow:  /\b(dow(\s+jones)?|djia)\b/i,
+  aapl: /\b(apple|aapl|iphone)\b/i,
+  nvda: /\b(nvidia|nvda)\b/i,
+  tsla: /\b(tesla|tsla)\b/i,
+  gold: /\b(gold|xau|bullion)\b/i,
+  silver: /\b(silver|xag)\b/i,
+  platinum: /\b(platinum|xpt)\b/i,
+  copper: /\b(copper)\b/i,
+  wti:  /\b(wti(\s+crude)?|crude\s+oil)\b/i,
+  brent: /\b(brent(\s+crude)?)\b/i,
+  ng:   /\b(natural\s+gas|lng)\b/i,
+  rbob: /\b(rbob|gasoline)\b/i,
+  eurusd: /\b(eur\/usd|eurusd)\b/i,
+  gbpusd: /\b(gbp\/usd|gbpusd)\b/i,
+  usdjpy: /\b(usd\/jpy|usdjpy)\b/i,
+  audusd: /\b(aud\/usd|audusd)\b/i,
+  usdcad: /\b(usd\/cad|usdcad)\b/i,
+  usdchf: /\b(usd\/chf|usdchf)\b/i,
+  usdinr: /\b(usd\/inr|usdinr)\b/i,
+};
+
+// Legacy keyword fallback map preserved for backward compatibility
 export const ASSET_KEYWORDS = {
-  btc:  ['bitcoin','btc','crypto','digital asset','satoshi'],
-  eth:  ['ethereum','eth','ether','defi','smart contract'],
-  sol:  ['solana','sol'],
-  bnb:  ['bnb','binance'],
-  xrp:  ['xrp','ripple'],
-  ada:  ['cardano','ada'],
-  spx:  ['s&p','sp500','s&p 500','spy','stock market','wall street','equities'],
-  ndx:  ['nasdaq','ndx','tech stocks','qqq'],
-  dow:  ['dow','djia','dow jones'],
-  aapl: ['apple','aapl','iphone'],
-  nvda: ['nvidia','nvda','gpu','ai chips'],
-  tsla: ['tesla','tsla','elon','ev'],
-  gold: ['gold','xau','bullion','precious metal'],
-  silver:['silver','xag'],
-  platinum:['platinum','xpt'],
-  copper:['copper'],
-  wti:  ['wti','crude oil','oil','petroleum','barrel'],
-  brent:['brent','crude'],
-  ng:   ['natural gas','lng','gas price'],
-  rbob:   ['gasoline','rbob','fuel'],
-  eurusd: ['eur/usd','eurusd','euro dollar','ecb'],
-  gbpusd: ['gbp/usd','gbpusd','sterling','pound'],
-  usdjpy: ['usd/jpy','usdjpy','yen','bank of japan'],
-  audusd: ['aud/usd','audusd','aussie'],
-  usdcad: ['usd/cad','usdcad','canadian dollar'],
-  usdchf: ['usd/chf','usdchf','swiss franc'],
-  usdinr: ['usd/inr','usdinr','indian rupee','rbi'],
-}
+  btc: ['bitcoin', 'btc'],
+  eth: ['ethereum', 'eth'],
+  sol: ['solana', 'sol'],
+  bnb: ['bnb', 'binance'],
+  xrp: ['xrp', 'ripple'],
+  ada: ['cardano', 'ada'],
+  spx: ['s&p 500', 'sp500', 'spy'],
+  ndx: ['nasdaq', 'ndx', 'qqq'],
+  dow: ['dow jones', 'djia', 'dow'],
+  aapl: ['apple', 'aapl'],
+  nvda: ['nvidia', 'nvda'],
+  tsla: ['tesla', 'tsla'],
+  gold: ['gold', 'xau'],
+  silver: ['silver', 'xag'],
+  platinum: ['platinum', 'xpt'],
+  copper: ['copper'],
+  wti: ['wti', 'crude oil'],
+  brent: ['brent'],
+  ng: ['natural gas', 'lng'],
+  rbob: ['rbob', 'gasoline'],
+  eurusd: ['eur/usd', 'eurusd'],
+  gbpusd: ['gbp/usd', 'gbpusd'],
+  usdjpy: ['usd/jpy', 'usdjpy'],
+  audusd: ['aud/usd', 'audusd'],
+  usdcad: ['usd/cad', 'usdcad'],
+  usdchf: ['usd/chf', 'usdchf'],
+  usdinr: ['usd/inr', 'usdinr'],
+};
 
 async function fetchWithTimeout(url, ms = 10000) {
   const controller = new AbortController()
@@ -84,16 +119,16 @@ async function fetchFeed(feed, retries = 1) {
           }
         })() || ''
         
-        // Find mentioned assets
-        const lower = (title + ' ' + desc).toLowerCase()
-        const mentioned = Object.entries(ASSET_KEYWORDS)
-          .filter(([,kws]) => kws.some(kw => lower.includes(kw)))
+        // Strict word boundary matching
+        const text = `${title} ${desc}`
+        const mentioned = Object.entries(ASSET_REGEX_MAP)
+          .filter(([, regex]) => regex.test(text))
           .map(([id]) => id)
           
         return {
           id: `${feed.source}-${i}-${Date.now()}`,
           title,
-          link: item.link || '#',
+          link: sanitizeUrl(item.link || '#'),
           desc,
           source: feed.source,
           sector: feed.sector,

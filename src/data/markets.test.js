@@ -55,9 +55,9 @@ describe('formatPrice unitless Forex & currency prefix rules', () => {
     expect(formatPrice(104.21, 'WTI', 'energy')).toBe('$104.21');
   });
 
-  it('formats Crypto with $ and 4 decimals if < $2, else 2 decimals with commas', () => {
+  it('formats Crypto with $ and consistent decimal precision (4 decimals if < 1, 2 decimals if >= 1)', () => {
     expect(formatPrice(77672.94, 'BTC', 'crypto')).toBe('$77,672.94');
-    expect(formatPrice(1.25, 'XRP', 'crypto')).toBe('$1.2500');
+    expect(formatPrice(1.25, 'XRP', 'crypto')).toBe('$1.25');
     expect(formatPrice(0.1935, 'ADA', 'crypto')).toBe('$0.1935');
   });
 

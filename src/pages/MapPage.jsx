@@ -1,12 +1,14 @@
-import React, { useState } from 'react'
-import MarketMap from '../components/MarketMap'
-import HotspotPanel from '../components/HotspotPanel'
-import DetailChart from '../components/DetailChart'
-import AssetCard from '../components/AssetCard'
-import { formatPrice, SECTOR_META } from '../data/markets'
-import { isFinnhubMissing } from '../utils/api'
-import NewsSignals from '../components/NewsSignals'
-import { computeMarketPulse } from '../utils/marketPulse'
+import React, { useState } from 'react';
+import MarketMap from '../components/MarketMap';
+import HotspotPanel from '../components/HotspotPanel';
+import DetailChart from '../components/DetailChart';
+import AssetCard from '../components/AssetCard';
+import PriceDisplay from '../components/PriceDisplay';
+import { formatPrice, SECTOR_META } from '../data/markets';
+import { isFinnhubMissing } from '../utils/api';
+import NewsSignals from '../components/NewsSignals';
+import { computeMarketPulse } from '../utils/marketPulse';
+import { useMarketPulse } from '../selectors/marketPulse';
 
 function NarrativeStrip({ allAssets, hotspots }) {
   const pulse = computeMarketPulse(allAssets, hotspots);
@@ -77,19 +79,20 @@ export default function MapPage({ data, allAssets, hotspots, watchlistProps, con
               <div style={s.mapTitle}>Live Market Map</div>
               <div style={s.mapSub}>Click any node to inspect · Hover to see correlations</div>
             </div>
-            <div style={{ display:'flex', gap:'8px', flexWrap:'wrap' }}>
-              {Object.entries(SECTOR_META).map(([k,m]) => {
+            {/* Market map legend with clear spacing between icon, label, and percentage */}
+            <div style={{ display: 'flex', gap: '10px', flexWrap: 'wrap', alignItems: 'center' }}>
+              {Object.entries(SECTOR_META).map(([k, m]) => {
                 const sectorAssets = allAssets.filter(a => a.sector === k);
                 const sectorAvg = sectorAssets.length
-                  ? (sectorAssets.reduce((s,a)=>s+a.change,0)/sectorAssets.length).toFixed(2)
+                  ? (sectorAssets.reduce((s, a) => s + (a.changePercent ?? a.change), 0) / sectorAssets.length).toFixed(2)
                   : '0.00';
                 const isUp = parseFloat(sectorAvg) >= 0;
                 return (
                   <div key={k} style={s.sectorPill}>
-                    <span style={{ color:m.color, fontSize:'9px' }}>{m.icon}</span>
-                    <span style={{ fontFamily:'var(--font-mono)', fontSize:'10px', color:'var(--text-secondary)' }}>{m.label}</span>
-                    <span style={{ fontFamily:'var(--font-mono)', fontSize:'10px', color: isUp ? 'var(--bull)' : 'var(--bear)' }}>
-                      {isUp?'+':''}{sectorAvg}%
+                    <span style={{ color: m.color, fontSize: '12px', display: 'inline-flex', alignItems: 'center' }}>{m.icon}</span>
+                    <span style={{ fontFamily: 'var(--font-mono)', fontSize: '11px', color: 'var(--text-secondary)', marginLeft: '4px', marginRight: '6px' }}>{m.label}</span>
+                    <span style={{ fontFamily: 'var(--font-mono)', fontSize: '11px', fontWeight: 600, color: isUp ? 'var(--bull)' : 'var(--bear)' }}>
+                      {isUp ? '+' : ''}{sectorAvg}%
                     </span>
                   </div>
                 );
@@ -107,104 +110,108 @@ export default function MapPage({ data, allAssets, hotspots, watchlistProps, con
               isStale={isStale}
             />
           </div>
-
-          {/* Selected asset chart */}
-          {selectedAsset && (
-            <div className="fade-up" style={{ marginTop:'16px' }}>
-              <DetailChart
-                asset={allAssets.find(a => a.id === selectedAsset.id) || selectedAsset}
-                onClose={() => setSelectedAsset(null)}
-              />
-            </div>
-          )}
         </div>
 
-        {/* Right sidebar */}
+        {/* Sidebar */}
         <div className="col-12 col-xl-3" style={s.sidebar}>
-          {/* Hotspots */}
+          {/* Top Movers */}
           <div className="fade-up-2" style={s.sideCard}>
             <div style={s.sideHeader}>
+              <span style={s.sideTitle}>Top Movers</span>
+              <span style={{ fontFamily:'var(--font-mono)', fontSize:'10px', color:'var(--text-dim)' }}>24H</span>
+            </div>
+            <div style={s.moversSection}>
+              {gainers.map(a => (
+                <div key={a.id} style={s.moverRow} onClick={() => setSelectedAsset(a)}>
+                  <span style={s.moverSym}>{a.symbol}</span>
+                  <span style={s.moverPrice}>
+                    <PriceDisplay
+                      value={a.price}
+                      prefix={a.sector === 'forex' ? (a.symbol?.endsWith('INR') ? '₹' : '') : '$'}
+                      precision={a.sector === 'forex' ? (a.symbol?.includes('JPY') || a.symbol?.includes('INR') ? 2 : 4) : (a.price < 1 ? 4 : 2)}
+                    />
+                  </span>
+                  <span style={{ ...s.moverChg, color:'var(--bull)' }}>
+                    +{a.change.toFixed(2)}%
+                  </span>
+                </div>
+              ))}
+              {losers.map(a => (
+                <div key={a.id} style={s.moverRow} onClick={() => setSelectedAsset(a)}>
+                  <span style={s.moverSym}>{a.symbol}</span>
+                  <span style={s.moverPrice}>
+                    <PriceDisplay
+                      value={a.price}
+                      prefix={a.sector === 'forex' ? (a.symbol?.endsWith('INR') ? '₹' : '') : '$'}
+                      precision={a.sector === 'forex' ? (a.symbol?.includes('JPY') || a.symbol?.includes('INR') ? 2 : 4) : (a.price < 1 ? 4 : 2)}
+                    />
+                  </span>
+                  <span style={{ ...s.moverChg, color:'var(--bear)' }}>
+                    {a.change.toFixed(2)}%
+                  </span>
+                </div>
+              ))}
+            </div>
+          </div>
+
+          {/* Trade Signals */}
+          <div className="fade-up-3" style={s.sideCard}>
+            <div style={s.sideHeader}>
               <span style={s.sideTitle}>Trade Signals</span>
-              <span style={{ fontFamily:'var(--font-mono)', fontSize:'10px', color:'var(--text-dim)' }}>
-                {hotspots.length} active
-              </span>
+              <span style={{ fontFamily:'var(--font-mono)', fontSize:'10px', color:'var(--accent)' }}>LIVE</span>
             </div>
             <HotspotPanel
               hotspots={hotspots}
+              onSelectAsset={setSelectedAsset}
               allAssets={allAssets}
-              onSelect={setSelectedAsset}
             />
           </div>
 
-          {/* Movers */}
-          <div className="fade-up-3" style={s.sideCard}>
-            <div style={s.sideHeader}>
-              <span style={s.sideTitle}>Top Movers</span>
-            </div>
-            <div style={s.moversSection}>
-              <div style={{ fontFamily:'var(--font-mono)', fontSize:'9px', color:'var(--bull)', letterSpacing:'0.1em', padding:'8px 14px 4px' }}>GAINERS</div>
-              {gainers.length === 0 ? (
-                <div style={{ fontFamily:'var(--font-mono)', fontSize:'11px', color:'var(--text-dim)', padding:'4px 14px 8px' }}>No gainers</div>
-              ) : gainers.map(a => (
-                <div key={a.id} style={s.moverRow} onClick={() => setSelectedAsset(a)}
-                  onMouseEnter={e => e.currentTarget.style.background='var(--bg-card-hover)'}
-                  onMouseLeave={e => e.currentTarget.style.background='transparent'}
-                >
-                  <span style={s.moverSym}>{a.symbol}</span>
-                  <span style={s.moverPrice}>{formatPrice(a.price, a.symbol, a.sector)}</span>
-                  <span style={{ ...s.moverChg, color:'var(--bull)' }}>+{a.change.toFixed(2)}%</span>
-                </div>
-              ))}
-              <div style={{ fontFamily:'var(--font-mono)', fontSize:'9px', color:'var(--bear)', letterSpacing:'0.1em', padding:'8px 14px 4px', borderTop:'1px solid var(--border-subtle)' }}>LOSERS</div>
-              {losers.length === 0 ? (
-                <div style={{ fontFamily:'var(--font-mono)', fontSize:'11px', color:'var(--text-dim)', padding:'4px 14px 8px' }}>No losers</div>
-              ) : losers.map(a => (
-                <div key={a.id} style={s.moverRow} onClick={() => setSelectedAsset(a)}
-                  onMouseEnter={e => e.currentTarget.style.background='var(--bg-card-hover)'}
-                  onMouseLeave={e => e.currentTarget.style.background='transparent'}
-                >
-                  <span style={s.moverSym}>{a.symbol}</span>
-                  <span style={s.moverPrice}>{formatPrice(a.price, a.symbol, a.sector)}</span>
-                  <span style={{ ...s.moverChg, color:'var(--bear)' }}>{a.change.toFixed(2)}%</span>
-                </div>
-              ))}
-            </div>
+          {/* Real-time Macro News & Correlation Signals */}
+          <div className="fade-up-4">
+            <NewsSignals
+              news={news}
+              loading={loading}
+              lastFetch={lastFetch}
+              onRefresh={refresh}
+            />
           </div>
         </div>
       </div>
 
-      {/* OSINT Box / News Signals */}
-      <div className="fade-up-3" style={{ marginBottom: '20px' }}>
-        <NewsSignals
-          news={news}
-          loading={loading}
-          lastFetch={lastFetch}
-          onRefresh={refresh}
-          layout="horizontal"
-        />
-      </div>
+      {/* Selected Asset Detail Overlay */}
+      {selectedAsset && (
+        <div style={{ marginBottom:'40px' }}>
+          <DetailChart asset={selectedAsset} onClose={() => setSelectedAsset(null)} />
+        </div>
+      )}
 
-      {/* All sectors strip */}
-      <div className="fade-up-4" style={s.sectorsStrip}>
-        {Object.entries(data).map(([sector, assets]) => {
-          const meta = SECTOR_META[sector];
-          if (!meta || !assets?.length) return null;
+      {/* Categorized Asset Grid */}
+      <div style={s.sectorsStrip}>
+        {['equities','crypto','metals','energy','forex'].map(k => {
+          const m = SECTOR_META[k];
+          const sectorAssets = allAssets.filter(a => a.sector === k);
+          if (!sectorAssets.length) return null;
           return (
-            <div key={sector} style={s.sectorBlock}>
+            <div key={k} style={s.sectorBlock}>
               <div style={s.sectorBlockHeader}>
-                <span style={{ color: meta.color }}>{meta.icon}</span>
-                <span style={{ fontFamily:'var(--font-display)', fontSize:'11px', color:'var(--text-primary)', letterSpacing:'0.05em' }}>{meta.label}</span>
-                <div style={{ flex:1, height:'1px', background:`${meta.color}20`, marginLeft:'8px' }} />
+                <span style={{ color:m.color, fontSize:'14px' }}>{m.icon}</span>
+                <span style={{ fontFamily:'var(--font-display)', fontSize:'14px', fontWeight:700, color:m.color, letterSpacing:'0.04em' }}>
+                  {m.label.toUpperCase()}
+                </span>
+                <span style={{ fontFamily:'var(--font-mono)', fontSize:'11px', color:'var(--text-dim)' }}>
+                  ({sectorAssets.length} assets)
+                </span>
               </div>
-              <div className="row row-cols-1 row-cols-sm-2 row-cols-lg-3 row-cols-xl-4 g-3">
-                {assets.map(asset => (
-                  <div className="col" key={asset.id}>
+              <div style={s.sectorCards}>
+                {sectorAssets.map(asset => (
+                  <div key={asset.id} style={{ minWidth: 0 }}>
                     <AssetCard
                       asset={asset}
-                      compact
                       onClick={setSelectedAsset}
                       isWatched={watchlistProps?.isWatched(asset.id)}
                       onToggleWatch={watchlistProps?.onToggleWatch}
+                      compact
                       convertPrice={convertPrice}
                       formatLocalPrice={formatLocalPrice}
                       isStale={isStale}
@@ -221,22 +228,21 @@ export default function MapPage({ data, allAssets, hotspots, watchlistProps, con
 }
 
 const s = {
-  page: { padding:'24px 28px', maxWidth:'1700px', margin:'0 auto' },
-  layout: { display:'grid', gridTemplateColumns:'1fr 340px', gap:'24px', alignItems:'start', marginBottom:'48px' },
-  mapCol: { display:'flex', flexDirection:'column', gap:'0' },
+  page: { minHeight:'100vh', display:'flex', flexDirection:'column' },
+  mapCol: { minWidth: 0 },
   mapHeader: {
-    display:'flex', justifyContent:'space-between', alignItems:'flex-end',
-    marginBottom:'20px', flexWrap:'wrap', gap:'16px',
+    display:'flex', justifyContent:'space-between', alignItems:'flex-start',
+    marginBottom:'16px', flexWrap:'wrap', gap:'12px',
   },
   mapTitle: {
-    fontFamily:'var(--font-display)', fontSize:'28px', fontWeight:700,
+    fontFamily:'var(--font-display)', fontSize:'20px', fontWeight:700,
     color:'var(--text-primary)', letterSpacing:'-0.02em', lineHeight:1,
   },
   mapSub: {
     fontFamily:'var(--font-body)', fontSize:'13px', color:'var(--text-secondary)', marginTop:'8px',
   },
   sectorPill: {
-    display:'flex', alignItems:'center', gap:'6px',
+    display:'inline-flex', alignItems:'center', gap:'8px',
     background:'var(--bg-card)', border:'1px solid var(--border-subtle)',
     borderRadius:'8px', padding:'6px 14px',
     boxShadow: 'inset 0 1px 0 rgba(255,255,255,0.04)',

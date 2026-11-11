@@ -1,4 +1,4 @@
-import React, { useState } from 'react'
+import React, { useState, useEffect } from 'react'
 import Navbar from './components/Navbar'
 import TickerTape from './components/TickerTape'
 import MapPage from './pages/MapPage'
@@ -15,16 +15,104 @@ import { useTheme } from './hooks/useTheme'
 import { useNewsSignals } from './hooks/useNewsSignals'
 import OSINTMap from './components/OSINTMap'
 import Logo from './components/Logo'
+import SocialShareBar from './components/SocialShareBar'
+import { Share2 } from 'lucide-react'
+
+const VALID_TABS = ['map', 'equities', 'crypto', 'metals', 'energy', 'forex', 'compare', 'watchlist', 'portfolio'];
+
+const SEO_META = {
+  map: {
+    title: 'Quidesk — Live Market Intelligence Terminal | Crypto, Stocks, Metals & Energy',
+    desc: 'Quidesk is a free real-time market intelligence terminal tracking Bitcoin, Ethereum, S&P 500, gold, crude oil and 20+ assets. Live price maps, OSINT news signals, and multi-currency conversion.'
+  },
+  equities: {
+    title: 'Live Equities & Stock Market Terminal | S&P 500, QQQ, NVDA, AAPL | Quidesk',
+    desc: 'Track US stocks and indices in real-time. Live streaming quotes and historical charts for SPY, QQQ, DIA, Apple, Nvidia, Tesla, and Meta with volume telemetry.'
+  },
+  crypto: {
+    title: 'Live Crypto Market Intelligence | Bitcoin, Ethereum, Solana Spot | Quidesk',
+    desc: 'Real-time cryptocurrency tracking across Bitcoin (BTC), Ethereum (ETH), Solana (SOL), BNB, XRP, and Cardano. Sub-second streaming prices and market cap metrics.'
+  },
+  metals: {
+    title: 'Live Precious Metals Spot Prices | Gold, Silver, Platinum Spot | Quidesk',
+    desc: 'Continuous real-time spot tracking for Gold (XAU/USD), Silver (XAG/USD), and Platinum (XPT/USD) with institutional multi-tier feeds and currency triangulation.'
+  },
+  energy: {
+    title: 'Live Energy Commodities Tracker | WTI Crude, Brent, Natural Gas | Quidesk',
+    desc: 'Track global energy markets live: WTI Crude Oil, Brent Crude, Natural Gas, and Heating Oil spot prices with real-time percentage deltas and commodity tape.'
+  },
+  forex: {
+    title: 'Live Foreign Exchange Rates | EUR/USD, GBP/USD, USD/JPY Spot Ticker | Quidesk',
+    desc: 'Institutional foreign exchange market intelligence covering EUR/USD, GBP/USD, USD/JPY, AUD/USD, USD/CAD, USD/CHF, NZD/USD with cross-currency triangulation.'
+  },
+  compare: {
+    title: 'Cross-Asset Market Correlation & Performance Comparison | Quidesk',
+    desc: 'Compare multi-asset historical performance and cross-market correlations across equities, crypto, precious metals, and commodities on synchronized normalized charts.'
+  },
+  watchlist: {
+    title: 'Real-Time Financial Watchlist & Price Alerts | Quidesk',
+    desc: 'Customizable multi-asset watchlist with customizable high/low price threshold alerts. Monitor your favorite market instruments in real-time without signing up.'
+  },
+  portfolio: {
+    title: 'Multi-Asset Portfolio Tracker & Live P&L Analytics | Quidesk',
+    desc: 'Private, browser-stored multi-asset portfolio tracker. Real-time profit and loss (P&L) calculations across stocks, crypto, commodities, and fiat holdings.'
+  }
+};
 
 export default function App() {
-  const [activeTab, setActiveTab] = useState('map')
-  const { data, allAssets, lastUpdate, isLive, setIsLive, hotspots, isStale, connectionStatus } = useMarketData()
-  const watchlist                  = useWatchlist()
-  const portfolio                  = usePortfolio(allAssets)
-  const alerts                     = useAlerts(allAssets)
-  const { convertPrice, formatLocalPrice, loaded } = useCurrencyRates()
-  const { theme, toggle: toggleTheme } = useTheme()
-  const newsSignals = useNewsSignals()
+  const [activeTab, setActiveTab] = useState(() => {
+    if (typeof window !== 'undefined') {
+      const hash = window.location.hash.replace('#', '').toLowerCase();
+      if (VALID_TABS.includes(hash)) return hash;
+    }
+    return 'map';
+  });
+
+  const { data, allAssets, lastUpdate, isLive, setIsLive, hotspots, isStale, connectionStatus } = useMarketData();
+  const watchlist                  = useWatchlist();
+  const portfolio                  = usePortfolio(allAssets);
+  const alerts                     = useAlerts(allAssets);
+  const { convertPrice, formatLocalPrice } = useCurrencyRates();
+  const { theme, toggle: toggleTheme } = useTheme();
+  const newsSignals = useNewsSignals();
+
+  // Sync URL hash and dynamic document metadata for deep-linking SEO
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
+
+    if (window.location.hash !== `#${activeTab}`) {
+      window.history.replaceState(null, '', `#${activeTab}`);
+    }
+
+    const meta = SEO_META[activeTab] || SEO_META.map;
+    document.title = meta.title;
+
+    const descEl = document.querySelector('meta[name="description"]');
+    if (descEl) descEl.setAttribute('content', meta.desc);
+
+    const ogTitleEl = document.querySelector('meta[property="og:title"]');
+    if (ogTitleEl) ogTitleEl.setAttribute('content', meta.title);
+
+    const ogDescEl = document.querySelector('meta[property="og:description"]');
+    if (ogDescEl) ogDescEl.setAttribute('content', meta.desc);
+
+    const canonicalEl = document.querySelector('link[rel="canonical"]');
+    if (canonicalEl) {
+      canonicalEl.setAttribute('href', `https://quidesk.github.io/#${activeTab}`);
+    }
+  }, [activeTab]);
+
+  // Handle browser back/forward buttons
+  useEffect(() => {
+    const onHashChange = () => {
+      const hash = window.location.hash.replace('#', '').toLowerCase();
+      if (VALID_TABS.includes(hash)) {
+        setActiveTab(hash);
+      }
+    };
+    window.addEventListener('hashchange', onHashChange);
+    return () => window.removeEventListener('hashchange', onHashChange);
+  }, []);
 
   const watchlistProps = {
     isWatched: watchlist.isWatched,
@@ -119,8 +207,27 @@ export default function App() {
 
       {/* Footer */}
       <footer style={fS.footer}>
+        <div style={fS.shareSection}>
+          <div style={fS.shareInner}>
+            <div style={fS.shareMeta}>
+              <div style={fS.shareBadge}>
+                <Share2 size={12} color="var(--accent)" />
+                <span style={fS.shareHeading}>SHARE TERMINAL</span>
+              </div>
+              <span style={fS.shareSub}>Share live market intelligence with your network</span>
+            </div>
+            <SocialShareBar
+              url="https://quidesk.github.io"
+              text="Quidesk — Live Market Intelligence Terminal | Equities, Crypto, Metals, Energy & Forex"
+              showLabels={true}
+            />
+          </div>
+        </div>
         <div style={fS.inner}>
-          <span style={fS.brand}><Logo size={160} /></span>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+            <Logo size={24} />
+            <span style={fS.brand}>QUIDESK</span>
+          </div>
           <span style={fS.text}>Market intelligence terminal · For informational purposes only</span>
           <span style={fS.text}>Last tick: {lastUpdate.toLocaleTimeString()}</span>
         </div>
@@ -130,6 +237,47 @@ export default function App() {
 }
 
 const fS = {
+  shareSection: {
+    borderBottom: '1px solid var(--border-subtle)',
+    background: 'rgba(255, 255, 255, 0.015)',
+  },
+  shareInner: {
+    display: 'flex',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    padding: '16px 28px',
+    maxWidth: '1700px',
+    margin: '0 auto',
+    flexWrap: 'wrap',
+    gap: '16px',
+  },
+  shareMeta: {
+    display: 'flex',
+    alignItems: 'center',
+    gap: '12px',
+    flexWrap: 'wrap',
+  },
+  shareBadge: {
+    display: 'inline-flex',
+    alignItems: 'center',
+    gap: '6px',
+    background: 'rgba(77, 158, 255, 0.08)',
+    border: '1px solid rgba(77, 158, 255, 0.2)',
+    borderRadius: '4px',
+    padding: '4px 8px',
+  },
+  shareHeading: {
+    fontFamily: 'var(--font-mono)',
+    fontSize: '11px',
+    fontWeight: 700,
+    color: 'var(--accent)',
+    letterSpacing: '0.06em',
+  },
+  shareSub: {
+    fontFamily: 'var(--font-body)',
+    fontSize: '12px',
+    color: 'var(--text-dim)',
+  },
   disclaimer: {
     background: 'rgba(244, 176, 17, 0.03)',
     borderTop: '1px solid rgba(244, 176, 17, 0.08)',

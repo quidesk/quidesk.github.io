@@ -38,17 +38,18 @@ describe('computeMarketPulse', () => {
     expect(pulse.risingCount).toBe(3);
   });
 
-  it('includes hotspot info in narrative when present', () => {
+  it('includes hotspot count in narrative without redundant individual asset signal', () => {
     const assets = [
       { id: 'btc', symbol: 'BTC', change: 5.2 },
-      { id: 'eth', symbol: 'ETH', change: -1.0 },
+      { id: 'tsla', symbol: 'TSLA', change: -10.7 },
     ];
     const hotspots = [
-      { assetId: 'btc', symbol: 'BTC', signal: '5.20% surge', severity: 'high' },
+      { assetId: 'tsla', symbol: 'TSLA', signal: '10.70% drop', severity: 'high' },
     ];
     const pulse = computeMarketPulse(assets, hotspots);
     expect(pulse.narrative).toContain('1 signal detected');
-    expect(pulse.narrative).toContain('BTC showing 5.20% surge');
+    // Verifies the redundant TSLA message is NOT in Market Pulse (kept in Trade Signals)
+    expect(pulse.narrative).not.toContain('TSLA showing 10.70% drop');
   });
 
   it('narrative includes top gainer and loser', () => {

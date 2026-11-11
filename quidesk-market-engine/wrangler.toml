@@ -1,0 +1,11 @@
+name = "quidesk-market-engine"
+main = "worker.js"
+compatibility_date = "2026-11-01"
+account_id = "64d68b0f03ca40ba24dfdfd3cdffab0d"
+
+[[kv_namespaces]]
+binding = "MARKET_KV"
+id = "644581d9d6ca4d0b89fffba641b00dab"
+
+[vars]
+ENVIRONMENT = "production"

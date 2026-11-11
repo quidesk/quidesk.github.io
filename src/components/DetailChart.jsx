@@ -1,9 +1,11 @@
-import React, { useState } from 'react'
+import React, { useState } from 'react';
 import {
   ResponsiveContainer, AreaChart, Area, XAxis, YAxis,
   CartesianGrid, Tooltip, ReferenceLine
-} from 'recharts'
-import { formatPrice, SECTOR_META } from '../data/markets'
+} from 'recharts';
+import { formatPrice, SECTOR_META } from '../data/markets';
+import PriceDisplay from './PriceDisplay';
+import TimeRangeToggles from './TimeRangeToggles';
 
 const Tip = ({ active, payload, label, symbol, sector }) => {
   if (!active || !payload?.length) return null;
@@ -27,10 +29,23 @@ export default function DetailChart({ asset, onClose }) {
   const color = isUp ? 'var(--bull)' : 'var(--bear)';
   const gid = `dc-${asset.id}`;
   
-  // Actually hook up the range to the history object
-  const data = asset.history && asset.history[range] ? asset.history[range] : asset.chartData;
-  const min = Math.min(...data.map(d=>d.value));
-  const max = Math.max(...data.map(d=>d.value));
+  // Hook up the range to the history object
+  const data = asset.history && asset.history[range] ? asset.history[range] : (asset.chartData || []);
+  const values = data.map(d => (typeof d === 'number' ? d : d.value)).filter(v => typeof v === 'number' && !isNaN(v));
+  const min = values.length ? Math.min(...values) : (asset.price * 0.95);
+  const max = values.length ? Math.max(...values) : (asset.price * 1.05);
+
+  const formattedData = data.map((d, i) => {
+    if (typeof d === 'number') {
+      return { time: `${i}:00`, value: d };
+    }
+    return d;
+  });
+
+  const isForex = asset.sector === 'forex' || (
+    asset.symbol && asset.symbol.includes('/') &&
+    !asset.symbol.startsWith('XAU') && !asset.symbol.startsWith('XAG') && !asset.symbol.startsWith('XPT')
+  );
 
   return (
     <div style={s.wrap}>
@@ -44,8 +59,17 @@ export default function DetailChart({ asset, onClose }) {
           <div style={s.name}>{asset.name}</div>
         </div>
         <div style={s.priceGroup}>
-          <div style={{ ...s.price, color }}>{formatPrice(asset.price, asset.symbol, asset.sector)}</div>
-          <div style={{ ...s.change, color }}>{isUp?'▲':'▼'} {formatPrice(Math.abs(asset.price * asset.change / 100), asset.symbol, asset.sector)} ({isUp?'+':''}{asset.change.toFixed(2)}%)</div>
+          <div style={{ ...s.price, color }}>
+            <PriceDisplay
+              value={asset.price}
+              prefix={isForex ? '' : '$'}
+              precision={isForex ? (asset.symbol?.includes('JPY') || asset.symbol?.includes('INR') ? 2 : 4) : (asset.price < 1 ? 4 : 2)}
+            />
+            {asset.unit && <span style={{ fontSize: '12px', color: 'var(--text-dim)', marginLeft: '3px' }}>/{asset.unit}</span>}
+          </div>
+          <div style={{ ...s.change, color }}>
+            {isUp ? '▲' : '▼'} {formatPrice(Math.abs(asset.price * asset.change / 100), asset.symbol, asset.sector)} ({isUp ? '+' : ''}{asset.change.toFixed(2)}%)
+          </div>
         </div>
         {onClose && (
           <button style={s.closeBtn} onClick={onClose}>✕</button>
@@ -54,15 +78,11 @@ export default function DetailChart({ asset, onClose }) {
 
       {/* Range pills and Trade Action */}
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom:'14px', flexWrap: 'wrap', gap: '10px' }}>
-        <div style={{ display:'flex', gap:'4px' }}>
-          {['1H','24H','1M','1Y'].map(r => (
-            <button
-              key={r}
-              style={{ ...s.range, ...(range===r ? { ...s.rangeOn, color: meta.color || 'var(--accent)', borderColor: meta.color || 'var(--accent)', background:`${meta.color||'#f0a500'}12` } : {}) }}
-              onClick={() => setRange(r)}
-            >{r}</button>
-          ))}
-        </div>
+        <TimeRangeToggles
+          selected={range}
+          onChange={(newR) => setRange(newR)}
+          accentColor={meta.color}
+        />
         
         {asset.sector === 'crypto' && (
           <a
@@ -98,53 +118,63 @@ export default function DetailChart({ asset, onClose }) {
         )}
       </div>
 
-      {/* Chart */}
-      <div style={{ height:200 }}>
-        <ResponsiveContainer width="100%" height="100%">
-          <AreaChart data={data} margin={{top:8,right:8,left:0,bottom:0}}>
+      {/* Recharts Area */}
+      <div style={s.chartArea}>
+        <ResponsiveContainer width="100%" height={200}>
+          <AreaChart data={formattedData} margin={{ top:8, right:8, left:0, bottom:0 }}>
             <defs>
               <linearGradient id={gid} x1="0" y1="0" x2="0" y2="1">
-                <stop offset="5%"  stopColor={color} stopOpacity={0.2}/>
-                <stop offset="95%" stopColor={color} stopOpacity={0}/>
+                <stop offset="0%" stopColor={color} stopOpacity={0.28} />
+                <stop offset="85%" stopColor={color} stopOpacity={0.02} />
+                <stop offset="100%" stopColor={color} stopOpacity={0} />
               </linearGradient>
             </defs>
-            <CartesianGrid stroke="rgba(255,255,255,0.03)" strokeDasharray="4 4"/>
-            <XAxis dataKey="time"
-              tick={{ fill:'var(--text-dim)', fontSize:9, fontFamily:'var(--font-mono)' }}
-              axisLine={{ stroke:'var(--border-subtle)' }} tickLine={false}
-              interval={Math.floor(data.length/5)}
-            />
+            <CartesianGrid stroke="rgba(255,255,255,0.04)" strokeDasharray="3 3" vertical={false} />
+            <XAxis dataKey="time" hide />
             <YAxis
-              domain={[min*0.998, max*1.002]}
+              domain={[min - (max - min) * 0.05, max + (max - min) * 0.05]}
+              orientation="right"
               tick={{ fill:'var(--text-dim)', fontSize:9, fontFamily:'var(--font-mono)' }}
-              axisLine={false} tickLine={false}
-              tickFormatter={v => formatPrice(v, asset.symbol, asset.sector)} width={68}
+              tickLine={false}
+              axisLine={false}
+              tickFormatter={v => formatPrice(v, asset.symbol, asset.sector)}
+              width={65}
             />
-            <Tooltip content={<Tip sector={asset.sector} symbol={asset.symbol}/>}/>
-            <ReferenceLine y={data[0]?.value} stroke="rgba(255,255,255,0.08)" strokeDasharray="3 2"/>
-            <Area type="monotone" dataKey="value"
-              stroke={color} strokeWidth={2}
-              fill={`url(#${gid})`} dot={false}
-              activeDot={{ r:4, fill:color, stroke:'var(--bg-card)', strokeWidth:2 }}
+            <Tooltip content={<Tip symbol={asset.symbol} sector={asset.sector} />} />
+            <ReferenceLine y={asset.price} stroke={color} strokeDasharray="2 2" strokeOpacity={0.4} />
+            <Area
+              type="monotone"
+              dataKey="value"
+              stroke={color}
+              strokeWidth={1.8}
+              fill={`url(#${gid})`}
+              dot={false}
+              activeDot={{ r:4, fill:color, stroke:'var(--bg-void)', strokeWidth:2 }}
             />
           </AreaChart>
         </ResponsiveContainer>
       </div>
 
-      {/* Stats */}
-      <div style={s.stats}>
-        {[
-          { l:'HIGH',   v: formatPrice(max, asset.symbol, asset.sector) },
-          { l:'LOW',    v: formatPrice(min, asset.symbol, asset.sector) },
-          { l:'VOLUME', v: asset.volume },
-          { l:'MKT CAP',v: asset.marketCap },
-          { l:'CHANGE', v: `${asset.change>=0?'+':''}${asset.change.toFixed(2)}%`, c: color },
-        ].filter(x => x.v && x.v !== '—').map(({ l, v, c }) => (
-          <div key={l} style={s.stat}>
-            <div style={s.statL}>{l}</div>
-            <div style={{ ...s.statV, ...(c ? { color: c } : {}) }}>{v}</div>
+      {/* Stats bar */}
+      <div style={s.statsBar}>
+        <div style={s.stat}>
+          <div style={s.statLabel}>24H LOW</div>
+          <div style={s.statVal}>{formatPrice(min, asset.symbol, asset.sector)}</div>
+        </div>
+        <div style={s.stat}>
+          <div style={s.statLabel}>24H HIGH</div>
+          <div style={s.statVal}>{formatPrice(max, asset.symbol, asset.sector)}</div>
+        </div>
+        <div style={s.stat}>
+          <div style={s.statLabel}>VOLUME</div>
+          <div style={s.statVal}>{asset.volume || '—'}</div>
+        </div>
+        {asset.marketCap && (
+          <div style={s.stat}>
+            <div style={s.statLabel}>MARKET CAP</div>
+            <div style={s.statVal}>{asset.marketCap}</div>
           </div>
-        ))}
+        )}
       </div>
     </div>
   );
@@ -152,48 +182,34 @@ export default function DetailChart({ asset, onClose }) {
 
 const s = {
   wrap: {
-    background:'var(--bg-card)', border:'1px solid var(--border-subtle)',
-    borderRadius:'10px', padding:'20px',
+    background:'var(--bg-panel)', border:'1px solid var(--border-mid)',
+    borderRadius:'10px', padding:'20px 24px',
+    boxShadow:'0 16px 48px rgba(0,0,0,0.5)',
   },
   header: {
-    display:'flex', alignItems:'flex-start', gap:'12px', marginBottom:'14px', flexWrap:'wrap',
+    display:'flex', justifyContent:'space-between', alignItems:'flex-start',
+    marginBottom:'16px',
   },
-  titleGroup: { flex:1, display:'flex', alignItems:'center', gap:'8px', flexWrap:'wrap' },
-  symbol: {
-    fontFamily:'var(--font-display)', fontSize:'18px', fontWeight:700,
-    color:'var(--text-primary)', letterSpacing:'0.05em',
-  },
+  titleGroup: { display:'flex', alignItems:'center', gap:'8px', flexWrap:'wrap' },
+  symbol: { fontFamily:'var(--font-display)', fontSize:'20px', fontWeight:700, color:'var(--text-primary)' },
   sectorTag: {
-    fontFamily:'var(--font-mono)', fontSize:'9px', letterSpacing:'0.08em',
-    padding:'2px 7px', borderRadius:'3px',
+    fontFamily:'var(--font-mono)', fontSize:'9px', borderRadius:'3px',
+    padding:'2px 7px', letterSpacing:'0.06em',
   },
-  name: {
-    fontFamily:'var(--font-body)', fontSize:'11px', color:'var(--text-dim)',
-  },
+  name: { fontFamily:'var(--font-body)', fontSize:'12px', color:'var(--text-dim)' },
   priceGroup: { textAlign:'right' },
-  price: {
-    fontFamily:'var(--font-mono)', fontSize:'22px', fontWeight:500,
-  },
-  change: {
-    fontFamily:'var(--font-mono)', fontSize:'11px', marginTop:'2px',
-  },
+  price: { fontFamily:'var(--font-mono)', fontSize:'22px', fontWeight:500, letterSpacing:'0.02em' },
+  change: { fontFamily:'var(--font-mono)', fontSize:'11px', marginTop:'2px' },
   closeBtn: {
-    background:'none', border:'1px solid var(--border-subtle)', borderRadius:'4px',
-    color:'var(--text-dim)', cursor:'pointer', padding:'4px 8px',
-    fontFamily:'var(--font-mono)', fontSize:'11px', flexShrink:0,
+    background:'transparent', border:'none', color:'var(--text-dim)',
+    cursor:'pointer', fontSize:'14px', padding:'2px 6px', marginLeft:'12px',
   },
-  ranges: { display:'flex', gap:'4px', marginBottom:'14px', flexWrap:'wrap' },
-  range: {
-    background:'none', border:'1px solid var(--border-subtle)', borderRadius:'4px',
-    color:'var(--text-dim)', fontFamily:'var(--font-mono)', fontSize:'9px',
-    letterSpacing:'0.05em', padding:'3px 9px', cursor:'pointer', transition:'all 0.12s',
+  chartArea: { width:'100%', marginBottom:'14px' },
+  statsBar: {
+    display:'flex', gap:'24px', paddingTop:'12px',
+    borderTop:'1px solid var(--border-subtle)', flexWrap:'wrap',
   },
-  rangeOn: { fontWeight:500 },
-  stats: {
-    display:'flex', gap:'20px', flexWrap:'wrap',
-    paddingTop:'12px', marginTop:'12px', borderTop:'1px solid var(--border-subtle)',
-  },
-  stat: {},
-  statL: { fontFamily:'var(--font-mono)', fontSize:'8px', color:'var(--text-dim)', letterSpacing:'0.1em', marginBottom:'2px' },
-  statV: { fontFamily:'var(--font-mono)', fontSize:'13px', color:'var(--text-primary)' },
+  stat: { fontFamily:'var(--font-mono)' },
+  statLabel: { fontSize:'8px', color:'var(--text-dim)', letterSpacing:'0.08em', marginBottom:'2px' },
+  statVal: { fontSize:'12px', color:'var(--text-secondary)' },
 };

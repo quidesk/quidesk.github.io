@@ -4,11 +4,18 @@
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <link rel="icon" type="image/png" href="/logo.png" />
+    <link rel="apple-touch-icon" href="/logo.png" />
+    <link rel="manifest" href="/site.webmanifest" />
+    <meta name="mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+    <meta name="apple-mobile-web-app-title" content="Quidesk" />
+    <meta name="application-name" content="Quidesk" />
 
     <!-- ═══ SEO — Primary ═══════════════════════════════════════════════ -->
     <title>Quidesk — Live Market Intelligence Terminal | Crypto, Stocks, Metals & Energy</title>
     <meta name="description" content="Quidesk is a free real-time market intelligence terminal tracking Bitcoin, Ethereum, S&P 500, gold, crude oil and 20+ assets. Live price maps, OSINT news signals, portfolio tracker and multi-currency conversion." />
-    <meta name="keywords" content="live market tracker, bitcoin price live, gold price today, stock market live, crypto market map, market intelligence, portfolio tracker, WTI crude oil price, ethereum price, S&P 500 live, market heatmap, OSINT financial news" />
+    <meta name="keywords" content="live market tracker, bitcoin price live, gold price today, stock market live, crypto market map, market intelligence, portfolio tracker, WTI crude oil price, ethereum price, S&P 500 live, market heatmap, OSINT financial news, forex live ticker, solana price, oil spot price" />
     <meta name="author" content="Quidesk" />
     <link rel="canonical" href="https://quidesk.github.io/" />
 
@@ -18,49 +25,158 @@
     <meta property="og:title" content="Quidesk — Live Market Intelligence Terminal" />
     <meta property="og:description" content="Track Bitcoin, S&P 500, gold and oil in real time. Free market intelligence terminal with live price maps, OSINT news signals, correlation lines and multi-currency conversion." />
     <meta property="og:image" content="https://quidesk.github.io/og-image.png" />
+    <meta property="og:image:secure_url" content="https://quidesk.github.io/og-image.png" />
+    <meta property="og:image:type" content="image/png" />
     <meta property="og:image:width" content="1200" />
     <meta property="og:image:height" content="630" />
+    <meta property="og:image:alt" content="Quidesk Live Market Intelligence Terminal Master Sovereign Edition" />
     <meta property="og:site_name" content="Quidesk" />
     <meta property="og:locale" content="en_US" />
 
     <!-- ═══ SEO — Twitter / X Card ═════════════════════════════════════ -->
     <meta name="twitter:card" content="summary_large_image" />
     <meta name="twitter:site" content="@quidesk" />
+    <meta name="twitter:creator" content="@quidesk" />
     <meta name="twitter:title" content="Quidesk — Live Market Intelligence Terminal" />
     <meta name="twitter:description" content="Free real-time market terminal. Bitcoin, S&P 500, gold, oil and 20+ assets live. OSINT news signals. Multi-currency. No signup." />
     <meta name="twitter:image" content="https://quidesk.github.io/og-image.png" />
+    <meta name="twitter:image:alt" content="Quidesk Live Market Intelligence Terminal Master Sovereign Edition" />
 
-    <!-- ═══ SEO — Structured Data (JSON-LD) ════════════════════════════ -->
+    <!-- ═══ SEO — Multi-Schema Linked Graph (JSON-LD) ════════════════════ -->
     <script type="application/ld+json">
     {
       "@context": "https://schema.org",
-      "@type": "WebApplication",
-      "name": "Quidesk",
-      "url": "https://quidesk.github.io/",
-      "description": "Free real-time market intelligence terminal tracking cryptocurrency, stocks, metals and energy with live price maps, OSINT news signals and portfolio tracking.",
-      "applicationCategory": "FinanceApplication",
-      "operatingSystem": "Any",
-      "offers": {
-        "@type": "Offer",
-        "price": "0",
-        "priceCurrency": "USD"
-      },
-      "featureList": [
-        "Live cryptocurrency prices",
-        "Stock market tracking",
-        "Gold and silver spot prices",
-        "Crude oil price tracking",
-        "Market correlation map",
-        "OSINT news signals",
-        "Portfolio tracker",
-        "Multi-currency conversion",
-        "Price alerts"
-      ],
-      "screenshot": "https://quidesk.github.io/og-image.png",
-      "creator": {
-        "@type": "Organization",
-        "name": "Quidesk"
-      }
+      "@graph": [
+        {
+          "@type": "WebSite",
+          "@id": "https://quidesk.github.io/#website",
+          "url": "https://quidesk.github.io/",
+          "name": "Quidesk",
+          "alternateName": [
+            "Quidesk Terminal",
+            "Quidesk Live Market Intelligence",
+            "Quidesk Master Sovereign"
+          ],
+          "description": "Free real-time market intelligence terminal tracking Bitcoin, Ethereum, S&P 500, Gold, WTI Crude Oil, and Global Forex with live edge streaming.",
+          "publisher": {
+            "@id": "https://quidesk.github.io/#organization"
+          },
+          "potentialAction": {
+            "@type": "SearchAction",
+            "target": {
+              "@type": "EntryPoint",
+              "urlTemplate": "https://quidesk.github.io/?q={search_term_string}"
+            },
+            "query-input": "required name=search_term_string"
+          },
+          "inLanguage": "en-US"
+        },
+        {
+          "@type": "Organization",
+          "@id": "https://quidesk.github.io/#organization",
+          "name": "Quidesk",
+          "url": "https://quidesk.github.io/",
+          "logo": {
+            "@type": "ImageObject",
+            "@id": "https://quidesk.github.io/#logo",
+            "url": "https://quidesk.github.io/logo.png",
+            "caption": "Quidesk Master Sovereign Logo"
+          },
+          "sameAs": [
+            "https://github.com/quidesk"
+          ]
+        },
+        {
+          "@type": ["WebApplication", "FinancialService"],
+          "@id": "https://quidesk.github.io/#app",
+          "name": "Quidesk Live Market Intelligence Terminal",
+          "url": "https://quidesk.github.io/",
+          "applicationCategory": "FinanceApplication",
+          "operatingSystem": "All",
+          "browserRequirements": "Requires JavaScript. Requires HTML5.",
+          "offers": {
+            "@type": "Offer",
+            "price": "0",
+            "priceCurrency": "USD"
+          },
+          "featureList": [
+            "Live edge multi-asset price stream",
+            "3D interactive market heatmap",
+            "Real-time OSINT news sentiment correlations",
+            "Precious metals spot tracking (Gold, Silver, Platinum)",
+            "Energy commodity market pricing (WTI, Brent, Natural Gas)",
+            "Global foreign exchange triangulation",
+            "Cross-asset correlation analysis",
+            "Localized IP-based multi-currency conversion",
+            "No signup, zero tracking privacy"
+          ],
+          "screenshot": "https://quidesk.github.io/og-image.png",
+          "softwareVersion": "2.0.0 (Master Sovereign Edition)"
+        },
+        {
+          "@type": "Dataset",
+          "@id": "https://quidesk.github.io/#dataset",
+          "name": "Quidesk Global Multi-Asset Live Market Feed",
+          "description": "Continuous real-time pricing and historical tape for 32 global financial assets spanning equities, cryptocurrencies, precious metals, energy commodities, and forex.",
+          "license": "https://creativecommons.org/licenses/by/4.0/",
+          "creator": {
+            "@id": "https://quidesk.github.io/#organization"
+          },
+          "keywords": [
+            "market data",
+            "crypto prices",
+            "stock quotes",
+            "commodity spot prices",
+            "forex rates"
+          ]
+        },
+        {
+          "@type": "FAQPage",
+          "@id": "https://quidesk.github.io/#faq",
+          "mainEntity": [
+            {
+              "@type": "Question",
+              "name": "What is Quidesk?",
+              "acceptedAnswer": {
+                "@type": "Answer",
+                "text": "Quidesk is an open, high-performance financial intelligence terminal providing real-time pricing, 3D market correlation maps, OSINT news signal tracking, and portfolio analysis across Equities, Cryptocurrencies, Precious Metals, Energy, and Forex."
+              }
+            },
+            {
+              "@type": "Question",
+              "name": "Is Quidesk free to use?",
+              "acceptedAnswer": {
+                "@type": "Answer",
+                "text": "Yes, Quidesk is 100% free with no subscription, no mandatory account registration, and zero trackers. All live data and terminal features are accessible instantly."
+              }
+            },
+            {
+              "@type": "Question",
+              "name": "How often are prices updated on Quidesk?",
+              "acceptedAnswer": {
+                "@type": "Answer",
+                "text": "Prices are streamed in real time via Cloudflare Edge workers and WebSocket connections to major global exchanges including Binance Spot, Yahoo Finance, and continuous Forex feeds with sub-second to sub-minute latency."
+              }
+            },
+            {
+              "@type": "Question",
+              "name": "What markets does Quidesk cover?",
+              "acceptedAnswer": {
+                "@type": "Answer",
+                "text": "Quidesk tracks Equities (SPY, QQQ, AAPL, NVDA, TSLA), Cryptocurrencies (Bitcoin, Ethereum, Solana, BNB, XRP, ADA), Precious Metals (Gold, Silver, Platinum), Energy Commodities (WTI Crude, Brent, Natural Gas), and major Forex pairs."
+              }
+            },
+            {
+              "@type": "Question",
+              "name": "Does Quidesk offer localized currency conversion?",
+              "acceptedAnswer": {
+                "@type": "Answer",
+                "text": "Yes, Quidesk automatically detects the visitor's geographic region to display synchronized localized prices alongside standard USD benchmarks across 30+ sovereign fiat currencies."
+              }
+            }
+          ]
+        }
+      ]
     }
     </script>
 
@@ -71,7 +187,7 @@
     <!-- ═══ Security headers ═══════════════════════════════════════════ -->
     <meta http-equiv="X-Content-Type-Options" content="nosniff" />
     <meta http-equiv="Referrer-Policy" content="strict-origin-when-cross-origin" />
-    <meta http-equiv="Permissions-Policy" content="camera=(), microphone=(), geolocation=()" />
+    <meta http-equiv="Permissions-Policy" content="accelerometer=(), camera=(), geolocation=(), gyroscope=(), magnetometer=(), microphone=(), payment=(), usb=()" />
     <meta http-equiv="Content-Security-Policy" content="
       default-src 'self';
       script-src 'self' 'unsafe-inline' https://www.googletagmanager.com https://www.google-analytics.com;
@@ -79,14 +195,18 @@
       font-src 'self' https://fonts.gstatic.com;
       img-src 'self' data: blob: https:;
       connect-src 'self'
+        https://*.workers.dev
         https://data-api.binance.vision
         wss://stream.binance.com:9443
+        wss://stream.binance.vision:9443
         https://api.coingecko.com
         https://api.gold-api.com
         https://finnhub.io
+        https://api.fxratesapi.com
         https://open.er-api.com
         https://api.frankfurter.app
         https://query1.finance.yahoo.com
+        https://query2.finance.yahoo.com
         https://cdn.jsdelivr.net
         https://ipapi.co
         https://api.rss2json.com
@@ -95,6 +215,7 @@
       frame-src 'none';
       object-src 'none';
       base-uri 'self';
+      form-action 'self';
     " />
 
     <!-- Bootstrap Grid & Utilities (No Reboot/Components to preserve custom UI) -->
@@ -106,7 +227,7 @@
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
     <link href="https://fonts.googleapis.com/css2?family=DM+Mono:ital,wght@0,300;0,400;0,500;1,300&family=Syne:wght@400;500;600;700;800&family=Inter:wght@300;400;500;600&display=swap" rel="stylesheet" />
 
-    <meta name="theme-color" content="#0d1117" />
+    <meta name="theme-color" content="#0B0E14" />
 
     <!-- Google tag (gtag.js) -->
     <script async src="https://www.googletagmanager.com/gtag/js?id=G-16STFZVGWN"></script>
@@ -117,10 +238,40 @@
 
       gtag('config', 'G-16STFZVGWN');
     </script>
-
   </head>
   <body>
-    <div id="root"></div>
+    <div id="root">
+      <!-- Semantic SEO Shell & Pre-Rendered Fallback for Search Crawlers -->
+      <header style="padding: 24px; max-width: 1400px; margin: 0 auto; font-family: system-ui, sans-serif;">
+        <h1 style="font-size: 28px; font-weight: 900; color: #ffffff;">Quidesk — Live Market Intelligence Terminal</h1>
+        <p style="font-size: 14px; color: #8899A6; margin-top: 6px;">
+          Master Sovereign Edition · Real-time edge financial tracking across Equities, Cryptocurrencies, Precious Metals, Energy Commodities, and Foreign Exchange.
+        </p>
+      </header>
+      <main style="padding: 20px 24px; max-width: 1400px; margin: 0 auto; font-family: system-ui, sans-serif; color: #CBD5E1;">
+        <section aria-labelledby="overview-heading" style="margin-bottom: 24px;">
+          <h2 id="overview-heading" style="font-size: 20px; font-weight: 700; color: #D4AF37;">Global Multi-Asset Intelligence &amp; Correlation Map</h2>
+          <p style="font-size: 13px; line-height: 1.6; margin-top: 8px;">
+            Quidesk delivers live market data, OSINT news intelligence, localized currency conversion, and 3D correlation mapping with zero latency bottlenecks. Track key global benchmarks including Bitcoin (BTC), Ethereum (ETH), SPDR S&amp;P 500 ETF (SPY), Invesco QQQ Trust (QQQ), Gold Spot (XAU/USD), Silver Spot (XAG/USD), WTI Crude Oil, Brent Crude, EUR/USD, and USD/JPY.
+          </p>
+        </section>
+        <section aria-labelledby="sectors-heading">
+          <h2 id="sectors-heading" style="font-size: 18px; font-weight: 700; color: #ffffff;">Tracked Asset Classes</h2>
+          <ul style="font-size: 13px; line-height: 1.8; margin-top: 8px; list-style: square; padding-left: 20px;">
+            <li><strong>Equities &amp; Indices:</strong> SPY, QQQ, DIA, AAPL, TSLA, META, NVDA</li>
+            <li><strong>Cryptocurrencies:</strong> Bitcoin (BTC), Ethereum (ETH), Solana (SOL), BNB, XRP, Cardano (ADA)</li>
+            <li><strong>Precious Metals:</strong> Gold Spot (XAU/USD), Silver Spot (XAG/USD), Platinum (XPT/USD)</li>
+            <li><strong>Energy Commodities:</strong> WTI Crude Oil, Brent Crude Oil, Natural Gas, Heating Oil</li>
+            <li><strong>Foreign Exchange:</strong> EUR/USD, GBP/USD, USD/JPY, AUD/USD, USD/CAD, USD/CHF, NZD/USD, USD/INR</li>
+          </ul>
+        </section>
+      </main>
+      <noscript>
+        <div style="background: #1e293b; color: #f8fafc; padding: 16px; text-align: center; font-family: sans-serif;">
+          Quidesk is an interactive real-time market intelligence terminal. Please enable JavaScript to access live price streaming, 3D interactive heatmaps, and OSINT news signals.
+        </div>
+      </noscript>
+    </div>
     <script type="module" src="/src/main.jsx"></script>
   </body>
 </html>
