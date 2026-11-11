@@ -1,0 +1,85 @@
+{
+  "schemaVersion": "1.0.0",
+  "generatedAt": "2026-11-11T03:30:00.000Z",
+  "assets": {
+    "spx": {
+      "id": "spx",
+      "symbol": "SPY",
+      "name": "SPDR S&P 500 ETF",
+      "sector": "equities",
+      "unit": "USD",
+      "price": 749.92,
+      "prevClose": 752.69,
+      "change": -0.37,
+      "changeBasis": "prev_close",
+      "quoteTs": 1794344400000,
+      "fetchedAt": "2026-11-11T03:30:00.000Z",
+      "source": "yahoo",
+      "session": "closed",
+      "status": "closed",
+      "flags": [],
+      "spark1d": [[1794301200000, 752.1], [1794344400000, 749.92]]
+    },
+    "btc": {
+      "id": "btc",
+      "symbol": "BTC",
+      "name": "Bitcoin",
+      "sector": "crypto",
+      "unit": "USD",
+      "price": 73784.00,
+      "prevClose": 75006.60,
+      "change": -1.63,
+      "changeBasis": "rolling_24h",
+      "quoteTs": 1794360000000,
+      "fetchedAt": "2026-11-11T03:30:00.000Z",
+      "source": "binance",
+      "session": "24x7",
+      "status": "live",
+      "flags": [],
+      "spark1d": [[1794301200000, 74500.0], [1794360000000, 73784.0]]
+    },
+    "gold": {
+      "id": "gold",
+      "symbol": "XAU/USD",
+      "name": "Gold (COMEX Continuous)",
+      "sector": "metals",
+      "unit": "oz",
+      "price": 4042.40,
+      "prevClose": 3936.90,
+      "change": 2.68,
+      "changeBasis": "prev_close",
+      "quoteTs": 1794360000000,
+      "fetchedAt": "2026-11-11T03:30:00.000Z",
+      "source": "yahoo",
+      "session": "regular",
+      "status": "live",
+      "flags": [],
+      "spark1d": [[1794301200000, 4010.0], [1794360000000, 4042.4]]
+    },
+    "eurusd": {
+      "id": "eurusd",
+      "symbol": "EUR/USD",
+      "name": "Euro / US Dollar",
+      "sector": "forex",
+      "unit": "USD",
+      "price": 1.1168,
+      "prevClose": 1.1167,
+      "change": 0.01,
+      "changeBasis": "prev_close",
+      "quoteTs": 1794360000000,
+      "fetchedAt": "2026-11-11T03:30:00.000Z",
+      "source": "yahoo",
+      "session": "regular",
+      "status": "live",
+      "flags": [],
+      "spark1d": [[1794301200000, 1.1170], [1794360000000, 1.1168]]
+    }
+  },
+  "health": {
+    "perSource": {
+      "yahoo": { "ok": true, "lastOk": 1794360000000, "latencyMs": 115 },
+      "binance": { "ok": true, "lastOk": 1794360000000, "latencyMs": 85 },
+      "gold-api": { "ok": true, "lastOk": 1794360000000, "latencyMs": 95 }
+    }
+  }
+}
