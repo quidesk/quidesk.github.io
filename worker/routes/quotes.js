@@ -6,7 +6,7 @@
  */
 
 import { ASSET_DEFINITIONS } from '../config.js';
-import { fetchYahooChart, determineSessionState } from '../providers/yahoo.js';
+import { fetchYahooChart, fetchFinnhubQuote, determineSessionState } from '../providers/yahoo.js';
 import { fetchBinanceCrypto, fetchCoinGeckoCrypto } from '../providers/binance.js';
 import { fetchSpotMetals, checkMetalsBasis } from '../providers/metals.js';
 import { fetchFrankfurterFallback } from '../providers/forex.js';
@@ -104,13 +104,13 @@ export async function handleQuotes(request, env) {
   let spotMetals = {};
   const t0Metals = Date.now();
   try {
-    spotMetals = await fetchSpotMetals();
+    spotMetals = await fetchSpotMetals(env?.GOLD_API_KEY);
     health.perSource['gold-api'] = { ok: true, lastOk: now, latencyMs: Date.now() - t0Metals };
   } catch {
     health.perSource['gold-api'] = { ok: false, lastOk: null, latencyMs: Date.now() - t0Metals };
   }
 
-  // 3. Fetch Yahoo Chart Assets (Equities, Energy, Metals, FX)
+  // 3. Fetch Yahoo Chart Assets (Equities, Energy, Metals, FX) with Finnhub Failover
   const yahooDefs = Object.values(ASSET_DEFINITIONS).filter(d => d.yahooSymbol);
   const yahooResults = {};
   const t0Yahoo = Date.now();
@@ -137,9 +137,41 @@ export async function handleQuotes(request, env) {
             flags,
             spark1d: chart.spark1d,
           };
+        } else if (def.sector === 'equities' && env?.FINNHUB_KEY) {
+          const fh = await fetchFinnhubQuote(def.symbol, env.FINNHUB_KEY);
+          if (fh) {
+            yahooResults[def.id] = {
+              price: fh.price,
+              prevClose: fh.prevClose,
+              quoteTs: fh.quoteTs,
+              source: 'finnhub',
+              session: 'regular',
+              changeBasis: 'prev_close',
+              flags: ['finnhub_failover'],
+              spark1d: [],
+            };
+          }
         }
-      } catch (err) {
-        // Handled per asset
+      } catch {
+        if (def.sector === 'equities' && env?.FINNHUB_KEY) {
+          try {
+            const fh = await fetchFinnhubQuote(def.symbol, env.FINNHUB_KEY);
+            if (fh) {
+              yahooResults[def.id] = {
+                price: fh.price,
+                prevClose: fh.prevClose,
+                quoteTs: fh.quoteTs,
+                source: 'finnhub',
+                session: 'regular',
+                changeBasis: 'prev_close',
+                flags: ['finnhub_failover'],
+                spark1d: [],
+              };
+            }
+          } catch {
+            // Handled
+          }
+        }
       }
     })
   );
