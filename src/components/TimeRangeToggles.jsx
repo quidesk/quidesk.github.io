@@ -11,6 +11,7 @@ export function TimeRangeToggles({
   onChange,
   className = '',
   accentColor,
+  disabledRanges = [],
 }) {
   return (
     <div
@@ -19,6 +20,7 @@ export function TimeRangeToggles({
     >
       {RANGES.map((r) => {
         const isSelected = selected === r;
+        const isDisabled = Array.isArray(disabledRanges) && disabledRanges.includes(r);
         const activeBg = accentColor ? `${accentColor}20` : 'var(--bg-surface, rgba(255,255,255,0.1))';
         const activeColor = accentColor || 'var(--text-primary, #ffffff)';
         const activeBorder = accentColor ? `1px solid ${accentColor}50` : '1px solid var(--accent, #00f5ff)';
@@ -27,9 +29,10 @@ export function TimeRangeToggles({
           <button
             key={r}
             type="button"
+            disabled={isDisabled}
             onClick={(e) => {
               e.stopPropagation();
-              if (onChange) onChange(r);
+              if (!isDisabled && onChange) onChange(r);
             }}
             className={`time-range-btn px-2 py-1 rounded text-xs ${
               isSelected ? 'active bg-blue-600 text-white' : 'bg-gray-800 text-gray-400'
@@ -39,7 +42,8 @@ export function TimeRangeToggles({
               borderRadius: '4px',
               fontFamily: 'var(--font-mono, monospace)',
               fontSize: '10px',
-              cursor: 'pointer',
+              cursor: isDisabled ? 'not-allowed' : 'pointer',
+              opacity: isDisabled ? 0.4 : 1,
               border: isSelected ? activeBorder : '1px solid var(--border-subtle, rgba(255,255,255,0.08))',
               background: isSelected ? activeBg : 'var(--bg-overlay, rgba(255,255,255,0.03))',
               color: isSelected ? activeColor : 'var(--text-dim, #8b949e)',

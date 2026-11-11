@@ -20,7 +20,7 @@ export default function MarketCard({ asset: propAsset, onClick, isWatched, onTog
   const asset = {
     ...(propAsset || {}),
     ...(storeQuote || {}),
-    chartData: propAsset?.chartData || storeQuote?.chartData,
+    chartData: propAsset?.chartData || storeQuote?.chartData || propAsset?.spark1d || storeQuote?.spark1d,
   };
 
   const hasPrice = asset.status !== 'unavailable' && typeof asset.price === 'number' && Number.isFinite(asset.price);

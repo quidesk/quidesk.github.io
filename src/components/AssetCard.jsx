@@ -2,7 +2,7 @@ import React, { useState, useEffect, useRef } from 'react';
 import { Star, Share2 } from 'lucide-react';
 import { formatChange, SECTOR_META } from '../data/markets';
 import { formatForexSecondaryValue, formatCardUnitSuffix, getAssetPrecision } from '../utils/formatters';
-import MiniChart from './MiniChart';
+import MiniChart, { fetchCachedRangeHistory, MIN_REAL_CHART_POINTS } from './MiniChart';
 import CurrencyTooltip from './CurrencyTooltip';
 import ShareModal from './ShareModal';
 import PriceDisplay from './PriceDisplay';
@@ -34,10 +34,11 @@ export default function AssetCard({
     ...(propAsset || {}),
     ...(storeQuote || {}),
     history: propAsset?.history || storeQuote?.history,
-    chartData: propAsset?.chartData || storeQuote?.chartData,
+    chartData: propAsset?.chartData || storeQuote?.chartData || propAsset?.spark1d || storeQuote?.spark1d,
   };
 
   const [tf, setTf] = useState('24H');
+  const [rangeHistory, setRangeHistory] = useState({});
   const [flash, setFlash] = useState(null);
   const [prev, setPrev] = useState(asset.price);
   const [tooltip, setTooltip] = useState({ visible: false, x: 0, y: 0 });
@@ -45,6 +46,20 @@ export default function AssetCard({
   const [shareOpen, setShareOpen] = useState(false);
   const cardRef = useRef(null);
   const timerRef = useRef(null);
+
+  useEffect(() => {
+    if (tf === '24H' || !asset.id) return;
+    if (asset.history?.[tf]?.length >= MIN_REAL_CHART_POINTS) return;
+    const key = `${asset.id}-${tf}`;
+    if (rangeHistory[key]) return;
+    let active = true;
+    fetchCachedRangeHistory(asset.id, tf).then((res) => {
+      if (active) {
+        setRangeHistory((p) => ({ ...p, [key]: res }));
+      }
+    });
+    return () => { active = false; };
+  }, [tf, asset.id, asset.history, rangeHistory]);
 
   useEffect(() => {
     if (typeof asset.price === 'number' && asset.price !== prev) {
@@ -286,12 +301,15 @@ export default function AssetCard({
 
         {/* Chart */}
         <MiniChart
-          data={asset.history ? asset.history[tf] : asset.chartData}
+          data={tf === '24H'
+            ? (asset.history?.['24H'] || asset.chartData)
+            : (asset.history?.[tf] || rangeHistory[`${asset.id}-${tf}`]?.points || [])}
           positive={isUp}
           change={changeVal}
           height={compact ? 36 : 48}
           currentPrice={asset.price}
-          prevClose={asset.prevClose}
+          prevClose={tf === '24H' ? asset.prevClose : rangeHistory[`${asset.id}-${tf}`]?.previousClose}
+          includePrevClose={tf === '24H'}
         />
 
         {!compact && (asset.volume || (asset.marketCap && asset.marketCap !== '—')) && (

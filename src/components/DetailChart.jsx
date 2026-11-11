@@ -4,8 +4,8 @@ import {
   CartesianGrid, Tooltip, ReferenceLine
 } from 'recharts';
 import { formatPrice, SECTOR_META } from '../data/markets';
-import { formatChangePercentage } from '../utils/formatters';
-import { fetchWorkerHistory } from '../utils/api';
+import { formatChangePercentage, formatCardUnitSuffix, getAssetPrecision } from '../utils/formatters';
+import { buildChartSeries, fetchCachedRangeHistory, MIN_REAL_CHART_POINTS } from './MiniChart';
 import PriceDisplay from './PriceDisplay';
 import TimeRangeToggles from './TimeRangeToggles';
 
@@ -28,21 +28,11 @@ export default function DetailChart({ asset, onClose }) {
   const [historyCache, setHistoryCache] = useState({});
   const [loading, setLoading] = useState(false);
 
-  // Range mapping between UI pills ('1H', '24H', '1M', '1Y') and Worker API ('1D', '5D', '1M', '1Y')
-  const rangeMap = {
-    '1H': '1D',
-    '24H': '1D',
-    '1M': '1M',
-    '1Y': '1Y',
-  };
-
   useEffect(() => {
     if (!asset || !asset.id) return;
-    const workerRange = rangeMap[range] || '1D';
     const cacheKey = `${asset.id}-${range}`;
 
-    // If already in asset.history or local cache, skip fetching
-    if (asset.history && asset.history[range] && asset.history[range].length > 1) {
+    if (asset.history?.[range]?.length >= MIN_REAL_CHART_POINTS) {
       return;
     }
     if (historyCache[cacheKey]) {
@@ -52,68 +42,60 @@ export default function DetailChart({ asset, onClose }) {
     let isMounted = true;
     setLoading(true);
 
-    fetchWorkerHistory(asset.id, workerRange)
-      .then(res => {
+    fetchCachedRangeHistory(asset.id, range)
+      .then((res) => {
         if (!isMounted) return;
-        if (res && Array.isArray(res.points) && res.points.length > 0) {
-          const pts = res.points.map(p => ({
-            time: p.time ? new Date(p.time * 1000).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : '',
-            value: typeof p.close === 'number' ? p.close : p.value,
-          }));
-          setHistoryCache(prev => ({ ...prev, [cacheKey]: pts }));
-        }
-      })
-      .catch(() => {
-        // Fallback gracefully — renders dashed baseline
+        setHistoryCache((prev) => ({ ...prev, [cacheKey]: res }));
       })
       .finally(() => {
         if (isMounted) setLoading(false);
       });
 
     return () => { isMounted = false; };
-  }, [asset?.id, range]);
+  }, [asset?.id, range, historyCache, asset?.history]);
 
   if (!asset) return null;
   const meta = SECTOR_META[asset.sector] || {};
-  
-  const changeVal = typeof asset.changePercent === 'number' ? asset.changePercent : (asset.change ?? 0);
-  const isFlat = Math.abs(changeVal) < 0.005;
-  const isUp = changeVal >= 0;
-  const color = isFlat ? 'var(--text-dim, #8b949e)' : (isUp ? 'var(--bull)' : 'var(--bear)');
+
+  const hasPrice = asset.status !== 'unavailable' && typeof asset.price === 'number' && Number.isFinite(asset.price);
+  const rawChange = asset.changePercent ?? asset.change;
+  const changeVal = asset.status !== 'unavailable' && typeof rawChange === 'number' && Number.isFinite(rawChange)
+    ? rawChange
+    : null;
+  const isFlat = changeVal !== null && Math.abs(changeVal) < 0.005;
+  const isUp = changeVal !== null && changeVal > 0;
+  const color = (changeVal === null || isFlat)
+    ? 'var(--text-dim, #8b949e)'
+    : (isUp ? 'var(--bull)' : 'var(--bear)');
   const gid = `dc-${asset.id}`;
 
   const cacheKey = `${asset.id}-${range}`;
-  const rawData = (asset.history && asset.history[range] && asset.history[range].length > 1)
-    ? asset.history[range]
-    : (historyCache[cacheKey] || asset.chartData || []);
+  const cachedEntry = historyCache[cacheKey];
+  const rawData = asset.history?.[range]
+    || cachedEntry?.points
+    || (range === '24H' ? (asset.chartData || asset.spark1d || []) : []);
 
-  const values = rawData
-    .map(d => (typeof d === 'number' ? d : d?.value))
-    .filter(v => typeof v === 'number' && Number.isFinite(v) && v > 0);
-
-  // Sync terminal points with real live prices
-  if (values.length > 0 && typeof asset.price === 'number') {
-    values[values.length - 1] = asset.price;
-  }
-  if (values.length > 1 && (range === '24H' || range === '1H') && typeof asset.prevClose === 'number' && asset.prevClose > 0) {
-    values[0] = asset.prevClose;
-  }
-
-  const hasChartData = values.length >= 2;
-  const min = hasChartData ? Math.min(...values) : null;
-  const max = hasChartData ? Math.max(...values) : null;
-
-  const formattedData = rawData.map((d, i) => {
-    if (typeof d === 'number') {
-      return { time: `${i}:00`, value: d };
-    }
-    return d;
+  const includePrevClose = range === '24H';
+  const refPrevClose = includePrevClose ? asset.prevClose : (cachedEntry?.previousClose ?? null);
+  const series = buildChartSeries({
+    data: rawData,
+    prevClose: refPrevClose,
+    currentPrice: asset.price,
+    includePrevClose,
+    minRealPoints: MIN_REAL_CHART_POINTS,
   });
 
-  const isForex = asset.sector === 'forex' || (
+  const delta = series.valid ? (series.max - series.min) : 0;
+  const pad = delta > 0 ? delta * 0.08 : (series.min ? series.min * 0.005 : 0.01);
+
+  const isForex = (asset.sector || '').toLowerCase() === 'forex' || (
     asset.symbol && asset.symbol.includes('/') &&
     !asset.symbol.startsWith('XAU') && !asset.symbol.startsWith('XAG') && !asset.symbol.startsWith('XPT')
   );
+  const isForexInr = isForex && (asset.symbol?.endsWith('/INR') || asset.symbol?.endsWith('INR'));
+  const pricePrefix = isForexInr ? '₹' : (isForex ? '' : '$');
+  const unitSuffix = hasPrice ? formatCardUnitSuffix(asset.sector, asset.unit, asset.symbol) : '';
+  const precision = getAssetPrecision(asset.symbol, asset.sector, asset.price);
 
   return (
     <div style={s.wrap}>
@@ -127,16 +109,16 @@ export default function DetailChart({ asset, onClose }) {
           <div style={s.name}>{asset.name}</div>
         </div>
         <div style={s.priceGroup}>
-          <div style={{ ...s.price, color }}>
+          <div style={{ ...s.price, color: changeVal === null || isFlat ? 'var(--text-primary)' : color }}>
             <PriceDisplay
-              value={asset.price}
-              prefix={isForex ? '' : '$'}
-              precision={isForex ? (asset.symbol?.includes('JPY') || asset.symbol?.includes('INR') ? 2 : 4) : (asset.price < 1 ? 4 : 2)}
+              value={hasPrice ? asset.price : null}
+              prefix={pricePrefix}
+              precision={precision}
             />
-            {asset.unit && <span style={{ fontSize: '12px', color: 'var(--text-dim)', marginLeft: '3px' }}>/{asset.unit}</span>}
+            {unitSuffix && <span style={{ fontSize: '12px', color: 'var(--text-dim)', marginLeft: '3px' }}>{unitSuffix}</span>}
           </div>
           <div style={{ ...s.change, color }}>
-            {isFlat ? '0.00%' : `${isUp ? '▲' : '▼'} ${formatChangePercentage(changeVal)}`}
+            {changeVal === null ? '—' : isFlat ? '0.00%' : `${isUp ? '▲' : '▼'} ${formatChangePercentage(changeVal)}`}
           </div>
         </div>
         {onClose && (
@@ -188,9 +170,9 @@ export default function DetailChart({ asset, onClose }) {
 
       {/* Recharts Area or Dashed Baseline */}
       <div style={s.chartArea}>
-        {hasChartData ? (
+        {series.valid ? (
           <ResponsiveContainer width="100%" height={200}>
-            <AreaChart data={formattedData} margin={{ top:8, right:8, left:0, bottom:0 }}>
+            <AreaChart data={series.points} margin={{ top:8, right:8, left:0, bottom:0 }}>
               <defs>
                 <linearGradient id={gid} x1="0" y1="0" x2="0" y2="1">
                   <stop offset="0%" stopColor={color} stopOpacity={0.28} />
@@ -201,7 +183,7 @@ export default function DetailChart({ asset, onClose }) {
               <CartesianGrid stroke="rgba(255,255,255,0.04)" strokeDasharray="3 3" vertical={false} />
               <XAxis dataKey="time" hide />
               <YAxis
-                domain={[min - (max - min) * 0.05, max + (max - min) * 0.05]}
+                domain={[series.min - pad, series.max + pad]}
                 orientation="right"
                 tick={{ fill:'var(--text-dim)', fontSize:9, fontFamily:'var(--font-mono)' }}
                 tickLine={false}
@@ -210,7 +192,14 @@ export default function DetailChart({ asset, onClose }) {
                 width={65}
               />
               <Tooltip content={<Tip symbol={asset.symbol} sector={asset.sector} />} />
-              <ReferenceLine y={asset.price} stroke={color} strokeDasharray="2 2" strokeOpacity={0.4} />
+              {series.prevClose !== null && (
+                <ReferenceLine
+                  y={series.prevClose}
+                  stroke="var(--text-dim, #8b949e)"
+                  strokeDasharray="3 3"
+                  strokeOpacity={0.55}
+                />
+              )}
               <Area
                 type="monotone"
                 dataKey="value"
@@ -244,12 +233,12 @@ export default function DetailChart({ asset, onClose }) {
       {/* Stats bar */}
       <div style={s.statsBar}>
         <div style={s.stat}>
-          <div style={s.statLabel}>24H LOW</div>
-          <div style={s.statVal}>{min !== null ? formatPrice(min, asset.symbol, asset.sector) : '—'}</div>
+          <div style={s.statLabel}>{range} LOW</div>
+          <div style={s.statVal}>{series.min !== null ? formatPrice(series.min, asset.symbol, asset.sector) : '—'}</div>
         </div>
         <div style={s.stat}>
-          <div style={s.statLabel}>24H HIGH</div>
-          <div style={s.statVal}>{max !== null ? formatPrice(max, asset.symbol, asset.sector) : '—'}</div>
+          <div style={s.statLabel}>{range} HIGH</div>
+          <div style={s.statVal}>{series.max !== null ? formatPrice(series.max, asset.symbol, asset.sector) : '—'}</div>
         </div>
         <div style={s.stat}>
           <div style={s.statLabel}>VOLUME</div>
