@@ -24,26 +24,46 @@ export function syncAllUI(quotes = {}) {
  * Guarantees:
  * 1. Single Source of Truth for all displayed assets across cards, pulse, heatmaps, and charts.
  * 2. Keyed by canonical ticker symbol and lowercase id for instantaneous O(1) sync.
- * 3. Atomic state reconciliation via applySnapshot: replaces the whole quote set simultaneously
- *    so all UI values share one synchronized sync cycle.
- * 4. Out-of-order update protection via applyTick: rejects stale ticks where quote.timestamp <= existing.timestamp.
+ * 3. Atomic state reconciliation via applySnapshot: replaces the whole quote set simultaneously.
+ * 4. Tracks generatedAt, sourcesHealth, and oldest quoteTs from the Worker.
  */
 export const useMarketStore = create((set, get) => ({
   quotes: {},
+  generatedAt: null,
+  oldestQuoteTs: null,
+  sourcesHealth: {},
   lastSync: null,
   isSyncing: false,
+  isWorkerOnline: true,
+  workerError: null,
 
   /**
-   * Replace the entire quote map atomically.
-   * @param {Record<string, any>} snapshot
+   * Replace the entire quote map atomically from Worker response.
+   * @param {object} payload - { generatedAt, assets, health }
    */
-  applySnapshot: (snapshot) => {
-    if (!snapshot || typeof snapshot !== 'object') return;
-    const synchronized = syncAllUI(snapshot);
+  applySnapshot: (payload) => {
+    if (!payload || typeof payload !== 'object') return;
+    const assets = payload.assets || payload;
+    const synchronized = syncAllUI(assets);
+
+    let oldestTs = null;
+    for (const item of Object.values(assets)) {
+      if (item && typeof item.quoteTs === 'number') {
+        if (oldestTs === null || item.quoteTs < oldestTs) {
+          oldestTs = item.quoteTs;
+        }
+      }
+    }
+
     set({
       quotes: synchronized,
+      generatedAt: payload.generatedAt || new Date().toISOString(),
+      oldestQuoteTs: oldestTs,
+      sourcesHealth: payload.health?.perSource || {},
       lastSync: Date.now(),
       isSyncing: false,
+      isWorkerOnline: true,
+      workerError: null,
     });
   },
 
@@ -77,4 +97,5 @@ export const useMarketStore = create((set, get) => ({
   },
 
   setSyncing: (isSyncing) => set({ isSyncing }),
+  setWorkerError: (err) => set({ isWorkerOnline: false, workerError: err }),
 }));

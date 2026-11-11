@@ -5,10 +5,10 @@ import DetailChart from '../components/DetailChart';
 import AssetCard from '../components/AssetCard';
 import PriceDisplay from '../components/PriceDisplay';
 import { formatPrice, SECTOR_META } from '../data/markets';
-import { isFinnhubMissing } from '../utils/api';
 import NewsSignals from '../components/NewsSignals';
 import { computeMarketPulse } from '../utils/marketPulse';
 import { useMarketPulse } from '../selectors/marketPulse';
+import { selectGainers, selectLosers } from '../selectors/marketSelectors';
 
 function NarrativeStrip({ allAssets, hotspots }) {
   const pulse = computeMarketPulse(allAssets, hotspots);
@@ -42,29 +42,11 @@ export default function MapPage({ data, allAssets, hotspots, watchlistProps, con
   const { news, loading, newsCorrelations, lastFetch, refresh } = newsSignals;
 
   // Top movers strictly filtered by polarity to prevent desynchronization
-  const gainers = React.useMemo(() => {
-    return allAssets
-      .filter(a => typeof a.change === 'number' && a.change > 0)
-      .sort((a, b) => b.change - a.change)
-      .slice(0, 4);
-  }, [allAssets]);
-
-  const losers = React.useMemo(() => {
-    return allAssets
-      .filter(a => typeof a.change === 'number' && a.change < 0)
-      .sort((a, b) => a.change - b.change)
-      .slice(0, 4);
-  }, [allAssets]);
+  const gainers = React.useMemo(() => selectGainers(allAssets, 4), [allAssets]);
+  const losers = React.useMemo(() => selectLosers(allAssets, 4), [allAssets]);
 
   return (
     <div style={s.page} className="page-wrap">
-      {/* Missing Key Warning */}
-      {isFinnhubMissing && (
-        <div style={{ background: 'var(--amber-dim)', border: '1px solid var(--amber)', color: 'var(--amber)', padding: '12px 16px', borderRadius: '8px', marginBottom: '16px', fontSize: '13px', display: 'flex', alignItems: 'center', gap: '8px' }}>
-          <strong>Action Required:</strong> Stock and Energy prices are currently frozen because the <code>VITE_FINNHUB_KEY</code> secret is missing from your GitHub repository. Please add your free Finnhub API Key to GitHub Actions Secrets to enable real-time tracking for these assets!
-        </div>
-      )}
-
       {/* Narrative */}
       <div className="fade-up" style={{ marginBottom:'16px' }}>
         <NarrativeStrip allAssets={allAssets} hotspots={hotspots} />

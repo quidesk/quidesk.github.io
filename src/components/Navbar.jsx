@@ -16,7 +16,24 @@ const NAV_TABS = [
   { id:'portfolio', label:'Portfolio',   short:'P&L'  },
 ]
 
-export default function Navbar({ active, setActive, isLive, setIsLive, hotspotCount, alertCount, theme, onToggleTheme, allAssets, formatLocalPrice, lastUpdate, connectionStatus }) {
+export default function Navbar({
+  active,
+  setActive,
+  isLive,
+  setIsLive,
+  hotspotCount,
+  alertCount,
+  theme,
+  onToggleTheme,
+  allAssets,
+  formatLocalPrice,
+  lastUpdate,
+  generatedAt,
+  oldestQuoteTs,
+  sourcesHealth,
+  isWorkerOnline,
+  connectionStatus,
+}) {
   const [clock, setClock] = useState(new Date())
   const [showGlobalShare, setShowGlobalShare] = useState(false)
 
@@ -71,11 +88,25 @@ export default function Navbar({ active, setActive, isLive, setIsLive, hotspotCo
 
           {/* Right Telemetry & Controls */}
           <div style={s.heroTelemetry}>
-            {lastUpdate && (
-              <div style={s.telemetryPill}>
-                <span style={s.telemetryLabel}>LAST TICK</span>
-                <span style={s.telemetryVal}>{lastUpdate.toLocaleTimeString()}</span>
+            {generatedAt ? (
+              <div
+                style={s.telemetryPill}
+                title={`Worker Feed: ${new Date(generatedAt).toLocaleString()}${oldestQuoteTs ? ` (Oldest quote: ${new Date(oldestQuoteTs).toLocaleTimeString()})` : ''}`}
+              >
+                <span style={s.telemetryLabel}>LAST UPDATED</span>
+                <span style={s.telemetryVal}>
+                  {new Date(generatedAt).toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', second: '2-digit', timeZoneName: 'short' })}
+                </span>
               </div>
+            ) : (
+              lastUpdate && (
+                <div style={s.telemetryPill}>
+                  <span style={s.telemetryLabel}>LAST TICK</span>
+                  <span style={s.telemetryVal}>
+                    {(lastUpdate instanceof Date ? lastUpdate : new Date(lastUpdate)).toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', second: '2-digit', timeZoneName: 'short' })}
+                  </span>
+                </div>
+              )
             )}
 
             <button
@@ -115,7 +146,7 @@ export default function Navbar({ active, setActive, isLive, setIsLive, hotspotCo
 
             <div style={s.clock}>
               <div style={s.clockTime}>
-                {clock.toLocaleTimeString('en-US', { hour:'2-digit', minute:'2-digit', second:'2-digit' })}
+                {clock.toLocaleTimeString('en-US', { hour:'2-digit', minute:'2-digit', second:'2-digit', timeZoneName:'short' })}
               </div>
               <div style={s.clockDate}>
                 {clock.toLocaleDateString('en-US', { month:'short', day:'numeric', year:'numeric' })}

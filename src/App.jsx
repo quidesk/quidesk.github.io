@@ -68,7 +68,21 @@ export default function App() {
     return 'map';
   });
 
-  const { data, allAssets, lastUpdate, isLive, setIsLive, hotspots, isStale, connectionStatus } = useMarketData();
+  const {
+    data,
+    allAssets,
+    lastUpdate,
+    generatedAt,
+    oldestQuoteTs,
+    sourcesHealth,
+    isLive,
+    setIsLive,
+    hotspots,
+    isStale,
+    isWorkerOnline,
+    workerError,
+    connectionStatus,
+  } = useMarketData();
   const watchlist                  = useWatchlist();
   const portfolio                  = usePortfolio(allAssets);
   const alerts                     = useAlerts(allAssets);
@@ -181,8 +195,32 @@ export default function App() {
         allAssets={allAssets}
         formatLocalPrice={formatLocalPrice}
         lastUpdate={lastUpdate}
+        generatedAt={generatedAt}
+        oldestQuoteTs={oldestQuoteTs}
+        sourcesHealth={sourcesHealth}
+        isWorkerOnline={isWorkerOnline}
         connectionStatus={connectionStatus}
       />
+      {!isWorkerOnline && (
+        <div style={{
+          background: 'rgba(239, 68, 68, 0.15)',
+          borderBottom: '1px solid var(--bear)',
+          color: 'var(--bear)',
+          padding: '8px 16px',
+          fontSize: '12px',
+          fontFamily: 'var(--font-mono)',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          gap: '8px',
+          zIndex: 100,
+        }}>
+          <span>⚠</span>
+          <span>
+            <strong>Edge Feed Offline:</strong> Live market data aggregator unreachable ({workerError || 'Connection refused'}). Showing unavailable indicators. Reconnecting automatically...
+          </span>
+        </div>
+      )}
       <TickerTape allAssets={allAssets} formatLocalPrice={formatLocalPrice} isStale={isStale} />
       <main style={{ flex:1 }}>
         {renderPage()}

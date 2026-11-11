@@ -144,3 +144,17 @@ export const formatCardUnitSuffix = (sector = '', unit = '', symbol = '') => {
 
   return '';
 };
+
+/**
+ * formatChangePercentage — Standardized percentage change formatter:
+ * - Flat (|c| < 0.005): "0.00%" (neutral, no '+' sign)
+ * - Positive (> 0.005): "+X.XX%"
+ * - Negative (< -0.005): "-X.XX%"
+ * - Null/Undefined: "—"
+ */
+export const formatChangePercentage = (c) => {
+  if (c === null || c === undefined || !Number.isFinite(c)) return '—';
+  if (Math.abs(c) < 0.005) return '0.00%';
+  return `${c > 0 ? '+' : ''}${c.toFixed(2)}%`;
+};
+

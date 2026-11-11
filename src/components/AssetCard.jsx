@@ -253,12 +253,14 @@ export default function AssetCard({
           currentPrice={asset.price}
         />
 
-        {!compact && (
+        {!compact && (asset.volume || (asset.marketCap && asset.marketCap !== '—')) && (
           <div style={{ display: 'flex', gap: '14px', marginTop: '8px', paddingTop: '8px', borderTop: '1px solid var(--border-subtle)' }}>
-            <div>
-              <div style={{ fontFamily: 'var(--font-mono)', fontSize: '8px', color: 'var(--text-dim)', letterSpacing: '0.08em' }}>VOL</div>
-              <div style={{ fontFamily: 'var(--font-mono)', fontSize: '11px', color: 'var(--text-secondary)' }}>{asset.volume || '—'}</div>
-            </div>
+            {asset.volume && (
+              <div>
+                <div style={{ fontFamily: 'var(--font-mono)', fontSize: '8px', color: 'var(--text-dim)', letterSpacing: '0.08em' }}>VOL</div>
+                <div style={{ fontFamily: 'var(--font-mono)', fontSize: '11px', color: 'var(--text-secondary)' }}>{asset.volume}</div>
+              </div>
+            )}
             {asset.marketCap && asset.marketCap !== '—' && (
               <div>
                 <div style={{ fontFamily: 'var(--font-mono)', fontSize: '8px', color: 'var(--text-dim)', letterSpacing: '0.08em' }}>MCAP</div>

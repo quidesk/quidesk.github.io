@@ -10,8 +10,8 @@ describe('formatChange (2-decimal precision)', () => {
     expect(formatChange(-4.58)).toBe('-4.58%');
   });
 
-  it('formats zero as +0.00%', () => {
-    expect(formatChange(0)).toBe('+0.00%');
+  it('formats flat zero as 0.00% without positive prefix', () => {
+    expect(formatChange(0)).toBe('0.00%');
   });
 
   it('always shows 2 decimal places', () => {
@@ -29,8 +29,8 @@ describe('formatChangeBubble (1-decimal, space-constrained)', () => {
     expect(formatChangeBubble(-4.58)).toBe('-4.6%');
   });
 
-  it('formats zero as +0.0%', () => {
-    expect(formatChangeBubble(0)).toBe('+0.0%');
+  it('formats flat zero as 0.0% without positive prefix', () => {
+    expect(formatChangeBubble(0)).toBe('0.0%');
   });
 });
 
@@ -67,24 +67,21 @@ describe('formatPrice unitless Forex & currency prefix rules', () => {
   });
 });
 
-describe('28+ Asset Integrity Verification', () => {
+describe('32 Asset Integrity Verification (Static Metadata & Skeleton)', () => {
   it('contains at least 28 unique tickers across 5 sectors', () => {
     const sectors = Object.keys(MARKET_DATA);
     expect(sectors).toEqual(expect.arrayContaining(['equities', 'crypto', 'metals', 'energy', 'forex']));
     expect(ALL_ASSETS.length).toBeGreaterThanOrEqual(28);
   });
 
-  it('contains valid non-zero prices and sanitized history for all assets', () => {
+  it('initializes skeleton assets with status unavailable and zero fabricated numbers', () => {
     ALL_ASSETS.forEach(asset => {
-      expect(asset.price).toBeGreaterThan(0);
-      expect(Number.isFinite(asset.price)).toBe(true);
-      expect(asset.history).toBeDefined();
-      expect(asset.history['24H'].length).toBeGreaterThan(0);
-      // Ensure no 0 or negative values in sparklines
-      asset.history['24H'].forEach(pt => {
-        const val = typeof pt === 'object' ? pt.value : pt;
-        expect(val).toBeGreaterThan(0);
-      });
+      expect(asset.id).toBeDefined();
+      expect(asset.symbol).toBeDefined();
+      expect(asset.sector).toBeDefined();
+      expect(asset.price).toBeNull();
+      expect(asset.change).toBeNull();
+      expect(asset.status).toBe('unavailable');
     });
   });
 

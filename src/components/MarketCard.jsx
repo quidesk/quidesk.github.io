@@ -141,25 +141,37 @@ export default function MarketCard({ asset: propAsset, onClick, isWatched, onTog
       </div>
 
       {/* Footer stats */}
-      <div style={styles.footer}>
-        <div style={styles.stat}>
-          <span style={styles.statLabel}>VOL</span>
-          <span style={styles.statValue}>{asset.volume || '—'}</span>
-        </div>
-        {asset.marketCap && asset.marketCap !== '—' && (
-          <div style={styles.stat}>
-            <span style={styles.statLabel}>MCAP</span>
-            <span style={styles.statValue}>{asset.marketCap}</span>
+      {(asset.volume || (asset.marketCap && asset.marketCap !== '—')) ? (
+        <div style={styles.footer}>
+          {asset.volume && (
+            <div style={styles.stat}>
+              <span style={styles.statLabel}>VOL</span>
+              <span style={styles.statValue}>{asset.volume}</span>
+            </div>
+          )}
+          {asset.marketCap && asset.marketCap !== '—' && (
+            <div style={styles.stat}>
+              <span style={styles.statLabel}>MCAP</span>
+              <span style={styles.statValue}>{asset.marketCap}</span>
+            </div>
+          )}
+          <div style={styles.indicator}>
+            <div style={{
+              ...styles.dot,
+              background: isPositive ? 'var(--bull)' : 'var(--bear)',
+              boxShadow: `0 0 6px ${isPositive ? 'var(--bull)' : 'var(--bear)'}`,
+            }} />
           </div>
-        )}
-        <div style={styles.indicator}>
+        </div>
+      ) : (
+        <div style={{ display: 'flex', justifyContent: 'flex-end', paddingTop: '4px' }}>
           <div style={{
             ...styles.dot,
             background: isPositive ? 'var(--bull)' : 'var(--bear)',
             boxShadow: `0 0 6px ${isPositive ? 'var(--bull)' : 'var(--bear)'}`,
           }} />
         </div>
-      </div>
+      )}
     </div>
   );
 }
