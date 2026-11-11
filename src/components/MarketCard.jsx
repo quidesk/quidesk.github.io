@@ -156,7 +156,13 @@ export default function MarketCard({ asset: propAsset, onClick, isWatched, onTog
 
       {/* Mini chart */}
       <div style={styles.chartWrap}>
-        <MiniChart data={asset.chartData} positive={isPositive} currentPrice={asset.price} />
+        <MiniChart
+          data={asset.chartData}
+          positive={isPositive}
+          change={changeVal}
+          currentPrice={asset.price}
+          prevClose={asset.prevClose}
+        />
       </div>
 
       {/* Footer stats */}

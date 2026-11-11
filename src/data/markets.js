@@ -162,14 +162,18 @@ export const CORRELATIONS = [
 export function detectHotspots(assets = []) {
   return assets
     .filter(a => typeof a.change === 'number' && Number.isFinite(a.change) && Math.abs(a.change) >= 2.0 && a.status !== 'closed')
-    .map(a => ({
-      assetId: a.id,
-      symbol: a.symbol,
-      sector: a.sector,
-      change: a.change,
-      quoteTs: a.quoteTs,
-      type: a.change > 0 ? 'breakout' : 'breakdown',
-      signal: a.change > 0 ? 'bullish_breakout' : 'bearish_reversal',
-      severity: Math.abs(a.change) >= 5 ? 'high' : 'medium',
-    }));
+    .map(a => {
+      const ts = a.quoteTs || a.timestamp;
+      return {
+        assetId: a.id,
+        symbol: a.symbol,
+        sector: a.sector,
+        change: a.change,
+        quoteTs: ts,
+        timestamp: ts,
+        type: a.change > 0 ? 'breakout' : 'breakdown',
+        signal: a.change > 0 ? 'bullish_breakout' : 'bearish_reversal',
+        severity: Math.abs(a.change) >= 5 ? 'high' : 'medium',
+      };
+    });
 }

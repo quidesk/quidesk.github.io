@@ -277,8 +277,10 @@ export default function AssetCard({
         <MiniChart
           data={asset.history ? asset.history[tf] : asset.chartData}
           positive={isUp}
+          change={changeVal}
           height={compact ? 36 : 48}
           currentPrice={asset.price}
+          prevClose={asset.prevClose}
         />
 
         {!compact && (asset.volume || (asset.marketCap && asset.marketCap !== '—')) && (
