@@ -6,10 +6,9 @@
   "description": "Quidesk — The trader's desk. All-in-one market intelligence terminal with live heatmaps, correlation maps, hotspot detection and cross-asset comparison.",
   "scripts": {
     "dev": "vite",
-    "snapshot": "node scripts/generate-snapshot.mjs",
     "og": "node scripts/generate-og.mjs",
     "verifyq": "node scripts/verifyq.mjs",
-    "build": "node scripts/generate-snapshot.mjs && vite build",
+    "build": "vite build",
     "preview": "vite preview",
     "lint": "eslint src --ext js,jsx --report-unused-disable-directives --max-warnings 0",
     "test": "vitest run",

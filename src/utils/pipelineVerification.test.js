@@ -1,19 +1,11 @@
 import { describe, it, expect } from 'vitest';
-import fs from 'fs';
-import path from 'path';
-import { formatPrice } from '../data/markets';
+import { ALL_ASSETS, formatPrice } from '../data/markets';
 
 describe('Market Data Pipeline & Store Verification Suite', () => {
 
-  describe('1. Static Pre-Hydration Snapshot Integrity', () => {
-    it('verifies public/market-snapshot.json exists and contains 28+ tickers', () => {
-      const snapshotPath = path.resolve(__dirname, '../../public/market-snapshot.json');
-      expect(fs.existsSync(snapshotPath)).toBe(true);
-      const content = JSON.parse(fs.readFileSync(snapshotPath, 'utf8'));
-
-      expect(content.assetCount).toBeGreaterThanOrEqual(28);
-      expect(content.timestamp).toBeDefined();
-      expect(content.assets).toBeDefined();
+  describe('1. Canonical Asset Catalog & Zero-Fabrication Integrity', () => {
+    it('verifies ALL_ASSETS contains 28+ tickers covering all 5 sectors', () => {
+      expect(ALL_ASSETS.length).toBeGreaterThanOrEqual(28);
 
       const requiredSymbols = [
         'SPY', 'QQQ', 'DIA', 'AAPL', 'TSLA', 'META', 'NVDA',
@@ -23,36 +15,29 @@ describe('Market Data Pipeline & Store Verification Suite', () => {
         'EUR/USD', 'GBP/USD', 'USD/JPY', 'AUD/USD', 'USD/CAD', 'USD/CHF', 'NZD/USD', 'EUR/GBP', 'GBP/JPY', 'USD/INR'
       ];
 
-      const presentSymbols = Object.values(content.assets).map(a => a.symbol);
+      const presentSymbols = ALL_ASSETS.map(a => a.symbol);
       requiredSymbols.forEach(sym => {
         expect(presentSymbols).toContain(sym);
       });
+
+      const sectors = new Set(ALL_ASSETS.map(a => a.sector));
+      expect(sectors).toContain('equities');
+      expect(sectors).toContain('crypto');
+      expect(sectors).toContain('metals');
+      expect(sectors).toContain('energy');
+      expect(sectors).toContain('forex');
     });
 
-    it('verifies snapshot values match current live target ranges', () => {
-      const snapshotPath = path.resolve(__dirname, '../../public/market-snapshot.json');
-      const content = JSON.parse(fs.readFileSync(snapshotPath, 'utf8'));
-      const a = content.assets;
-
-      // Equities in realistic range
-      expect(a.spx.price).toBeGreaterThan(700);
-      expect(a.ndx.price).toBeGreaterThan(600);
-      expect(a.nvda.price).toBeGreaterThan(150);
-
-      // Crypto in realistic range
-      expect(a.btc.price).toBeGreaterThan(70000);
-      expect(a.eth.price).toBeGreaterThan(2000);
-
-      // Metals & Energy in realistic range
-      expect(a.gold.price).toBeGreaterThan(3500);
-      expect(a.silver.price).toBeGreaterThan(40);
-      expect(a.wti.price).toBeGreaterThan(60);
-
-      // Forex in realistic range
-      expect(a.usdjpy.price).toBeGreaterThan(150);
-      expect(a.usdinr.price).toBeGreaterThan(90);
-      expect(a.eurusd.price).toBeGreaterThan(1.05);
-      expect(a.nzdusd.price).toBeGreaterThan(0.50);
+    it('verifies ALL_ASSETS strictly enforces zero synthetic data on boot', () => {
+      ALL_ASSETS.forEach(asset => {
+        // Must never contain hardcoded numbers before live feed hydration
+        expect(asset.price).toBeNull();
+        expect(asset.change).toBeNull();
+        expect(asset.changePercent).toBeNull();
+        expect(asset.spark1d).toEqual([]);
+        expect(asset.chartData).toEqual([]);
+        expect(asset.status).toBe('unavailable');
+      });
     });
   });
 
