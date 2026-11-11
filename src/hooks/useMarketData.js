@@ -146,11 +146,15 @@ export function useMarketData() {
     const baseMap = buildSkeletonMap();
     Object.values(storeQuotes).forEach((q) => {
       if (q && q.id && baseMap[q.id.toLowerCase()]) {
+        const ts = typeof q.quoteTs === 'number' && Number.isFinite(q.quoteTs)
+          ? q.quoteTs
+          : (typeof q.timestamp === 'number' && Number.isFinite(q.timestamp) ? q.timestamp : null);
         baseMap[q.id.toLowerCase()] = {
           ...baseMap[q.id.toLowerCase()],
           ...q,
-          chartData: (q.spark1d || []).map((pt, i) => ({
-            time: `${i}:00`,
+          timestamp: ts,
+          chartData: (q.spark1d || []).map((pt) => ({
+            time: pt[0],
             value: pt[1],
           })),
         };
@@ -178,7 +182,18 @@ export function useMarketData() {
 
   const gainers = useMemo(() => selectGainers(allAssets, 4), [allAssets]);
   const losers = useMemo(() => selectLosers(allAssets, 4), [allAssets]);
-  const hotspots = useMemo(() => detectHotspots(allAssets), [allAssets]);
+  const hotspots = useMemo(() => {
+    const refMs = generatedAt ? Date.parse(generatedAt) : NaN;
+    return detectHotspots(allAssets, Number.isFinite(refMs) ? refMs : Date.now());
+  }, [allAssets, generatedAt]);
+
+  const isStaleFn = useCallback((id) => {
+    if (!isWorkerOnline) return true;
+    const key = typeof id === 'string' ? id.toLowerCase() : '';
+    const q = key ? storeQuotes[key] : null;
+    if (!q) return false;
+    return q.status === 'stale' || q.status === 'unavailable';
+  }, [isWorkerOnline, storeQuotes]);
 
   return {
     data,
@@ -186,7 +201,7 @@ export function useMarketData() {
     gainers,
     losers,
     hotspots,
-    lastUpdate: generatedAt ? new Date(generatedAt).getTime() : Date.now(),
+    lastUpdate: generatedAt ? new Date(generatedAt).getTime() : null,
     generatedAt,
     oldestQuoteTs,
     sourcesHealth,
@@ -194,7 +209,7 @@ export function useMarketData() {
     setIsLive,
     isWorkerOnline,
     workerError,
-    isStale: !isWorkerOnline,
+    isStale: isStaleFn,
     connectionStatus: isWorkerOnline ? (isLive ? 'connected' : 'paused') : 'disconnected',
   };
 }

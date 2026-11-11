@@ -3,7 +3,7 @@ import {
   ResponsiveContainer, LineChart, Line, XAxis, YAxis,
   CartesianGrid, Tooltip, ReferenceLine, Legend
 } from 'recharts'
-import { SECTOR_META, formatPrice } from '../data/markets'
+import { SECTOR_META, formatPrice, formatChange } from '../data/markets'
 
 const COMPARE_COLORS = ['#f0a500','#4d9eff','#22d47a','#a78bfa'];
 
@@ -110,6 +110,9 @@ export default function ComparePage({ data }) {
               <div style={s.assetList}>
                 {filteredAssets.slice(0, 16).map(a => {
                   const meta = SECTOR_META[a.sector];
+                  const chg = a.status === 'unavailable' ? null : (typeof a.change === 'number' && Number.isFinite(a.change) ? a.change : null);
+                  const isFlat = chg !== null && Math.abs(chg) < 0.005;
+                  const chgColor = chg === null || isFlat ? 'var(--text-dim)' : (chg >= 0 ? 'var(--bull)' : 'var(--bear)');
                   return (
                     <div key={a.id} style={s.assetRow}
                       onClick={() => addAsset(a.id)}
@@ -118,8 +121,8 @@ export default function ComparePage({ data }) {
                     >
                       <span style={{ fontFamily:'var(--font-mono)', fontSize:'11px', color: meta?.color || 'var(--text-primary)', fontWeight:500 }}>{a.symbol}</span>
                       <span style={{ fontFamily:'var(--font-body)', fontSize:'10px', color:'var(--text-dim)', flex:1 }}>{a.name}</span>
-                      <span style={{ fontFamily:'var(--font-mono)', fontSize:'10px', color: a.change>=0 ? 'var(--bull)' : 'var(--bear)' }}>
-                        {a.change >= 0 ? '+' : ''}{a.change.toFixed(2)}%
+                      <span style={{ fontFamily:'var(--font-mono)', fontSize:'10px', color: chgColor }}>
+                        {formatChange(chg)}
                       </span>
                     </div>
                   );
@@ -178,9 +181,13 @@ export default function ComparePage({ data }) {
               <div className="fade-up-3" style={s.statGrid}>
                 {selectedAssets.map((a, i) => {
                   const meta = SECTOR_META[a.sector];
-                  const isUp = a.change >= 0;
-                  const firstVal = a.chartData[0]?.value || a.price;
-                  const sessionChg = ((a.price - firstVal) / firstVal * 100).toFixed(2);
+                  const chg = a.status === 'unavailable' ? null : (typeof a.change === 'number' && Number.isFinite(a.change) ? a.change : null);
+                  const isFlat = chg !== null && Math.abs(chg) < 0.005;
+                  const chgColor = chg === null || isFlat ? 'var(--text-dim)' : (chg >= 0 ? 'var(--bull)' : 'var(--bear)');
+                  const firstVal = a.chartData?.[0]?.value;
+                  const sessionNum = (typeof a.price === 'number' && typeof firstVal === 'number' && firstVal > 0)
+                    ? ((a.price - firstVal) / firstVal) * 100
+                    : null;
                   return (
                     <div key={a.id} style={{ ...s.statCard, borderTopColor: COMPARE_COLORS[i] }}>
                       <div style={{ display:'flex', alignItems:'center', gap:'8px', marginBottom:'12px' }}>
@@ -188,16 +195,16 @@ export default function ComparePage({ data }) {
                         <span style={{ fontFamily:'var(--font-display)', fontSize:'14px', fontWeight:700, color:'var(--text-primary)' }}>{a.symbol}</span>
                         <span style={{ fontFamily:'var(--font-mono)', fontSize:'9px', color: meta?.color, background:`${meta?.color}15`, border:`1px solid ${meta?.color}30`, borderRadius:'3px', padding:'0 5px', lineHeight:'15px' }}>{meta?.label}</span>
                       </div>
-                      <div style={{ fontFamily:'var(--font-mono)', fontSize:'22px', color: isUp ? 'var(--bull)' : 'var(--bear)', marginBottom:'4px' }}>
+                      <div style={{ fontFamily:'var(--font-mono)', fontSize:'22px', color: chg === null || isFlat ? 'var(--text-primary)' : chgColor, marginBottom:'4px' }}>
                         {formatPrice(a.price, a.symbol, a.sector)}
                       </div>
                       <div style={{ display:'flex', gap:'16px', flexWrap:'wrap' }}>
                         {[
-                          { l:'24H', v:`${a.change >= 0 ? '+' : ''}${a.change.toFixed(2)}%`, c: isUp ? 'var(--bull)' : 'var(--bear)' },
-                          { l:'SESSION', v:`${parseFloat(sessionChg) >= 0 ? '+' : ''}${sessionChg}%` },
+                          { l:'24H', v: formatChange(chg), c: chgColor },
+                          { l:'SESSION', v: sessionNum !== null ? formatChange(sessionNum) : '—' },
                           { l:'VOLUME', v: a.volume },
                           { l:'MKT CAP', v: a.marketCap },
-                        ].filter(x => x.v && x.v !== '—').map(({ l, v, c }) => (
+                        ].filter(x => x.v && (x.l === '24H' || x.v !== '—')).map(({ l, v, c }) => (
                           <div key={l}>
                             <div style={{ fontFamily:'var(--font-mono)', fontSize:'8px', color:'var(--text-dim)', letterSpacing:'0.08em' }}>{l}</div>
                             <div style={{ fontFamily:'var(--font-mono)', fontSize:'12px', color: c || 'var(--text-secondary)' }}>{v}</div>
@@ -212,9 +219,12 @@ export default function ComparePage({ data }) {
               {/* Divergence insight */}
               {selectedAssets.length === 2 && (() => {
                 const [a, b] = selectedAssets;
-                const diff = Math.abs(a.change - b.change).toFixed(2);
-                const leader = a.change > b.change ? a : b;
-                const lagger = a.change > b.change ? b : a;
+                const ca = typeof a.change === 'number' && Number.isFinite(a.change) ? a.change : null;
+                const cb = typeof b.change === 'number' && Number.isFinite(b.change) ? b.change : null;
+                if (ca === null || cb === null) return null;
+                const diff = Math.abs(ca - cb).toFixed(2);
+                const leader = ca > cb ? a : b;
+                const lagger = ca > cb ? b : a;
                 return (
                   <div className="fade-up-4" style={s.insightCard}>
                     <span style={s.insightEye}>DIVERGENCE INSIGHT</span>

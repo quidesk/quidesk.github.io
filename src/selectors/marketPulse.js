@@ -1,48 +1,23 @@
 import { useMarketStore } from '../store/marketStore';
+import { selectMarketPulse } from './marketSelectors';
 
 /**
  * Pure selector to compute pulse metrics from a quote dictionary.
- * Ensures that pulse metrics are always strictly derived from the exact same
- * snapshot that populates the asset list.
+ * Delegates strictly to selectMarketPulse so null/unavailable quotes and
+ * flat (< 0.005%) moves follow the exact same rules across every widget.
  *
  * @param {Record<string, any>} quotes
  * @param {number|null} lastSync
  */
 export function computePulseFromQuotes(quotes = {}, lastSync = null) {
-  // De-duplicate in case both lowercase id and uppercase symbol are keyed
-  const seenIds = new Set();
-  const values = [];
-
-  Object.values(quotes).forEach(q => {
-    if (!q) return;
-    const key = q.id || q.symbol;
-    if (key && !seenIds.has(key)) {
-      seenIds.add(key);
-      values.push(q);
-    } else if (!key) {
-      values.push(q);
-    }
-  });
-
-  const total = values.length;
-  const advancing = values.filter(q => {
-    const chg = typeof q.changePercent === 'number' ? q.changePercent : q.change;
-    return typeof chg === 'number' && chg > 0;
-  }).length;
-
-  const declining = values.filter(q => {
-    const chg = typeof q.changePercent === 'number' ? q.changePercent : q.change;
-    return typeof chg === 'number' && chg < 0;
-  }).length;
-
-  const advancingPct = total ? Math.round((advancing / total) * 100) : 0;
-
+  const pulse = selectMarketPulse(quotes);
   return {
-    advancingPct,
-    risingCount: advancing,
-    fallingCount: declining,
+    advancingPct: pulse.advancePercent,
+    risingCount: pulse.advancingCount,
+    fallingCount: pulse.decliningCount,
+    flatCount: pulse.flatCount,
     lastSync,
-    totalAssets: total,
+    totalAssets: pulse.totalCount,
   };
 }
 

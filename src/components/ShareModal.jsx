@@ -4,6 +4,7 @@ import { X, Download, Copy } from 'lucide-react'
 import MiniChart from './MiniChart'
 import Logo from './Logo'
 import SocialShareBar from './SocialShareBar'
+import { formatPrice, formatChange } from '../data/markets'
 
 export default function ShareModal({ isOpen, onClose, data, formatLocalPrice }) {
   const [imgUrl, setImgUrl] = useState(null)
@@ -125,35 +126,44 @@ export default function ShareModal({ isOpen, onClose, data, formatLocalPrice }) 
               </div>
             </div>
             
-            {renderData.type === 'asset' && renderData.asset && (
-              <div style={s.assetContent}>
-                <div style={s.assetTop}>
-                  <div>
-                    <div style={s.assetSymbol}>{renderData.asset.symbol}</div>
-                    <div style={s.assetName}>{renderData.asset.name}</div>
+            {renderData.type === 'asset' && renderData.asset && (() => {
+              const a = renderData.asset;
+              const chg = a.status === 'unavailable' ? null : (typeof a.change === 'number' && Number.isFinite(a.change) ? a.change : null);
+              const isFlat = chg !== null && Math.abs(chg) < 0.005;
+              const chgColor = chg === null || isFlat ? '#94a3b8' : (chg >= 0 ? '#10b981' : '#ef4444');
+              return (
+                <div style={s.assetContent}>
+                  <div style={s.assetTop}>
+                    <div>
+                      <div style={s.assetSymbol}>{a.symbol}</div>
+                      <div style={s.assetName}>{a.name}</div>
+                    </div>
+                    <div style={{ textAlign: 'right' }}>
+                      <div style={s.assetPrice}>
+                        {formatPrice(a.price, a.symbol, a.sector)}
+                        {typeof a.price === 'number' && formatLocalPrice && formatLocalPrice(a.price) && (
+                          <span style={{ fontSize: '16px', color: 'rgba(255,255,255,0.7)', marginLeft: '6px', fontWeight: 500 }}>
+                            ({formatLocalPrice(a.price)})
+                          </span>
+                        )}
+                      </div>
+                      <div style={{...s.assetChange, color: chgColor}}>
+                        {formatChange(chg)}
+                      </div>
+                    </div>
                   </div>
-                  <div style={{ textAlign: 'right' }}>
-                    <div style={s.assetPrice}>
-                      {renderData.asset.pricePrefix || '$'}{renderData.asset.price.toLocaleString(undefined, {minimumFractionDigits:2})}
-                      {formatLocalPrice && formatLocalPrice(renderData.asset.price) && (
-                        <span style={{ fontSize: '16px', color: 'rgba(255,255,255,0.7)', marginLeft: '6px', fontWeight: 500 }}>
-                          ({formatLocalPrice(renderData.asset.price)})
-                        </span>
-                      )}
-                    </div>
-                    <div style={{...s.assetChange, color: renderData.asset.change >= 0 ? '#10b981' : '#ef4444'}}>
-                      {renderData.asset.change >= 0 ? '+' : ''}{renderData.asset.change.toFixed(2)}%
-                    </div>
+                  <div style={s.assetChart}>
+                    <MiniChart 
+                      data={a.spark1d || a.chartData || []}
+                      prevClose={a.prevClose}
+                      currentPrice={a.price}
+                      change={chg}
+                      color={chgColor}
+                    />
                   </div>
                 </div>
-                <div style={s.assetChart}>
-                  <MiniChart 
-                    data={renderData.asset.chartData || []} 
-                    color={renderData.asset.change >= 0 ? '#10b981' : '#ef4444'} 
-                  />
-                </div>
-              </div>
-            )}
+              );
+            })()}
 
             {renderData.type === 'news' && renderData.news && (
               <div style={s.newsContent}>
@@ -179,6 +189,9 @@ export default function ShareModal({ isOpen, onClose, data, formatLocalPrice }) 
                     if(a.symbol === 'USD/INR') cName = 'USD vs INR';
                     if(a.symbol === 'QQQ') cName = 'NASDAQ';
                     if(a.symbol === 'BTC') cName = 'Bitcoin';
+                    const chg = a.status === 'unavailable' ? null : (typeof a.change === 'number' && Number.isFinite(a.change) ? a.change : null);
+                    const isFlat = chg !== null && Math.abs(chg) < 0.005;
+                    const chgColor = chg === null || isFlat ? '#94a3b8' : (chg >= 0 ? '#34d399' : '#f87171');
                     
                     return (
                       <div className="col" key={a.id}>
@@ -188,15 +201,15 @@ export default function ShareModal({ isOpen, onClose, data, formatLocalPrice }) 
                           </div>
                           <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: '1px', flexShrink: 0, marginLeft: '8px' }}>
                             <span style={{ color: '#fff', fontSize: '13px', fontWeight: 700 }}>
-                              ${a.price.toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2})}
+                              {formatPrice(a.price, a.symbol, a.sector)}
                             </span>
-                            {formatLocalPrice && formatLocalPrice(a.price) && (
+                            {typeof a.price === 'number' && formatLocalPrice && formatLocalPrice(a.price) && (
                               <span style={{ color: 'rgba(255,255,255,0.7)', fontSize: '10px', fontWeight: 500 }}>
                                 ({formatLocalPrice(a.price)})
                               </span>
                             )}
-                            <span style={{ color: a.change >= 0 ? '#34d399' : '#f87171', fontSize: '10px', fontWeight: 800 }}>
-                              {a.change >= 0 ? '+' : ''}{a.change.toFixed(2)}%
+                            <span style={{ color: chgColor, fontSize: '10px', fontWeight: 800 }}>
+                              {formatChange(chg)}
                             </span>
                           </div>
                         </div>

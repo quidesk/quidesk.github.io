@@ -43,14 +43,14 @@ export default function HotspotPanel({ hotspots = [], allAssets = [], onSelect }
                 <span style={{ ...s.typeBadge, color: typeInfo.color, borderColor: typeInfo.color + '40' }}>
                   {typeInfo.label}
                 </span>
-                {h.timestamp && (
+                {(h.quoteTs || h.timestamp) && (
                   <span style={{ fontFamily: 'var(--font-mono)', fontSize: '9px', color: 'var(--text-dim)', marginLeft: 'auto' }}>
-                    {new Date(h.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' })}
+                    {new Date(h.quoteTs || h.timestamp).toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', second: '2-digit', timeZoneName: 'short' })}
                   </span>
                 )}
               </div>
               <div style={s.itemDesc}>
-                {h.desc || `${h.symbol} ${h.change >= 0 ? '+' : ''}${typeof h.change === 'number' ? h.change.toFixed(2) : h.change}% 24H move`}
+                {h.desc || `${h.symbol} ${typeof h.change === 'number' ? `${h.change >= 0 ? '+' : ''}${h.change.toFixed(2)}%` : '—'} 24H move`}
               </div>
             </div>
             {asset && (

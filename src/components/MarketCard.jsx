@@ -21,9 +21,10 @@ export default function MarketCard({ asset: propAsset, onClick, isWatched, onTog
     chartData: propAsset?.chartData || storeQuote?.chartData,
   };
 
-  const hasPrice = typeof asset.price === 'number' && Number.isFinite(asset.price);
-  const changeVal = hasPrice && typeof (asset.changePercent ?? asset.change) === 'number'
-    ? (asset.changePercent ?? asset.change)
+  const hasPrice = asset.status !== 'unavailable' && typeof asset.price === 'number' && Number.isFinite(asset.price);
+  const rawChange = asset.changePercent ?? asset.change;
+  const changeVal = asset.status !== 'unavailable' && typeof rawChange === 'number' && Number.isFinite(rawChange)
+    ? rawChange
     : null;
   const isFlat = changeVal !== null && Math.abs(changeVal) < 0.005;
   const isPositive = changeVal !== null && changeVal >= 0;
@@ -91,7 +92,8 @@ export default function MarketCard({ asset: propAsset, onClick, isWatched, onTog
             <span style={styles.symbol}>{asset.symbol}</span>
             <FreshnessBadge
               level={freshness}
-              timestamp={asset.timestamp}
+              status={asset.status}
+              timestamp={asset.quoteTs ?? asset.timestamp}
               source={asset.source}
               compact
             />
@@ -118,7 +120,10 @@ export default function MarketCard({ asset: propAsset, onClick, isWatched, onTog
             background: changeVal === null || isFlat ? 'rgba(139, 148, 158, 0.12)' : (isPositive ? 'var(--neon-green-dim)' : 'var(--neon-pink-dim)'),
             borderColor: changeVal === null || isFlat ? 'rgba(139, 148, 158, 0.25)' : (isPositive ? 'var(--bull)' : 'var(--bear)'),
           }}>
-            {changeVal === null ? '—' : isFlat ? '0.00%' : `${isPositive ? '▲' : '▼'} ${formatChange(changeVal)}`}
+            {changeVal !== null && !isFlat && (
+              <span aria-hidden="true" style={{ marginRight: '3px' }}>{isPositive ? '▲' : '▼'}</span>
+            )}
+            <span>{changeVal === null ? '—' : formatChange(changeVal)}</span>
           </div>
         </div>
       </div>

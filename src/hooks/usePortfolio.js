@@ -35,18 +35,23 @@ export function usePortfolio(liveAssets) {
 
   const enriched = useMemo(() => holdings.map(h => {
     const live = liveAssets?.find(a => a.id === h.id)
-    const currentPrice = live?.price ?? h.avgCost
-    const currentValue = currentPrice * h.qty
+    const hasLivePrice = live && live.status !== 'unavailable' && typeof live.price === 'number' && Number.isFinite(live.price)
+    const currentPrice = hasLivePrice ? live.price : null
+    const currentValue = hasLivePrice ? currentPrice * h.qty : null
     const costBasis = h.avgCost * h.qty
-    const pnl = currentValue - costBasis
-    const pnlPct = ((currentValue - costBasis) / costBasis) * 100
-    return { ...h, currentPrice, currentValue, costBasis, pnl, pnlPct, change24h: live?.change ?? 0 }
+    const pnl = currentValue !== null ? currentValue - costBasis : null
+    const pnlPct = pnl !== null && costBasis > 0 ? (pnl / costBasis) * 100 : null
+    const rawChange = live && live.status !== 'unavailable' ? (live.changePercent ?? live.change) : null
+    const change24h = typeof rawChange === 'number' && Number.isFinite(rawChange) ? rawChange : null
+    return { ...h, currentPrice, currentValue, costBasis, pnl, pnlPct, change24h }
   }), [holdings, liveAssets])
 
-  const totalValue  = enriched.reduce((s,h) => s + h.currentValue, 0)
+  const hasAllValues = enriched.length > 0 && enriched.some(h => h.currentValue !== null)
+  const totalValue  = hasAllValues ? enriched.reduce((s,h) => s + (h.currentValue ?? 0), 0) : null
   const totalCost   = enriched.reduce((s,h) => s + h.costBasis, 0)
-  const totalPnl    = totalValue - totalCost
-  const totalPnlPct = totalCost > 0 ? (totalPnl / totalCost) * 100 : 0
+  const valuedCost  = enriched.reduce((s,h) => s + (h.currentValue !== null ? h.costBasis : 0), 0)
+  const totalPnl    = totalValue !== null ? totalValue - valuedCost : null
+  const totalPnlPct = totalPnl !== null && valuedCost > 0 ? (totalPnl / valuedCost) * 100 : null
 
   const addHolding = (h) => setHoldings(prev => {
     const ei = prev.findIndex(x => x.id === h.id)

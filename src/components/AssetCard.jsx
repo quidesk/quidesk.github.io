@@ -61,18 +61,20 @@ export default function AssetCard({
     );
   }
 
-  const hasPrice = typeof asset.price === 'number' && Number.isFinite(asset.price);
-  const changeVal = hasPrice && typeof (asset.changePercent ?? asset.change) === 'number'
-    ? (asset.changePercent ?? asset.change)
+  const hasPrice = asset.status !== 'unavailable' && typeof asset.price === 'number' && Number.isFinite(asset.price);
+  const rawChange = asset.changePercent ?? asset.change;
+  const changeVal = asset.status !== 'unavailable' && typeof rawChange === 'number' && Number.isFinite(rawChange)
+    ? rawChange
     : null;
   const isFlat = changeVal !== null && Math.abs(changeVal) < 0.005;
   const isUp = changeVal !== null && changeVal >= 0;
   const meta = SECTOR_META[asset.sector] || {};
-  
-  // Session status and staleness evaluation
+
+  // Session status and staleness evaluation (derived strictly from Worker status / quoteTs)
   const isClosed = asset.status === 'closed' || asset.tradingPeriod === 'closed';
   const freshness = isClosed ? 'closed' : getFreshnessLevel(asset);
-  const isStale = !isClosed && ((propIsStale && propIsStale(asset.id, asset.sector)) || (freshness === 'stale' || freshness === 'very_stale'));
+  const staleFromProp = typeof propIsStale === 'function' ? propIsStale(asset.id, asset.sector) : Boolean(propIsStale);
+  const isStale = !isClosed && (staleFromProp || freshness === 'stale' || freshness === 'very_stale');
 
   const isForex = (asset.sector || '').toLowerCase() === 'forex' || (
     asset.symbol && asset.symbol.includes('/') &&
@@ -154,10 +156,11 @@ export default function AssetCard({
                   {meta.label}
                 </span>
               )}
-              {/* Freshness Badge (Stale > 15s or Fallback) */}
+              {/* Authoritative Worker Status & Quote Age Badge */}
               <FreshnessBadge
                 level={freshness}
-                timestamp={asset.timestamp}
+                status={asset.status}
+                timestamp={asset.quoteTs ?? asset.timestamp}
                 source={asset.source}
                 compact={compact}
               />
@@ -181,7 +184,10 @@ export default function AssetCard({
                   : {}
               }
             >
-              {changeVal === null ? '—' : isFlat ? '0.00%' : `${isUp ? '▲' : '▼'} ${formatChange(changeVal)}`}
+              {changeVal !== null && !isFlat && (
+                <span aria-hidden="true" style={{ marginRight: '3px' }}>{isUp ? '▲' : '▼'}</span>
+              )}
+              <span>{changeVal === null ? '—' : formatChange(changeVal)}</span>
             </span>
             <button
               style={{

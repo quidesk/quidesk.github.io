@@ -1,23 +1,29 @@
 import React, { useState } from 'react'
 import AssetCard from '../components/AssetCard'
 import DetailChart from '../components/DetailChart'
-import { formatPrice, SECTOR_META } from '../data/markets'
+import { formatPrice, formatChange, SECTOR_META } from '../data/markets'
+import { selectSectorStats } from '../selectors/marketSelectors'
 
 export default function SectorPage({ sector, assets, watchlistProps, convertPrice, formatLocalPrice, isStale }) {
   const [selected, setSelected] = useState(null);
   const [sort, setSort] = useState('default');
   const meta = SECTOR_META[sector] || { label: sector.toUpperCase(), color: 'var(--accent)', icon: '?' };
 
+  const numOrNull = (v) => (typeof v === 'number' && Number.isFinite(v) ? v : null);
+
   const sorted = [...assets].sort((a, b) => {
-    if (sort === 'price-desc') return b.price - a.price;
-    if (sort === 'price-asc')  return a.price - b.price;
-    if (sort === 'gain')       return b.change - a.change;
-    if (sort === 'loss')       return a.change - b.change;
+    if (sort === 'price-desc') return (numOrNull(b.price) ?? -Infinity) - (numOrNull(a.price) ?? -Infinity);
+    if (sort === 'price-asc')  return (numOrNull(a.price) ?? Infinity) - (numOrNull(b.price) ?? Infinity);
+    if (sort === 'gain')       return (numOrNull(b.change) ?? -Infinity) - (numOrNull(a.change) ?? -Infinity);
+    if (sort === 'loss')       return (numOrNull(a.change) ?? Infinity) - (numOrNull(b.change) ?? Infinity);
     return 0;
   });
 
-  const advancing = assets.filter(a => a.change > 0).length;
-  const avgChg = assets.length ? (assets.reduce((s,a) => s+a.change, 0) / assets.length).toFixed(2) : '0.00';
+  const stats = selectSectorStats(assets);
+  const avgIsFlat = stats.avgChange !== null && Math.abs(stats.avgChange) < 0.005;
+  const avgColor = stats.avgChange === null || avgIsFlat
+    ? 'var(--text-dim)'
+    : stats.avgChange >= 0 ? 'var(--bull)' : 'var(--bear)';
 
   return (
     <div style={s.page} className='page-wrap'>
@@ -26,14 +32,23 @@ export default function SectorPage({ sector, assets, watchlistProps, convertPric
         <div style={{ display:'flex', alignItems:'center', gap:'10px' }}>
           <span style={{ fontSize:'22px', color: meta.color }}>{meta.icon}</span>
           <h1 style={{ ...s.title, color: meta.color }}>{meta.label}</h1>
+          {stats.isClosed && (
+            <span style={{ fontFamily: 'var(--font-mono)', fontSize: '10px', color: 'var(--text-dim)' }}>
+              last session
+            </span>
+          )}
         </div>
         <div style={s.statsBar} className="stats-bar">
           {[
-            { l:'INSTRUMENTS',  v: assets.length },
-            { l:'ADVANCING',    v: advancing, c:'var(--bull)' },
-            { l:'DECLINING',    v: assets.length - advancing, c:'var(--bear)' },
-            { l:'AVG CHANGE',   v: `${parseFloat(avgChg)>=0?'+':''}${avgChg}%`, c: parseFloat(avgChg)>=0 ? 'var(--bull)' : 'var(--bear)' },
-            { l:'TOP GAINER',   v: `${[...assets].sort((a,b)=>b.change-a.change)[0]?.symbol} +${Math.max(...assets.map(a=>a.change)).toFixed(2)}%`, c:'var(--bull)' },
+            { l:'INSTRUMENTS',  v: stats.totalCount },
+            { l:'ADVANCING',    v: stats.advancingCount, c:'var(--bull)' },
+            { l:'DECLINING',    v: stats.decliningCount, c:'var(--bear)' },
+            { l:'AVG CHANGE',   v: formatChange(stats.avgChange), c: avgColor },
+            {
+              l: 'TOP GAINER',
+              v: stats.topGainer ? `${stats.topGainer.symbol} ${formatChange(stats.topGainer.change)}` : '—',
+              c: stats.topGainer ? 'var(--bull)' : 'var(--text-dim)',
+            },
           ].map(({ l, v, c }) => (
             <div key={l} style={s.statItem}>
               <div style={s.statL}>{l}</div>
@@ -96,22 +111,28 @@ export default function SectorPage({ sector, assets, watchlistProps, convertPric
               </tr>
             </thead>
             <tbody>
-              {sorted.map(a => (
-                <tr key={a.id} style={{ cursor:'pointer', transition:'background 0.1s' }}
-                  onClick={() => setSelected(a)}
-                  onMouseEnter={e => e.currentTarget.style.background='var(--bg-card-hover)'}
-                  onMouseLeave={e => e.currentTarget.style.background='transparent'}
-                >
-                  <td style={{ ...s.td, color: meta.color, fontWeight:600 }}>{a.symbol}</td>
-                  <td style={s.td}>{a.name}</td>
-                  <td style={{ ...s.td, fontFamily:'var(--font-mono)' }}>{formatPrice(a.price, a.symbol, a.sector)}</td>
-                  <td style={{ ...s.td, fontFamily:'var(--font-mono)', color: a.change>=0?'var(--bull)':'var(--bear)' }}>
-                    {a.change>=0?'▲':'▼'} {Math.abs(a.change).toFixed(2)}%
-                  </td>
-                  <td style={{ ...s.td, color:'var(--text-secondary)' }}>{a.volume}</td>
-                  <td style={{ ...s.td, color:'var(--text-secondary)' }}>{a.marketCap || '—'}</td>
-                </tr>
-              ))}
+              {sorted.map(a => {
+                const chg = a.status === 'unavailable' ? null : (typeof a.change === 'number' && Number.isFinite(a.change) ? a.change : null);
+                const isFlat = chg !== null && Math.abs(chg) < 0.005;
+                const chgColor = chg === null || isFlat ? 'var(--text-dim)' : (chg >= 0 ? 'var(--bull)' : 'var(--bear)');
+                return (
+                  <tr key={a.id} style={{ cursor:'pointer', transition:'background 0.1s' }}
+                    onClick={() => setSelected(a)}
+                    onMouseEnter={e => e.currentTarget.style.background='var(--bg-card-hover)'}
+                    onMouseLeave={e => e.currentTarget.style.background='transparent'}
+                  >
+                    <td style={{ ...s.td, color: meta.color, fontWeight:600 }}>{a.symbol}</td>
+                    <td style={s.td}>{a.name}</td>
+                    <td style={{ ...s.td, fontFamily:'var(--font-mono)' }}>{formatPrice(a.price, a.symbol, a.sector)}</td>
+                    <td style={{ ...s.td, fontFamily:'var(--font-mono)', color: chgColor }}>
+                      {chg !== null && !isFlat && <span style={{ marginRight: '3px' }}>{chg >= 0 ? '▲' : '▼'}</span>}
+                      {formatChange(chg)}
+                    </td>
+                    <td style={{ ...s.td, color:'var(--text-secondary)' }}>{a.volume}</td>
+                    <td style={{ ...s.td, color:'var(--text-secondary)' }}>{a.marketCap || '—'}</td>
+                  </tr>
+                );
+              })}
             </tbody>
           </table>
         </div>

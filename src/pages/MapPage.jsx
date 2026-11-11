@@ -4,12 +4,17 @@ import HotspotPanel from '../components/HotspotPanel';
 import DetailChart from '../components/DetailChart';
 import AssetCard from '../components/AssetCard';
 import PriceDisplay from '../components/PriceDisplay';
-import { formatPrice, SECTOR_META } from '../data/markets';
+import { formatPrice, formatChange, SECTOR_META } from '../data/markets';
 import { getAssetPrecision } from '../utils/formatters';
 import NewsSignals from '../components/NewsSignals';
 import { computeMarketPulse } from '../utils/marketPulse';
 import { useMarketPulse } from '../selectors/marketPulse';
-import { selectGainers, selectLosers, selectSectorAverages } from '../selectors/marketSelectors';
+import {
+  selectGainers,
+  selectLosers,
+  selectEquitiesIndexVsStocks,
+  selectSectorAverages,
+} from '../selectors/marketSelectors';
 
 function NarrativeStrip({ allAssets, hotspots }) {
   const pulse = computeMarketPulse(allAssets, hotspots);
@@ -46,6 +51,11 @@ export default function MapPage({ data, allAssets, hotspots, watchlistProps, con
   const gainers = React.useMemo(() => selectGainers(allAssets, 4), [allAssets]);
   const losers = React.useMemo(() => selectLosers(allAssets, 4), [allAssets]);
   const sectorAverages = React.useMemo(() => selectSectorAverages(allAssets), [allAssets]);
+  const equitiesSplit = React.useMemo(() => selectEquitiesIndexVsStocks(allAssets), [allAssets]);
+  const moversClosed = React.useMemo(() => {
+    const combined = [...gainers, ...losers];
+    return combined.length > 0 && combined.every((a) => a.status === 'closed' || a.tradingPeriod === 'closed');
+  }, [gainers, losers]);
 
   return (
     <div style={s.page} className="page-wrap">
@@ -67,18 +77,32 @@ export default function MapPage({ data, allAssets, hotspots, watchlistProps, con
             <div style={{ display: 'flex', gap: '10px', flexWrap: 'wrap', alignItems: 'center' }}>
               {Object.entries(SECTOR_META).map(([k, m]) => {
                 const sData = sectorAverages[k];
-                const avgNum = sData ? sData.avgChange : 0;
-                const isFlat = Math.abs(avgNum) < 0.005;
-                const isUp = avgNum >= 0;
-                const displayAvg = isFlat ? '0.00%' : `${isUp ? '+' : ''}${avgNum.toFixed(2)}%`;
-                const pillColor = isFlat ? 'var(--text-dim)' : (isUp ? 'var(--bull)' : 'var(--bear)');
+                const hasData = sData && sData.count > 0 && typeof sData.avgChange === 'number';
+                const avgNum = hasData ? sData.avgChange : null;
+                const isFlat = avgNum !== null && Math.abs(avgNum) < 0.005;
+                const isUp = avgNum !== null && avgNum >= 0;
+                const displayAvg = avgNum === null ? '—' : formatChange(avgNum);
+                const pillColor = avgNum === null || isFlat ? 'var(--text-dim)' : (isUp ? 'var(--bull)' : 'var(--bear)');
+                const tooltipText = k === 'equities'
+                  ? `Equities median (${displayAvg}) — Indices (SPY, QQQ, DIA): ${equitiesSplit.indicesAvg !== null ? formatChange(equitiesSplit.indicesAvg) : '—'} · Stocks: ${equitiesSplit.stocksAvg !== null ? formatChange(equitiesSplit.stocksAvg) : '—'}${sData?.isClosed ? ' · last session (closed)' : ''}`
+                  : `${m.label} ${sData?.method || 'mean'} across ${sData?.count || 0} active quotes${sData?.isClosed ? ' · last session (closed)' : ''}`;
                 return (
-                  <div key={k} style={s.sectorPill}>
+                  <div key={k} style={s.sectorPill} title={tooltipText}>
                     <span style={{ color: m.color, fontSize: '12px', display: 'inline-flex', alignItems: 'center' }}>{m.icon}</span>
                     <span style={{ fontFamily: 'var(--font-mono)', fontSize: '11px', color: 'var(--text-secondary)', marginLeft: '4px', marginRight: '6px' }}>{m.label}</span>
                     <span style={{ fontFamily: 'var(--font-mono)', fontSize: '11px', fontWeight: 600, color: pillColor }}>
                       {displayAvg}
                     </span>
+                    {k === 'equities' && equitiesSplit.indicesAvg !== null && equitiesSplit.stocksAvg !== null && (
+                      <span style={{ fontFamily: 'var(--font-mono)', fontSize: '9px', color: 'var(--text-dim)', marginLeft: '5px' }}>
+                        (Idx {formatChange(equitiesSplit.indicesAvg)} / Stk {formatChange(equitiesSplit.stocksAvg)})
+                      </span>
+                    )}
+                    {sData?.isClosed && (
+                      <span style={{ fontFamily: 'var(--font-mono)', fontSize: '8.5px', color: 'var(--text-dim)', marginLeft: '5px' }}>
+                        last session
+                      </span>
+                    )}
                   </div>
                 );
               })}
@@ -103,39 +127,49 @@ export default function MapPage({ data, allAssets, hotspots, watchlistProps, con
           <div className="fade-up-2" style={s.sideCard}>
             <div style={s.sideHeader}>
               <span style={s.sideTitle}>Top Movers</span>
-              <span style={{ fontFamily:'var(--font-mono)', fontSize:'10px', color:'var(--text-dim)' }}>24H</span>
+              <span style={{ fontFamily:'var(--font-mono)', fontSize:'10px', color:'var(--text-dim)' }}>
+                {moversClosed ? 'last session' : '24H'}
+              </span>
             </div>
             <div style={s.moversSection}>
-              {gainers.map(a => (
-                <div key={a.id} style={s.moverRow} onClick={() => setSelectedAsset(a)}>
-                  <span style={s.moverSym}>{a.symbol}</span>
-                  <span style={s.moverPrice}>
-                    <PriceDisplay
-                      value={a.price}
-                      prefix={a.sector === 'forex' ? (a.symbol?.endsWith('INR') ? '₹' : '') : '$'}
-                      precision={getAssetPrecision(a.symbol, a.sector, a.price)}
-                    />
-                  </span>
-                  <span style={{ ...s.moverChg, color:'var(--bull)' }}>
-                    +{a.change.toFixed(2)}%
-                  </span>
+              {gainers.length === 0 && losers.length === 0 ? (
+                <div style={{ fontFamily: 'var(--font-mono)', fontSize: '11px', color: 'var(--text-dim)', padding: '12px 6px' }}>
+                  No non-flat movers available
                 </div>
-              ))}
-              {losers.map(a => (
-                <div key={a.id} style={s.moverRow} onClick={() => setSelectedAsset(a)}>
-                  <span style={s.moverSym}>{a.symbol}</span>
-                  <span style={s.moverPrice}>
-                    <PriceDisplay
-                      value={a.price}
-                      prefix={a.sector === 'forex' ? (a.symbol?.endsWith('INR') ? '₹' : '') : '$'}
-                      precision={getAssetPrecision(a.symbol, a.sector, a.price)}
-                    />
-                  </span>
-                  <span style={{ ...s.moverChg, color:'var(--bear)' }}>
-                    {a.change.toFixed(2)}%
-                  </span>
-                </div>
-              ))}
+              ) : (
+                <>
+                  {gainers.map(a => (
+                    <div key={a.id} style={s.moverRow} onClick={() => setSelectedAsset(a)}>
+                      <span style={s.moverSym}>{a.symbol}</span>
+                      <span style={s.moverPrice}>
+                        <PriceDisplay
+                          value={a.price}
+                          prefix={a.sector === 'forex' ? (a.symbol?.endsWith('INR') ? '₹' : '') : '$'}
+                          precision={getAssetPrecision(a.symbol, a.sector, a.price)}
+                        />
+                      </span>
+                      <span style={{ ...s.moverChg, color:'var(--bull)' }}>
+                        {formatChange(a.change)}
+                      </span>
+                    </div>
+                  ))}
+                  {losers.map(a => (
+                    <div key={a.id} style={s.moverRow} onClick={() => setSelectedAsset(a)}>
+                      <span style={s.moverSym}>{a.symbol}</span>
+                      <span style={s.moverPrice}>
+                        <PriceDisplay
+                          value={a.price}
+                          prefix={a.sector === 'forex' ? (a.symbol?.endsWith('INR') ? '₹' : '') : '$'}
+                          precision={getAssetPrecision(a.symbol, a.sector, a.price)}
+                        />
+                      </span>
+                      <span style={{ ...s.moverChg, color:'var(--bear)' }}>
+                        {formatChange(a.change)}
+                      </span>
+                    </div>
+                  ))}
+                </>
+              )}
             </div>
           </div>
 

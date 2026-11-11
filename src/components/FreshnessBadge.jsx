@@ -12,11 +12,15 @@ import { formatQuoteAge } from '../lib/freshness';
  * - "LIVE" / "WS" badge when stream is active.
  */
 export function FreshnessBadge({ level, status, timestamp, source, compact = false }) {
+  const ageText = typeof timestamp === 'number' && Number.isFinite(timestamp)
+    ? formatQuoteAge(timestamp)
+    : null;
+
   if (level === 'closed' || status === 'closed') {
     return (
       <span
         className="freshness-badge badge-closed"
-        title="Market closed — Official session close price"
+        title={`CLOSED — last close${ageText ? ` (${ageText})` : ''}`}
         style={{
           fontFamily: 'var(--font-mono, monospace)',
           fontSize: '8px',
@@ -34,7 +38,44 @@ export function FreshnessBadge({ level, status, timestamp, source, compact = fal
         }}
       >
         <span style={{ width: '4px', height: '4px', borderRadius: '50%', background: 'var(--text-dim, #8b949e)' }} />
-        Close
+        {compact ? 'CLOSED' : 'CLOSED · last close'}
+        {!compact && ageText && (
+          <span style={{ opacity: 0.75, fontSize: '7.5px' }}>
+            ({ageText})
+          </span>
+        )}
+      </span>
+    );
+  }
+
+  if (level === 'delayed' || status === 'delayed') {
+    return (
+      <span
+        className="freshness-badge badge-delayed"
+        title={`ECB daily reference rate${ageText ? ` (${ageText})` : ''}`}
+        style={{
+          fontFamily: 'var(--font-mono, monospace)',
+          fontSize: '8px',
+          fontWeight: 600,
+          color: 'var(--amber, #f59e0b)',
+          background: 'rgba(245, 158, 11, 0.12)',
+          border: '1px solid rgba(245, 158, 11, 0.3)',
+          borderRadius: '3px',
+          padding: '0 5px',
+          lineHeight: '14px',
+          letterSpacing: '0.04em',
+          display: 'inline-flex',
+          alignItems: 'center',
+          gap: '4px',
+        }}
+      >
+        <span style={{ width: '4px', height: '4px', borderRadius: '50%', background: 'var(--amber, #f59e0b)' }} />
+        ECB daily
+        {!compact && ageText && (
+          <span style={{ opacity: 0.8, fontSize: '7.5px' }}>
+            ({ageText})
+          </span>
+        )}
       </span>
     );
   }
@@ -66,7 +107,7 @@ export function FreshnessBadge({ level, status, timestamp, source, compact = fal
   if (!level || level === 'fresh') {
     return (
       <span
-        title={`Live feed: ${source || 'direct'} (${formatQuoteAge(timestamp)})`}
+        title={`Live feed: ${source || 'direct'}${ageText ? ` (${ageText})` : ''}`}
         style={{
           fontFamily: 'var(--font-mono, monospace)',
           fontSize: '8px',
@@ -83,11 +124,16 @@ export function FreshnessBadge({ level, status, timestamp, source, compact = fal
       >
         <span style={{ width: '4px', height: '4px', borderRadius: '50%', background: 'var(--bull, #22d47a)' }} />
         {source === 'websocket' ? 'WS' : 'LIVE'}
+        {!compact && ageText && (
+          <span style={{ opacity: 0.75, fontSize: '7.5px' }}>
+            ({ageText})
+          </span>
+        )}
       </span>
     );
   }
 
-  const isFallback = source === 'fallback' || level === 'very_stale';
+  const isFallback = source === 'fallback';
   const label = isFallback ? 'FALLBACK' : 'STALE';
   const color = isFallback ? 'var(--neon-pink, #ff2d6b)' : 'var(--amber, #f59e0b)';
   const bg = isFallback ? 'rgba(255, 45, 107, 0.12)' : 'rgba(245, 158, 11, 0.12)';
@@ -96,7 +142,7 @@ export function FreshnessBadge({ level, status, timestamp, source, compact = fal
   return (
     <span
       className={`freshness-badge badge-${level}`}
-      title={`Age: ${formatQuoteAge(timestamp)} | Source: ${source || 'unknown'}`}
+      title={`Warning — Age: ${ageText || 'unknown'} | Source: ${source || 'unknown'}`}
       style={{
         fontFamily: 'var(--font-mono, monospace)',
         fontSize: '8px',
@@ -115,9 +161,9 @@ export function FreshnessBadge({ level, status, timestamp, source, compact = fal
     >
       <span style={{ width: '4px', height: '4px', borderRadius: '50%', background: color }} />
       {label}
-      {!compact && timestamp && (
+      {!compact && ageText && (
         <span style={{ opacity: 0.75, fontSize: '7.5px' }}>
-          ({formatQuoteAge(timestamp)})
+          ({ageText})
         </span>
       )}
     </span>

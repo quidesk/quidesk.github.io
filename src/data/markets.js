@@ -54,9 +54,9 @@ export const STATIC_ASSETS_METADATA = {
   ada:  { id: 'ada',  symbol: 'ADA',      name: 'Cardano',           sector: 'crypto',   unit: 'USD', decimals: 4 },
 
   // Metals
-  gold:     { id: 'gold',     symbol: 'XAU/USD', name: 'Gold (COMEX Continuous)',     sector: 'metals', unit: 'oz', decimals: 2 },
-  silver:   { id: 'silver',   symbol: 'XAG/USD', name: 'Silver (COMEX Continuous)',   sector: 'metals', unit: 'oz', decimals: 2 },
-  platinum: { id: 'platinum', symbol: 'XPT/USD', name: 'Platinum (NYMEX Continuous)', sector: 'metals', unit: 'oz', decimals: 2 },
+  gold:     { id: 'gold',     symbol: 'XAU/USD', name: 'Gold (fut.)',     sector: 'metals', unit: 'oz', decimals: 2 },
+  silver:   { id: 'silver',   symbol: 'XAG/USD', name: 'Silver (fut.)',   sector: 'metals', unit: 'oz', decimals: 2 },
+  platinum: { id: 'platinum', symbol: 'XPT/USD', name: 'Platinum (fut.)', sector: 'metals', unit: 'oz', decimals: 2 },
 
   // Energy
   wti:   { id: 'wti',   symbol: 'WTI',   name: 'WTI Crude Oil', sector: 'energy', unit: 'bbl',   decimals: 2 },
@@ -155,25 +155,62 @@ export const CORRELATIONS = [
   { a: 'wti', b: 'usdcad', r: -0.65, label: 'illustrative' },
 ];
 
+function getNYDateKey(tsMs) {
+  try {
+    return new Intl.DateTimeFormat('en-CA', {
+      timeZone: 'America/New_York',
+      year: 'numeric',
+      month: '2-digit',
+      day: '2-digit',
+    }).format(new Date(tsMs));
+  } catch {
+    return null;
+  }
+}
+
 /**
  * Detects intraday hotspots directly from verified quote changes.
- * Expired on session rollover. Flat assets are excluded.
+ * Uses the quote's own timestamp and expires on session rollover or closed/stale status.
+ * Flat and rebounded assets (< 2.0%) are excluded.
  */
-export function detectHotspots(assets = []) {
+export function detectHotspots(assets = [], referenceNow = null) {
+  const hasRefClock = typeof referenceNow === 'number' && Number.isFinite(referenceNow);
+  const nowDateNY = hasRefClock ? getNYDateKey(referenceNow) : null;
   return assets
-    .filter(a => typeof a.change === 'number' && Number.isFinite(a.change) && Math.abs(a.change) >= 2.0 && a.status !== 'closed')
+    .filter(a => {
+      if (!a) return false;
+      if (a.status === 'closed' || a.status === 'unavailable' || a.status === 'stale' || a.status === 'delayed' || a.tradingPeriod === 'closed') {
+        return false;
+      }
+      const chg = typeof a.changePercent === 'number' ? a.changePercent : a.change;
+      if (typeof chg !== 'number' || !Number.isFinite(chg) || Math.abs(chg) < 2.0) {
+        return false;
+      }
+      if (hasRefClock) {
+        const ts = typeof a.quoteTs === 'number' && Number.isFinite(a.quoteTs)
+          ? a.quoteTs
+          : (typeof a.timestamp === 'number' && Number.isFinite(a.timestamp) ? a.timestamp : null);
+        if (ts === null) return false;
+        if (referenceNow - ts > 16 * 60 * 60 * 1000) return false;
+        if (a.sector === 'equities' && nowDateNY && getNYDateKey(ts) !== nowDateNY) {
+          return false;
+        }
+      }
+      return true;
+    })
     .map(a => {
-      const ts = a.quoteTs || a.timestamp;
+      const ts = typeof a.quoteTs === 'number' && Number.isFinite(a.quoteTs) ? a.quoteTs : a.timestamp;
+      const chg = typeof a.changePercent === 'number' ? a.changePercent : a.change;
       return {
         assetId: a.id,
         symbol: a.symbol,
         sector: a.sector,
-        change: a.change,
+        change: chg,
         quoteTs: ts,
         timestamp: ts,
-        type: a.change > 0 ? 'breakout' : 'breakdown',
-        signal: a.change > 0 ? 'bullish_breakout' : 'bearish_reversal',
-        severity: Math.abs(a.change) >= 5 ? 'high' : 'medium',
+        type: chg > 0 ? 'breakout' : 'breakdown',
+        signal: chg > 0 ? 'bullish_breakout' : 'bearish_reversal',
+        severity: Math.abs(chg) >= 5 ? 'high' : 'medium',
       };
     });
 }

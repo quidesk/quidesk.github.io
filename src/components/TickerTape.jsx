@@ -1,5 +1,6 @@
 import React, { useMemo } from 'react';
 import { formatUsdPrice, formatForexSecondaryValue } from '../utils/formatters';
+import { formatChange } from '../data/markets';
 
 export default function TickerTape({ allAssets = [], formatLocalPrice, isStale }) {
   const ratesMap = useMemo(() => {
@@ -14,10 +15,13 @@ export default function TickerTape({ allAssets = [], formatLocalPrice, isStale }
   }, [allAssets]);
 
   const renderItem = (a, key) => {
-    const changeVal = typeof a.change === 'number' && Number.isFinite(a.change) ? a.change : null;
+    const rawChange = a.changePercent ?? a.change;
+    const changeVal = a.status !== 'unavailable' && typeof rawChange === 'number' && Number.isFinite(rawChange) ? rawChange : null;
     const isFlat = changeVal !== null && Math.abs(changeVal) < 0.005;
     const up = changeVal !== null && changeVal >= 0;
-    const stale = isStale && isStale(a.id, a.sector);
+    const stale = (typeof isStale === 'function' ? isStale(a.id, a.sector) : Boolean(isStale))
+      || a.status === 'stale'
+      || a.status === 'unavailable';
     const isFx = (a.sector || '').toLowerCase() === 'forex';
     const isFxInr = isFx && (a.symbol?.endsWith('INR') || a.symbol?.endsWith('/INR'));
     const rawSecondary = isFx
@@ -32,7 +36,7 @@ export default function TickerTape({ allAssets = [], formatLocalPrice, isStale }
       : formatUsdPrice(a.symbol, a.price, a.sector);
 
     return (
-      <span key={key} style={{ ...s.item, opacity: stale ? 0.4 : 1 }}>
+      <span key={key} style={{ ...s.item, opacity: stale ? 0.45 : 1 }}>
         <span style={s.sym}>{a.symbol}</span>
         <span style={s.price}>
           {priceDisplay}
@@ -42,8 +46,11 @@ export default function TickerTape({ allAssets = [], formatLocalPrice, isStale }
             </span>
           )}
         </span>
-        <span style={{ ...s.chg, color: changeVal === null || isFlat ? 'var(--text-dim)' : (up ? 'var(--bull)' : 'var(--bear)') }}>
-          {changeVal === null ? '—' : (isFlat ? '0.00%' : `${up ? '▲' : '▼'}${Math.abs(changeVal).toFixed(2)}%`)}
+        <span style={{ ...s.chg, marginLeft: '4px', color: changeVal === null || isFlat ? 'var(--text-dim)' : (up ? 'var(--bull)' : 'var(--bear)') }}>
+          {changeVal !== null && !isFlat && (
+            <span aria-hidden="true" style={{ marginRight: '3px' }}>{up ? '▲' : '▼'}</span>
+          )}
+          <span>{formatChange(changeVal)}</span>
         </span>
         <span style={s.sep} />
       </span>

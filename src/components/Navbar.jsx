@@ -3,6 +3,7 @@ import { Sun, Moon, RefreshCw, Share2 } from 'lucide-react'
 import Logo from './Logo'
 import SearchBar from './SearchBar'
 import ShareModal from './ShareModal'
+import { deriveFeedStatus } from '../lib/freshness'
 
 const NAV_TABS = [
   { id:'map',       label:'Market Map',  short:'Map'  },
@@ -55,6 +56,14 @@ export default function Navbar({
     }
   }
 
+  const feedStatus = deriveFeedStatus({
+    isLive,
+    isWorkerOnline,
+    allAssets,
+    sourcesHealth,
+  })
+  const pillActiveColor = feedStatus.color
+
   return (
     <>
       {/* ── Desktop Hero Header ── */}
@@ -73,11 +82,11 @@ export default function Navbar({
                 <div style={s.heroLiveBadge}>
                   <span style={{
                     ...s.heroLiveDot,
-                    background: isLive ? 'var(--bull)' : 'var(--bear)',
-                    boxShadow: isLive ? '0 0 8px var(--bull)' : 'none',
-                    animation: isLive ? 'pulseDot 1.6s ease-in-out infinite' : 'none',
+                    background: pillActiveColor,
+                    boxShadow: feedStatus.key === 'live' ? '0 0 8px var(--bull)' : 'none',
+                    animation: feedStatus.key === 'live' ? 'pulseDot 1.6s ease-in-out infinite' : 'none',
                   }} />
-                  <span style={s.heroLiveText}>{isLive ? 'EDGE STREAMING' : 'PAUSED'}</span>
+                  <span style={s.heroLiveText}>{feedStatus.badgeText}</span>
                 </div>
               </div>
               <span style={s.heroTagline}>
@@ -91,7 +100,7 @@ export default function Navbar({
             {generatedAt ? (
               <div
                 style={s.telemetryPill}
-                title={`Worker Feed: ${new Date(generatedAt).toLocaleString()}${oldestQuoteTs ? ` (Oldest quote: ${new Date(oldestQuoteTs).toLocaleTimeString()})` : ''}`}
+                title={`Worker generatedAt: ${new Date(generatedAt).toLocaleString('en-US', { timeZoneName: 'short' })}${oldestQuoteTs ? ` · Oldest quoteTs: ${new Date(oldestQuoteTs).toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', second: '2-digit', timeZoneName: 'short' })}` : ''}`}
               >
                 <span style={s.telemetryLabel}>LAST UPDATED</span>
                 <span style={s.telemetryVal}>
@@ -99,28 +108,31 @@ export default function Navbar({
                 </span>
               </div>
             ) : (
-              lastUpdate && (
-                <div style={s.telemetryPill}>
-                  <span style={s.telemetryLabel}>LAST TICK</span>
-                  <span style={s.telemetryVal}>
-                    {(lastUpdate instanceof Date ? lastUpdate : new Date(lastUpdate)).toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', second: '2-digit', timeZoneName: 'short' })}
-                  </span>
-                </div>
-              )
+              <div
+                style={s.telemetryPill}
+                title="No authoritative Worker snapshot received yet"
+              >
+                <span style={s.telemetryLabel}>LAST UPDATED</span>
+                <span style={s.telemetryVal}>
+                  {lastUpdate
+                    ? (lastUpdate instanceof Date ? lastUpdate : new Date(lastUpdate)).toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', second: '2-digit', timeZoneName: 'short' })
+                    : '—'}
+                </span>
+              </div>
             )}
 
             <button
-              style={{ ...s.liveBtn, ...(isLive ? s.liveBtnOn : s.liveBtnOff) }}
+              style={{ ...s.liveBtn, ...(isLive && feedStatus.key !== 'offline' ? s.liveBtnOn : s.liveBtnOff), borderColor: pillActiveColor, color: pillActiveColor }}
               onClick={() => setIsLive(v => !v)}
-              title={isLive ? 'Pause live stream' : 'Resume live stream'}
+              title={isLive ? `Feed status: ${feedStatus.label} (click to pause polling)` : 'Polling paused (click to resume)'}
             >
               <span style={{
                 ...s.liveDot,
-                background: isLive ? 'var(--bull)' : 'var(--bear)',
-                boxShadow: isLive ? '0 0 6px var(--bull)' : 'none',
-                animation: isLive ? 'pulseDot 1.6s ease-in-out infinite' : 'none',
+                background: pillActiveColor,
+                boxShadow: feedStatus.key === 'live' ? '0 0 6px var(--bull)' : 'none',
+                animation: feedStatus.key === 'live' ? 'pulseDot 1.6s ease-in-out infinite' : 'none',
               }}/>
-              {isLive ? 'Live' : 'Paused'}
+              {feedStatus.label}
             </button>
 
             <button style={s.iconBtn} onClick={() => window.location.reload()} title="Refresh telemetry">
@@ -248,13 +260,14 @@ export default function Navbar({
             }
           </button>
           <button
-            style={{ ...s.liveBtn, ...(isLive ? s.liveBtnOn : s.liveBtnOff), padding:'4px 8px' }}
+            style={{ ...s.liveBtn, ...(isLive && feedStatus.key !== 'offline' ? s.liveBtnOn : s.liveBtnOff), padding:'4px 8px', borderColor: pillActiveColor, color: pillActiveColor }}
             onClick={() => setIsLive(v => !v)}
+            title={`Feed status: ${feedStatus.label}`}
           >
             <span style={{
               ...s.liveDot,
-              background: isLive ? 'var(--bull)' : 'var(--bear)',
-              animation: isLive ? 'pulseDot 1.6s ease-in-out infinite' : 'none',
+              background: pillActiveColor,
+              animation: feedStatus.key === 'live' ? 'pulseDot 1.6s ease-in-out infinite' : 'none',
             }}/>
           </button>
         </div>

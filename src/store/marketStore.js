@@ -11,7 +11,10 @@ export function syncAllUI(quotes = {}) {
     if (!item) continue;
     const idKey = (item.id || key).toLowerCase();
     const symKey = item.symbol || item.id || key;
-    const unified = { ...item, id: idKey, symbol: symKey };
+    const ts = typeof item.quoteTs === 'number' && Number.isFinite(item.quoteTs)
+      ? item.quoteTs
+      : (typeof item.timestamp === 'number' && Number.isFinite(item.timestamp) ? item.timestamp : null);
+    const unified = { ...item, id: idKey, symbol: symKey, ...(ts !== null ? { timestamp: ts } : {}) };
     synchronized[idKey] = unified;
     synchronized[symKey] = unified;
   }
@@ -29,6 +32,7 @@ export function syncAllUI(quotes = {}) {
  */
 export const useMarketStore = create((set, get) => ({
   quotes: {},
+  fxExtras: { usdaed: 3.6725 },
   generatedAt: null,
   oldestQuoteTs: null,
   sourcesHealth: {},
@@ -41,7 +45,7 @@ export const useMarketStore = create((set, get) => ({
 
   /**
    * Replace the entire quote map atomically from Worker response.
-   * @param {object} payload - { generatedAt, assets, health }
+   * @param {object} payload - { generatedAt, assets, health, fx }
    */
   applySnapshot: (payload) => {
     if (!payload || typeof payload !== 'object') return;
@@ -57,16 +61,21 @@ export const useMarketStore = create((set, get) => ({
       }
     }
 
-    set({
+    set((state) => ({
       quotes: synchronized,
+      fxExtras: payload.fx && typeof payload.fx === 'object'
+        ? { usdaed: 3.6725, ...payload.fx }
+        : state.fxExtras,
       generatedAt: payload.generatedAt || new Date().toISOString(),
       oldestQuoteTs: oldestTs,
-      sourcesHealth: payload.health?.perSource || {},
+      sourcesHealth: payload.health?.perSource && Object.keys(payload.health.perSource).length > 0
+        ? payload.health.perSource
+        : state.sourcesHealth,
       lastSync: Date.now(),
       isSyncing: false,
       isWorkerOnline: true,
       workerError: null,
-    });
+    }));
   },
 
   /**

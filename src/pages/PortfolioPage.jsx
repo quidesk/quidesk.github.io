@@ -1,7 +1,7 @@
 import React, { useState } from 'react'
 import { PieChart, Pie, Cell, ResponsiveContainer, Tooltip, BarChart, Bar, XAxis, YAxis, CartesianGrid } from 'recharts'
 import { Plus, Trash2 } from 'lucide-react'
-import { formatPrice, SECTOR_META } from '../data/markets'
+import { formatPrice, formatChange, SECTOR_META } from '../data/markets'
 
 const SLICE_COLORS = ['#f0a500','#4d9eff','#22d47a','#a78bfa','#f97316','#e2e8f0','#f04060','#64748b']
 
@@ -19,12 +19,14 @@ export default function PortfolioPage({ portfolio, allAssets }) {
 
   const knownAssets = allAssets || []
 
-  const pieData = holdings.map((h,i) => ({
+  const valuedHoldings = holdings.filter(h => typeof h.currentValue === 'number' && Number.isFinite(h.currentValue))
+
+  const pieData = valuedHoldings.map((h,i) => ({
     name: h.symbol, value: parseFloat(h.currentValue.toFixed(2)),
     color: SLICE_COLORS[i % SLICE_COLORS.length],
   }))
 
-  const barData = holdings.map((h,i) => ({
+  const barData = valuedHoldings.map((h) => ({
     symbol: h.symbol, pnl: parseFloat(h.pnl.toFixed(2)),
     fill: h.pnl >= 0 ? '#22d47a' : '#f04060',
   }))
@@ -41,7 +43,7 @@ export default function PortfolioPage({ portfolio, allAssets }) {
   }
 
   const sectorGroups = {}
-  holdings.forEach(h => {
+  valuedHoldings.forEach(h => {
     const s = h.sector || 'other'
     if (!sectorGroups[s]) sectorGroups[s] = 0
     sectorGroups[s] += h.currentValue
@@ -136,10 +138,10 @@ export default function PortfolioPage({ portfolio, allAssets }) {
       {/* Summary strip */}
       <div className="fade-up-1" style={s.summaryStrip}>
         {[
-          { l:'TOTAL VALUE',   v:`$${totalValue.toLocaleString('en-US',{minimumFractionDigits:2,maximumFractionDigits:2})}`,  c:'var(--text-primary)', large:true },
+          { l:'TOTAL VALUE',   v: totalValue !== null ? `$${totalValue.toLocaleString('en-US',{minimumFractionDigits:2,maximumFractionDigits:2})}` : '—',  c:'var(--text-primary)', large:true },
           { l:'TOTAL COST',    v:`$${totalCost.toLocaleString('en-US',{minimumFractionDigits:2,maximumFractionDigits:2})}`,   c:'var(--text-secondary)' },
-          { l:'UNREALIZED P&L',v:`${totalPnl>=0?'+':''}$${Math.abs(totalPnl).toLocaleString('en-US',{minimumFractionDigits:2,maximumFractionDigits:2})}`, c:totalPnl>=0?'var(--bull)':'var(--bear)', large:true },
-          { l:'TOTAL RETURN',  v:`${totalPnlPct>=0?'+':''}${totalPnlPct.toFixed(2)}%`, c:totalPnlPct>=0?'var(--bull)':'var(--bear)' },
+          { l:'UNREALIZED P&L',v: totalPnl !== null ? `${totalPnl>=0?'+':'-'}$${Math.abs(totalPnl).toLocaleString('en-US',{minimumFractionDigits:2,maximumFractionDigits:2})}` : '—', c: totalPnl === null ? 'var(--text-dim)' : (totalPnl>=0?'var(--bull)':'var(--bear)'), large:true },
+          { l:'TOTAL RETURN',  v: totalPnlPct !== null ? formatChange(totalPnlPct) : '—', c: totalPnlPct === null ? 'var(--text-dim)' : (totalPnlPct>=0?'var(--bull)':'var(--bear)') },
           { l:'POSITIONS',     v:holdings.length,                                        c:'var(--text-primary)' },
         ].map(({ l, v, c, large }) => (
           <div key={l} style={s.summaryCard}>
@@ -168,7 +170,7 @@ export default function PortfolioPage({ portfolio, allAssets }) {
               </PieChart>
             </ResponsiveContainer>
             <div style={s.pieCenter}>
-              <div style={s.pieCenterVal}>${(totalValue/1000).toFixed(1)}K</div>
+              <div style={s.pieCenterVal}>{totalValue !== null ? `$${(totalValue/1000).toFixed(1)}K` : '—'}</div>
               <div style={s.pieCenterLabel}>TOTAL</div>
             </div>
           </div>
@@ -269,17 +271,17 @@ export default function PortfolioPage({ portfolio, allAssets }) {
                     <td style={{ ...s.td, fontFamily:'var(--font-mono)' }}>{h.qty}</td>
                     <td style={{ ...s.td, fontFamily:'var(--font-mono)' }}>{formatPrice(h.avgCost, h.symbol, h.sector)}</td>
                     <td style={{ ...s.td, fontFamily:'var(--font-mono)' }}>{formatPrice(h.currentPrice, h.symbol, h.sector)}</td>
-                    <td style={{ ...s.td, fontFamily:'var(--font-mono)', color:h.change24h>=0?'var(--bull)':'var(--bear)' }}>
-                      {h.change24h>=0?'+':''}{h.change24h.toFixed(2)}%
+                    <td style={{ ...s.td, fontFamily:'var(--font-mono)', color: h.change24h === null || Math.abs(h.change24h) < 0.005 ? 'var(--text-dim)' : (h.change24h >= 0 ? 'var(--bull)' : 'var(--bear)') }}>
+                      {formatChange(h.change24h)}
                     </td>
                     <td style={{ ...s.td, fontFamily:'var(--font-mono)', fontWeight:500, color:'var(--text-primary)' }}>
-                      ${h.currentValue.toLocaleString('en-US',{minimumFractionDigits:2,maximumFractionDigits:2})}
+                      {h.currentValue !== null ? `$${h.currentValue.toLocaleString('en-US',{minimumFractionDigits:2,maximumFractionDigits:2})}` : '—'}
                     </td>
-                    <td style={{ ...s.td, fontFamily:'var(--font-mono)', color:h.pnl>=0?'var(--bull)':'var(--bear)' }}>
-                      {h.pnl>=0?'+':''}${h.pnl.toFixed(2)}
+                    <td style={{ ...s.td, fontFamily:'var(--font-mono)', color: h.pnl === null ? 'var(--text-dim)' : (h.pnl >= 0 ? 'var(--bull)' : 'var(--bear)') }}>
+                      {h.pnl !== null ? `${h.pnl>=0?'+':'-'}$${Math.abs(h.pnl).toFixed(2)}` : '—'}
                     </td>
-                    <td style={{ ...s.td, fontFamily:'var(--font-mono)', color:h.pnlPct>=0?'var(--bull)':'var(--bear)' }}>
-                      {h.pnlPct>=0?'▲':'▼'} {Math.abs(h.pnlPct).toFixed(2)}%
+                    <td style={{ ...s.td, fontFamily:'var(--font-mono)', color: h.pnlPct === null || Math.abs(h.pnlPct) < 0.005 ? 'var(--text-dim)' : (h.pnlPct >= 0 ? 'var(--bull)' : 'var(--bear)') }}>
+                      {h.pnlPct === null ? '—' : formatChange(h.pnlPct)}
                     </td>
                     <td style={s.td}>
                       <button style={s.removeBtn} onClick={() => removeHolding(h.id)}>

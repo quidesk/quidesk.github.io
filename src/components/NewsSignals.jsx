@@ -28,17 +28,8 @@ export default function NewsSignals({ news, loading, lastFetch, onRefresh, layou
     ? news
     : news.filter(n => n.sector === filter)
 
-  const affiliateContent = {
-    crypto: { title: 'Trade Crypto on Binance (0% Fees)', link: 'https://www.binance.com/register?ref=1067434967' },
-    equities: { title: 'Buy Stocks & Options on eToro', link: 'https://etoro.com' },
-    metals: { title: 'Buy Physical Gold & Silver on APMEX', link: 'https://apmex.com' },
-    energy: { title: 'Trade Energy Futures on Interactive Brokers', link: 'https://interactivebrokers.com' },
-    forex: { title: 'Trade Forex on OANDA (Low Spreads)', link: 'https://oanda.com' }
-  }
-
-  const filtered = baseFiltered;
-  const activeSector = filter === 'all' ? 'crypto' : filter;
-  const sponsor = affiliateContent[activeSector] || affiliateContent.crypto;
+  const filtered = baseFiltered.filter(n => !n.isSponsored)
+  const sponsoredItems = baseFiltered.filter(n => n.isSponsored)
 
   return (
     <div style={{...s.wrap, ...(isHorz ? { border: 'none', background: 'transparent' } : {})}}>
@@ -205,19 +196,24 @@ export default function NewsSignals({ news, loading, lastFetch, onRefresh, layou
         )}
       </div>
 
-      {/* Isolated Sponsored Partner Section (No asset tags, no share button) */}
-      <div style={s.sponsoredBox}>
-        <a
-          href={sanitizeUrl(sponsor.link)}
-          target="_blank"
-          rel="noopener noreferrer"
-          style={s.sponsoredLink}
-        >
-          <span style={s.sponsoredBadge}>PARTNER</span>
-          <span style={s.sponsoredTitle}>{sponsor.title}</span>
-          <ExternalLink size={12} color="var(--accent)" style={{ marginLeft: 'auto', flexShrink: 0 }} />
-        </a>
-      </div>
+      {/* Isolated Sponsored Items (explicitly labelled "Sponsored", no asset tags or Share button) */}
+      {sponsoredItems.length > 0 && (
+        <div style={s.sponsoredBox}>
+          {sponsoredItems.map((sponsor) => (
+            <a
+              key={sponsor.id}
+              href={sanitizeUrl(sponsor.link)}
+              target="_blank"
+              rel="noopener noreferrer sponsored"
+              style={s.sponsoredLink}
+            >
+              <span style={s.sponsoredBadge}>Sponsored</span>
+              <span style={s.sponsoredTitle}>{sponsor.title}</span>
+              <ExternalLink size={12} color="var(--accent)" style={{ marginLeft: 'auto', flexShrink: 0 }} />
+            </a>
+          ))}
+        </div>
+      )}
 
       <ShareModal 
         isOpen={!!shareItem} 

@@ -28,8 +28,19 @@ export function toAssetArray(quotes) {
 }
 
 /**
+ * Returns valid numerical change for an active/non-unavailable asset.
+ * @param {object} asset
+ * @returns {number|null}
+ */
+function getValidChange(asset) {
+  if (!asset || asset.status === 'unavailable') return null;
+  const chg = typeof asset.changePercent === 'number' ? asset.changePercent : asset.change;
+  return typeof chg === 'number' && Number.isFinite(chg) ? chg : null;
+}
+
+/**
  * Returns top gainers sorted descending by percentage change.
- * Flat (|change| < 0.005) or missing changes are excluded.
+ * Flat (|change| < 0.005), unavailable, or missing changes are excluded.
  * @param {Record<string, any>|Array<any>} quotes
  * @param {number} [limit=4]
  * @returns {Array<object>}
@@ -37,14 +48,17 @@ export function toAssetArray(quotes) {
 export function selectGainers(quotes, limit = 4) {
   const assets = toAssetArray(quotes);
   return assets
-    .filter(a => typeof a.change === 'number' && Number.isFinite(a.change) && a.change >= 0.005)
-    .sort((a, b) => b.change - a.change)
+    .filter(a => {
+      const c = getValidChange(a);
+      return c !== null && c >= 0.005;
+    })
+    .sort((a, b) => getValidChange(b) - getValidChange(a))
     .slice(0, limit);
 }
 
 /**
  * Returns top losers sorted ascending by percentage change.
- * Flat (|change| < 0.005) or missing changes are excluded.
+ * Flat (|change| < 0.005), unavailable, or missing changes are excluded.
  * @param {Record<string, any>|Array<any>} quotes
  * @param {number} [limit=4]
  * @returns {Array<object>}
@@ -52,16 +66,20 @@ export function selectGainers(quotes, limit = 4) {
 export function selectLosers(quotes, limit = 4) {
   const assets = toAssetArray(quotes);
   return assets
-    .filter(a => typeof a.change === 'number' && Number.isFinite(a.change) && a.change <= -0.005)
-    .sort((a, b) => a.change - b.change)
+    .filter(a => {
+      const c = getValidChange(a);
+      return c !== null && c <= -0.005;
+    })
+    .sort((a, b) => getValidChange(a) - getValidChange(b))
     .slice(0, limit);
 }
 
 /**
  * Splits equities into Indices (SPY, QQQ, DIA) and Individual Stocks (AAPL, TSLA, META, NVDA)
  * to avoid constituent double-counting in sector averages.
+ * Excludes null/unavailable and computes median plus index/stock averages.
  * @param {Record<string, any>|Array<any>} quotes
- * @returns {{ indices: object[], stocks: object[], combinedMedian: number }}
+ * @returns {{ indices: object[], stocks: object[], combinedMedian: number|null, indicesAvg: number|null, stocksAvg: number|null, isClosed: boolean }}
  */
 export function selectEquitiesIndexVsStocks(quotes) {
   const assets = toAssetArray(quotes).filter(a => a.sector === 'equities');
@@ -70,31 +88,49 @@ export function selectEquitiesIndexVsStocks(quotes) {
   const indices = assets.filter(a => INDEX_SYMBOLS.has(a.symbol));
   const stocks = assets.filter(a => !INDEX_SYMBOLS.has(a.symbol));
 
-  const allChanges = assets
-    .map(a => a.change)
-    .filter(c => typeof c === 'number' && Number.isFinite(c))
+  const validAssets = assets.filter(a => getValidChange(a) !== null);
+  const allChanges = validAssets
+    .map(getValidChange)
     .sort((a, b) => a - b);
 
-  let combinedMedian = 0;
-  if (allChanges.length > 0) {
-    const mid = Math.floor(allChanges.length / 2);
-    combinedMedian = allChanges.length % 2 !== 0
-      ? allChanges[mid]
-      : (allChanges[mid - 1] + allChanges[mid]) / 2;
+  const nonFlatChanges = allChanges.filter(c => Math.abs(c) >= 0.005);
+  const medianPool = nonFlatChanges.length > 0 ? nonFlatChanges : allChanges;
+
+  let combinedMedian = null;
+  if (medianPool.length > 0) {
+    const mid = Math.floor(medianPool.length / 2);
+    const raw = medianPool.length % 2 !== 0
+      ? medianPool[mid]
+      : (medianPool[mid - 1] + medianPool[mid]) / 2;
+    combinedMedian = parseFloat(raw.toFixed(2));
   }
+
+  const meanFor = (list) => {
+    const vals = list.map(getValidChange).filter(c => c !== null && Math.abs(c) >= 0.005);
+    const pool = vals.length > 0 ? vals : list.map(getValidChange).filter(c => c !== null);
+    if (pool.length === 0) return null;
+    return parseFloat((pool.reduce((acc, v) => acc + v, 0) / pool.length).toFixed(2));
+  };
+
+  const isClosed = validAssets.length > 0 && validAssets.every(a => a.status === 'closed' || a.tradingPeriod === 'closed');
 
   return {
     indices,
     stocks,
-    combinedMedian: parseFloat(combinedMedian.toFixed(2)),
+    combinedMedian,
+    indicesAvg: meanFor(indices),
+    stocksAvg: meanFor(stocks),
+    isClosed,
   };
 }
 
 /**
  * Calculates sector percentage change averages.
- * For equities, uses median of combined or averages indices to avoid double counting.
+ * Excludes null/unavailable changes and flat moves (< 0.005%) from sector direction averages
+ * (if all valid assets in a sector are flat, returns avgChange: 0 so UI displays neutral 0.00%).
+ * For equities, uses median to avoid index and stock constituent double-counting.
  * @param {Record<string, any>|Array<any>} quotes
- * @returns {Record<string, { avgChange: number, count: number, advancingCount: number }>}
+ * @returns {Record<string, { avgChange: number|null, count: number, advancingCount: number, decliningCount: number, flatCount: number, isClosed: boolean, method: string }>}
  */
 export function selectSectorAverages(quotes) {
   const assets = toAssetArray(quotes);
@@ -103,29 +139,37 @@ export function selectSectorAverages(quotes) {
 
   sectors.forEach(sec => {
     const secAssets = assets.filter(a => a.sector === sec);
-    const validChanges = secAssets
-      .map(a => a.change)
-      .filter(c => typeof c === 'number' && Number.isFinite(c));
+    const validAssets = secAssets.filter(a => getValidChange(a) !== null);
+    const validChanges = validAssets.map(getValidChange);
+    const nonFlatChanges = validChanges.filter(c => Math.abs(c) >= 0.005);
 
     const count = validChanges.length;
-    let avg = 0;
-    if (count > 0) {
+    const pool = nonFlatChanges.length > 0 ? nonFlatChanges : validChanges;
+    let avg = null;
+    if (pool.length > 0) {
       if (sec === 'equities') {
-        // Use median to avoid index and stock constituent double counting
-        const sorted = [...validChanges].sort((a, b) => a - b);
+        const sorted = [...pool].sort((a, b) => a - b);
         const mid = Math.floor(sorted.length / 2);
         avg = sorted.length % 2 !== 0 ? sorted[mid] : (sorted[mid - 1] + sorted[mid]) / 2;
       } else {
-        const sum = validChanges.reduce((acc, v) => acc + v, 0);
-        avg = sum / count;
+        avg = pool.reduce((acc, v) => acc + v, 0) / pool.length;
       }
+      avg = parseFloat(avg.toFixed(2));
     }
 
     const advancingCount = validChanges.filter(c => c >= 0.005).length;
+    const decliningCount = validChanges.filter(c => c <= -0.005).length;
+    const flatCount = validChanges.length - advancingCount - decliningCount;
+    const isClosed = validAssets.length > 0 && validAssets.every(a => a.status === 'closed' || a.tradingPeriod === 'closed');
+
     summary[sec] = {
-      avgChange: parseFloat(avg.toFixed(2)),
+      avgChange: avg,
       count,
       advancingCount,
+      decliningCount,
+      flatCount,
+      isClosed,
+      method: sec === 'equities' ? 'median' : 'mean',
     };
   });
 
@@ -133,14 +177,53 @@ export function selectSectorAverages(quotes) {
 }
 
 /**
+ * Computes sector summary metrics (count, advancing, declining, avgChange, topGainer, topLoser, isClosed)
+ * for any filtered asset subset so pages/cards do not re-implement local averages or extrema.
+ * @param {Array<object>} assets
+ * @returns {object}
+ */
+export function selectSectorStats(assets = []) {
+  const list = toAssetArray(assets);
+  const valid = list.filter(a => getValidChange(a) !== null);
+  const changes = valid.map(getValidChange);
+  const nonFlat = changes.filter(c => Math.abs(c) >= 0.005);
+  const pool = nonFlat.length > 0 ? nonFlat : changes;
+  const isEquities = list.some(a => a.sector === 'equities');
+
+  let avgChange = null;
+  if (pool.length > 0) {
+    if (isEquities) {
+      const sorted = [...pool].sort((a, b) => a - b);
+      const mid = Math.floor(sorted.length / 2);
+      avgChange = sorted.length % 2 !== 0 ? sorted[mid] : (sorted[mid - 1] + sorted[mid]) / 2;
+    } else {
+      avgChange = pool.reduce((acc, v) => acc + v, 0) / pool.length;
+    }
+    avgChange = parseFloat(avgChange.toFixed(2));
+  }
+
+  return {
+    totalCount: list.length,
+    validCount: valid.length,
+    advancingCount: changes.filter(c => c >= 0.005).length,
+    decliningCount: changes.filter(c => c <= -0.005).length,
+    flatCount: changes.filter(c => Math.abs(c) < 0.005).length,
+    avgChange,
+    topGainer: selectGainers(list, 1)[0] || null,
+    topLoser: selectLosers(list, 1)[0] || null,
+    isClosed: valid.length > 0 && valid.every(a => a.status === 'closed' || a.tradingPeriod === 'closed'),
+  };
+}
+
+/**
  * Computes global market breadth, advancing percentage, leading and lagging sectors.
- * Flat assets (|change| < 0.005) are counted as neutral, NOT advancing.
+ * Unavailable / null quotes are excluded; flat assets (|change| < 0.005) are neutral, NOT advancing.
  * @param {Record<string, any>|Array<any>} quotes
  * @returns {object}
  */
 export function selectMarketPulse(quotes) {
   const assets = toAssetArray(quotes);
-  const valid = assets.filter(a => typeof a.change === 'number' && Number.isFinite(a.change));
+  const valid = assets.filter(a => getValidChange(a) !== null);
 
   if (valid.length === 0) {
     return {
@@ -161,8 +244,9 @@ export function selectMarketPulse(quotes) {
   let flat = 0;
 
   valid.forEach(a => {
-    if (a.change >= 0.005) advancing++;
-    else if (a.change <= -0.005) declining++;
+    const chg = getValidChange(a);
+    if (chg >= 0.005) advancing++;
+    else if (chg <= -0.005) declining++;
     else flat++;
   });
 
@@ -172,7 +256,7 @@ export function selectMarketPulse(quotes) {
   // Sector leaderboard
   const secAverages = selectSectorAverages(quotes);
   const sortedSectors = Object.entries(secAverages)
-    .filter(([, data]) => data.count > 0)
+    .filter(([, data]) => data.count > 0 && typeof data.avgChange === 'number')
     .sort((a, b) => b[1].avgChange - a[1].avgChange);
 
   const leadingSector = sortedSectors.length > 0 ? { name: sortedSectors[0][0], avgChange: sortedSectors[0][1].avgChange } : null;

@@ -1,6 +1,6 @@
 import React, { useState, useRef, useEffect } from 'react'
 import { Search, X } from 'lucide-react'
-import { formatPrice, SECTOR_META } from '../data/markets'
+import { formatPrice, formatChange, SECTOR_META } from '../data/markets'
 
 export default function SearchBar({ allAssets, onSelect }) {
   const [query, setQuery]     = useState('')
@@ -56,7 +56,9 @@ export default function SearchBar({ allAssets, onSelect }) {
         <div style={s.dropdown}>
           {results.map(asset => {
             const meta = SECTOR_META[asset.sector] || {}
-            const isUp = asset.change >= 0
+            const chg = asset.status === 'unavailable' ? null : (typeof asset.change === 'number' && Number.isFinite(asset.change) ? asset.change : null)
+            const isFlat = chg !== null && Math.abs(chg) < 0.005
+            const chgColor = chg === null || isFlat ? 'var(--text-dim)' : (chg >= 0 ? 'var(--bull)' : 'var(--bear)')
             return (
               <div
                 key={asset.id}
@@ -76,10 +78,10 @@ export default function SearchBar({ allAssets, onSelect }) {
                 </div>
                 <div style={{ textAlign:'right', flexShrink:0 }}>
                   <div style={{ fontFamily:'var(--font-mono)', fontSize:'12px', color:'var(--text-primary)' }}>
-                    {formatPrice(asset.price)}
+                    {formatPrice(asset.price, asset.symbol, asset.sector)}
                   </div>
-                  <div style={{ fontFamily:'var(--font-mono)', fontSize:'10px', color: isUp ? 'var(--bull)' : 'var(--bear)' }}>
-                    {isUp ? '+' : ''}{asset.change.toFixed(2)}%
+                  <div style={{ fontFamily:'var(--font-mono)', fontSize:'10px', color: chgColor }}>
+                    {formatChange(chg)}
                   </div>
                 </div>
               </div>

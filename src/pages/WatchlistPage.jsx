@@ -92,7 +92,7 @@ export default function WatchlistPage({ data, watchlist, allAssets, onToggleWatc
               <div key={asset.id}>
                 <AssetCard asset={asset} onClick={setSelected} isWatched onToggleWatch={onToggleWatch} convertPrice={convertPrice} formatLocalPrice={formatLocalPrice} />
                 <div style={s.cardActions}>
-                  <button style={s.actionBtn} onClick={() => { setAlertModal(asset); setAlertForm({ type:'above', price:(asset.price*1.02).toFixed(2) }); }}>
+                  <button style={s.actionBtn} onClick={() => { setAlertModal(asset); setAlertForm({ type:'above', price: typeof asset.price === 'number' && Number.isFinite(asset.price) ? (asset.price * 1.02).toFixed(2) : '' }); }}>
                     <Bell size={10}/> Set Alert
                   </button>
                   <button style={{ ...s.actionBtn, color:'var(--bear)' }} onClick={() => onToggleWatch(asset.id)}>

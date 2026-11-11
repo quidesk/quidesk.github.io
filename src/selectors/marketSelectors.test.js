@@ -57,17 +57,29 @@ describe('Market Selectors — Single Source of Truth', () => {
   });
 
   describe('3. selectSectorAverages & selectMarketPulse', () => {
-    it('computes unbiased sector averages across all 5 sectors', () => {
+    it('computes unbiased sector averages across all 5 sectors and marks closed state', () => {
       const averages = selectSectorAverages(sampleQuotes);
       expect(averages).toHaveProperty('equities');
       expect(averages).toHaveProperty('crypto');
       expect(averages).toHaveProperty('metals');
       expect(averages).toHaveProperty('energy');
       expect(averages).toHaveProperty('forex');
+      expect(averages.equities.method).toBe('median');
+      // Gold (+1.80) with flat silver (0.002) excluded -> Metals avg +1.80
+      expect(averages.metals.avgChange).toBe(1.80);
+
+      const closedEquities = sampleQuotes.map(q =>
+        q.sector === 'equities' ? { ...q, status: 'closed' } : q
+      );
+      expect(selectSectorAverages(closedEquities).equities.isClosed).toBe(true);
     });
 
-    it('selectMarketPulse computes advance percent, sentiment, and separates flat count', () => {
-      const pulse = selectMarketPulse(sampleQuotes);
+    it('selectMarketPulse computes advance percent, sentiment, and excludes unavailable quotes', () => {
+      const withUnavailable = [
+        ...sampleQuotes,
+        { id: 'ada', symbol: 'ADA', sector: 'crypto', change: null, status: 'unavailable' },
+      ];
+      const pulse = selectMarketPulse(withUnavailable);
       expect(pulse.totalCount).toBe(14);
       expect(pulse.flatCount).toBe(2); // META (0.00) and Silver (0.002)
       expect(pulse.advancingCount).toBe(5); // BTC, XAU/USD, WTI, TSLA, EUR/USD

@@ -119,7 +119,7 @@ export default function App() {
   const alerts                     = useAlerts(allAssets);
   const { convertPrice, formatLocalPrice } = useCurrencyRates();
   const { theme, toggle: toggleTheme } = useTheme();
-  const newsSignals = useNewsSignals();
+  const newsSignals = useNewsSignals(isLive);
   const [showFeedHealth, setShowFeedHealth] = useState(false);
 
   // Sync URL hash and dynamic document metadata for deep-linking SEO
