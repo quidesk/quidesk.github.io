@@ -157,7 +157,7 @@ export async function fetchAggregatedNews() {
     try {
       const res = await fetch(feed.url, {
         headers: {
-          'User-Agent': 'Mozilla/5.0 (compatible; QuideskNewsBot/1.0; +https://librepiste.me)',
+          'User-Agent': 'Mozilla/5.0 (compatible; QuideskNewsBot/1.0; +https://quidesk.github.io)',
           'Accept': 'application/rss+xml, application/xml, text/xml',
         },
         signal: AbortSignal.timeout(8000),

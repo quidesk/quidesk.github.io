@@ -163,11 +163,10 @@ describe('Cloudflare Worker — Phase 1 Contract & Schema Validation', () => {
 
   describe('5. CORS & Request Routing', () => {
     const mockEnv = {
-      ALLOWED_ORIGINS: 'https://librepiste.me,https://quidesk.github.io,http://localhost:3000',
+      ALLOWED_ORIGINS: 'https://quidesk.github.io,http://localhost:3000',
     };
 
     it('permits whitelisted origins and rejects unauthorized origins', () => {
-      expect(getCorsOrigin('https://librepiste.me', mockEnv)).toBe('https://librepiste.me');
       expect(getCorsOrigin('https://quidesk.github.io', mockEnv)).toBe('https://quidesk.github.io');
       expect(getCorsOrigin('http://localhost:3000', mockEnv)).toBe('http://localhost:3000');
       expect(getCorsOrigin('https://malicious-site.com', mockEnv)).toBeNull();
@@ -175,9 +174,9 @@ describe('Cloudflare Worker — Phase 1 Contract & Schema Validation', () => {
 
     it('attaches proper CORS and security headers', () => {
       const rawRes = new Response(JSON.stringify({ ok: true }));
-      const wrapped = withHeaders(rawRes, 'https://librepiste.me', 'public, max-age=15');
+      const wrapped = withHeaders(rawRes, 'https://quidesk.github.io', 'public, max-age=15');
 
-      expect(wrapped.headers.get('Access-Control-Allow-Origin')).toBe('https://librepiste.me');
+      expect(wrapped.headers.get('Access-Control-Allow-Origin')).toBe('https://quidesk.github.io');
       expect(wrapped.headers.get('Cache-Control')).toBe('public, max-age=15');
       expect(wrapped.headers.get('X-Content-Type-Options')).toBe('nosniff');
       expect(wrapped.headers.get('X-Frame-Options')).toBe('DENY');
@@ -186,11 +185,11 @@ describe('Cloudflare Worker — Phase 1 Contract & Schema Validation', () => {
     it('handles OPTIONS preflight with 204 status', async () => {
       const optReq = new Request('http://worker.internal/v1/quotes', {
         method: 'OPTIONS',
-        headers: { Origin: 'https://librepiste.me' },
+        headers: { Origin: 'https://quidesk.github.io' },
       });
       const res = await worker.fetch(optReq, mockEnv);
       expect(res.status).toBe(204);
-      expect(res.headers.get('Access-Control-Allow-Origin')).toBe('https://librepiste.me');
+      expect(res.headers.get('Access-Control-Allow-Origin')).toBe('https://quidesk.github.io');
     });
   });
 });

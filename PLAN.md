@@ -21,7 +21,7 @@ This document establishes the architectural blueprint for replacing the client-s
 | **D10** | Flat prices render green; MapPage duplicates logic; disconnected Live toggle | `src/data/markets.js:132-140`, `src/pages/MapPage.jsx:45-57`, `src/hooks/useMarketData.js:154` | `formatChange` formats `0` as `+0.00%` (bullish green); duplicate `gainers`/`losers` filters; `isLive` is an unwired state; clock lacks timezone abbr. |
 | **D11** | CI matrix misalignment; missing vitest in CI; lockfile mismatch | `.github/workflows/ci.yml:21`, `.github/workflows/main.yml:24` | CI uses Node 20, deploy uses Node 24; `npm test` never runs in `ci.yml`; tests asserted static thresholds against committed snapshot. |
 | **D12** | Hard-coded Volume/MarketCap strings; fake correlations; dead test scripts | `src/data/markets.js:142-162`, root `update_markets.js`, `fetch_data.*` | Hand-typed correlations; static "60M"/"540B" strings; dead scripts polluting repo root. |
-| **D13** | Domain and origin ambiguity between CNAME and GitHub Pages | Root `CNAME`, `public/_headers` | Custom domain `librepiste.me` vs default `quidesk.github.io` vs local development servers (`http://localhost:3000`, `http://localhost:4173`, `http://localhost:5173`). Worker CORS must accommodate all valid origins. |
+| **D13** | Domain and origin ambiguity | `wrangler.toml`, `public/_headers` | Origin handling across default `quidesk.github.io` and local development servers (`http://localhost:3000`, `http://localhost:4173`, `http://localhost:5173`). Worker CORS must accommodate all valid origins. |
 
 ---
 

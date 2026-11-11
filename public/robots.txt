@@ -7,7 +7,6 @@ User-agent: Slurp
 User-agent: DuckDuckBot
 Allow: /
 Disallow: /snapshots/
-Disallow: /market-snapshot.json
 
 # Block aggressive AI data harvesters & scraping bots from cloning assets
 User-agent: GPTBot
@@ -28,7 +27,6 @@ Disallow: /
 User-agent: *
 Allow: /
 Disallow: /snapshots/
-Disallow: /market-snapshot.json
 
 # Sitemaps
 Sitemap: https://quidesk.github.io/sitemap.xml

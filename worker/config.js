@@ -360,7 +360,6 @@ export const RSS_FEEDS = [
 ];
 
 export const ALLOWED_ORIGINS_DEFAULT = [
-  'https://librepiste.me',
   'https://quidesk.github.io',
   'http://localhost:3000',
   'http://localhost:4173',
