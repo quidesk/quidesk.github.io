@@ -2,7 +2,7 @@ import React from 'react'
 import { useMarketStore } from '../store/marketStore'
 import { formatRatesMeta } from '../hooks/useCurrencyRates'
 
-export default function CurrencyTooltip({ conversions, visible, x, y, ratesMeta }) {
+export default function CurrencyTooltip({ conversions, visible, x, y, ratesMeta, assetInfo }) {
   const storeQuotes = useMarketStore((s) => s.quotes)
   const generatedAt = useMarketStore((s) => s.generatedAt)
   if (!visible || !conversions?.length) return null
@@ -15,6 +15,19 @@ export default function CurrencyTooltip({ conversions, visible, x, y, ratesMeta 
       left: x,
       top: y,
     }}>
+      {assetInfo && (
+        <div style={s.assetHeader}>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', gap: '10px' }}>
+            <span style={{ fontWeight: 700, color: 'var(--text-primary)' }}>{assetInfo.symbol}</span>
+            <span style={{ color: 'var(--text-secondary)' }}>
+              {assetInfo.priceDisplay} ({assetInfo.changeDisplay})
+            </span>
+          </div>
+          <div style={{ fontSize: '8px', color: 'var(--text-dim)', marginTop: '2px' }}>
+            {assetInfo.source} · As of {assetInfo.asOf}
+          </div>
+        </div>
+      )}
       <div style={s.header}>PRICE IN 8 CURRENCIES</div>
       {conversions.map(c => (
         <div key={c.code} style={s.row}>
@@ -50,6 +63,13 @@ const s = {
     padding: '10px 14px 8px',
     borderBottom: '1px solid var(--border-subtle)',
     background: 'var(--bg-surface)',
+  },
+  assetHeader: {
+    fontFamily: 'var(--font-mono)',
+    fontSize: '10px',
+    padding: '9px 14px 7px',
+    borderBottom: '1px solid var(--border-subtle)',
+    background: 'rgba(255,255,255,0.02)',
   },
   row: {
     display: 'flex',

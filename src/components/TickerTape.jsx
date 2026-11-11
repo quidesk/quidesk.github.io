@@ -48,16 +48,27 @@ export default function TickerTape({ allAssets = [], formatLocalPrice, isStale }
       <span key={key} style={{ ...s.item, opacity: stale ? 0.45 : 1 }}>
         <span style={s.sym}>{a.symbol}</span>
         <span style={s.price}>
-          {priceDisplay}
+          <span>{priceDisplay}</span>
           {secondaryDisplay && (
-            <span style={{ fontSize: '11px', color: 'var(--text-dim)', marginLeft: '4px', fontWeight: 400 }}>
+            <span style={{ fontSize: '11px', color: 'var(--text-dim)', fontWeight: 400, whiteSpace: 'nowrap' }}>
               {secondaryDisplay}
             </span>
           )}
         </span>
-        <span style={{ ...s.chg, marginLeft: '4px', color: changeVal === null || isFlat ? 'var(--text-dim)' : (up ? 'var(--bull)' : 'var(--bear)') }}>
+        <span style={{ ...s.chg, marginLeft: '8px', color: changeVal === null || isFlat ? 'var(--text-dim)' : (up ? 'var(--bull)' : 'var(--bear)') }}>
           {changeVal !== null && !isFlat && (
-            <span aria-hidden="true" style={{ marginRight: '3px' }}>{up ? '▲' : '▼'}</span>
+            <svg
+              width="7"
+              height="6"
+              viewBox="0 0 8 6"
+              aria-hidden="true"
+              style={{ flexShrink: 0, display: 'inline-block' }}
+            >
+              <polygon
+                points={up ? '4,0 8,6 0,6' : '0,0 8,0 4,6'}
+                fill="currentColor"
+              />
+            </svg>
           )}
           <span>{formatChange(changeVal)}</span>
         </span>
@@ -169,6 +180,9 @@ const s = {
     whiteSpace: 'nowrap',
   },
   price: {
+    display: 'inline-flex',
+    alignItems: 'baseline',
+    gap: '5px',
     fontFamily: 'var(--font-mono)',
     fontSize: '11px',
     color: 'var(--text-primary)',
@@ -176,6 +190,9 @@ const s = {
     whiteSpace: 'nowrap',
   },
   chg: {
+    display: 'inline-flex',
+    alignItems: 'center',
+    gap: '4px',
     fontFamily: 'var(--font-mono)',
     fontSize: '10px',
     flexShrink: 0,
