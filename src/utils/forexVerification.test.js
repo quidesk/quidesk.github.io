@@ -3,8 +3,7 @@ import {
   FOREX_PAIRS_CONFIG,
   formatForexRate,
   parseYahooFxMeta,
-  parseFxRatesApiPayload,
-  parseOpenErApiPayload
+  parseFxRatesApiPayload
 } from './forexHelpers';
 import { formatPrice } from '../data/markets';
 

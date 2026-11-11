@@ -5,7 +5,7 @@
  * - Symbol-to-pair mappings
  * - Strict quote orientation (direct vs indirect vs cross)
  * - Numeric precision formatting (2 decimals for JPY/INR, 4 for other pairs)
- * - Provider response parsers (Yahoo Finance, fxratesapi.com, open.er-api)
+ * - Provider response parsers (Worker Yahoo FX & fallback parsing)
  * - Safe staleness and error state guards (no synthesized/fabricated rates)
  */
 
@@ -219,13 +219,12 @@ export function parseYahooFxMeta(assetId, chartResult) {
 }
 
 /**
- * Parse a fxratesapi.com latest rates payload.
- * 
+ * Parse a fxratesapi-style latest rates payload (testing/validation utility; no browser fetches).
+ *
  * @param {object} payload - { date: string, rates: Record<string, number> }
- * @param {object} [baselinePrices] - Optional map of previous close prices for change calculation
  * @returns {Record<string, object>}
  */
-export function parseFxRatesApiPayload(payload, baselinePrices = {}) {
+export function parseFxRatesApiPayload(payload) {
   if (!payload || !payload.rates || typeof payload.rates !== 'object') {
     throw new Error('Invalid fxratesapi payload: missing rates object');
   }
@@ -238,7 +237,7 @@ export function parseFxRatesApiPayload(payload, baselinePrices = {}) {
     }
   }
 
-  const observedAt = payload.date || new Date().toISOString();
+  const observedAt = payload.date || null;
   const results = {};
 
   for (const [id, config] of Object.entries(FOREX_PAIRS_CONFIG)) {
@@ -248,127 +247,19 @@ export function parseFxRatesApiPayload(payload, baselinePrices = {}) {
     }
 
     const price = parseFloat(rawRate.toFixed(config.decimals));
-    const prev = baselinePrices[id]?.price || baselinePrices[id] || price;
-    const change = prev > 0
-      ? parseFloat((((price - prev) / prev) * 100).toFixed(3))
-      : 0;
 
     results[id] = {
       id,
       symbol: config.symbol,
       name: config.name,
       price,
-      change,
+      change: null,
       decimals: config.decimals,
       observedAt,
-      source: 'fxratesapi.com Live Interbank',
-      status: 'live',
+      source: 'fxratesapi.com',
+      status: 'delayed',
     };
   }
 
-  return results;
-}
-
-/**
- * Parse open.er-api.com rates payload (fallback).
- * 
- * @param {object} payload - { time_last_update_utc: string, rates: Record<string, number> }
- * @param {object} [baselinePrices]
- * @returns {Record<string, object>}
- */
-export function parseOpenErApiPayload(payload, baselinePrices = {}) {
-  if (!payload || !payload.rates || typeof payload.rates !== 'object') {
-    throw new Error('Invalid open.er-api payload: missing rates object');
-  }
-
-  const rates = {};
-  for (const [code, val] of Object.entries(payload.rates)) {
-    if (typeof val === 'number' && Number.isFinite(val) && val > 0) {
-      rates[code.toUpperCase()] = val;
-    }
-  }
-
-  const observedAt = payload.time_last_update_utc
-    ? new Date(payload.time_last_update_utc).toISOString()
-    : new Date().toISOString();
-
-  const results = {};
-  for (const [id, config] of Object.entries(FOREX_PAIRS_CONFIG)) {
-    const rawRate = config.computeRate(rates);
-    if (typeof rawRate !== 'number' || !Number.isFinite(rawRate) || rawRate <= 0) {
-      continue;
-    }
-
-    const price = parseFloat(rawRate.toFixed(config.decimals));
-    const prev = baselinePrices[id]?.price || baselinePrices[id] || price;
-    const change = prev > 0
-      ? parseFloat((((price - prev) / prev) * 100).toFixed(3))
-      : 0;
-
-    results[id] = {
-      id,
-      symbol: config.symbol,
-      name: config.name,
-      price,
-      change,
-      decimals: config.decimals,
-      observedAt,
-      source: 'open.er-api (Daily Reference)',
-      status: 'live',
-    };
-  }
-
-  return results;
-}
-
-
-/**
- * fetchFrankfurterForex — Fetches a rolling 5-day date range from Frankfurter ECB API.
- * Automatically handles weekends and bank holidays to calculate authentic 24-hour percentage change.
- */
-export async function fetchFrankfurterForex() {
-  const today = new Date().toISOString().split('T')[0];
-  const fiveDaysAgo = new Date(Date.now() - 7 * 86400000).toISOString().split('T')[0];
-  const res = await fetch(`https://api.frankfurter.dev/v1/${fiveDaysAgo}..${today}?base=USD`);
-  if (!res.ok) throw new Error(`Frankfurter HTTP ${res.status}`);
-  const json = await res.json();
-  if (!json || !json.rates) throw new Error('Invalid Frankfurter payload');
-
-  const dates = Object.keys(json.rates).sort();
-  if (dates.length < 2) throw new Error('Insufficient dates for 24h change calculation');
-
-  const curDate = dates[dates.length - 1];
-  const prevDate = dates[dates.length - 2];
-  const curRates = { ...json.rates[curDate], USD: 1 };
-  const prevRates = { ...json.rates[prevDate], USD: 1 };
-
-  const results = {};
-  for (const [id, config] of Object.entries(FOREX_PAIRS_CONFIG)) {
-    const curVal = config.computeRate(curRates);
-    const prevVal = config.computeRate(prevRates);
-    if (typeof curVal === 'number' && Number.isFinite(curVal) && curVal > 0) {
-      const price = parseFloat(curVal.toFixed(config.decimals));
-      const prevPrice = (typeof prevVal === 'number' && prevVal > 0)
-        ? parseFloat(prevVal.toFixed(config.decimals))
-        : price;
-      const change = prevPrice > 0
-        ? parseFloat((((price - prevPrice) / prevPrice) * 100).toFixed(2))
-        : 0;
-
-      results[id] = {
-        id,
-        symbol: config.symbol,
-        name: config.name,
-        price,
-        change,
-        changePercent: change,
-        previousClose: prevPrice,
-        decimals: config.decimals,
-        timestamp: Date.now(),
-        source: 'Frankfurter ECB Tape',
-        status: 'live',
-      };
-    }
-  }
   return results;
 }

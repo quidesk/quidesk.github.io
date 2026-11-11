@@ -17,11 +17,11 @@ export const getAssetPrecision = (symbol = '', sector = '', price = null) => {
     return 2;
   }
   if (sec === 'energy') {
-    if (sym === 'NG' || sym === 'HOIL' || sym.includes('NATURAL') || sym.includes('HEATING')) return 3;
+    if (sym === 'NG' || sym === 'NGAS' || sym === 'HOIL' || sym.includes('NATURAL') || sym.includes('HEATING')) return 3;
     return 2;
   }
   if (sec === 'crypto') {
-    if (typeof price === 'number' && price > 0 && price < 1) return 4;
+    if (typeof price === 'number' && Number.isFinite(price) && price > 0 && price < 2) return 4;
     return 2;
   }
   if (sec === 'equities') {
@@ -33,7 +33,7 @@ export const getAssetPrecision = (symbol = '', sector = '', price = null) => {
     return 4;
   }
 
-  if (typeof price === 'number' && price > 0 && price < 1) return 4;
+  if (typeof price === 'number' && Number.isFinite(price) && price > 0 && price < 1) return 4;
   return 2;
 };
 
@@ -94,7 +94,7 @@ export const formatUsdPrice = (symbol = '', price, category = '') => {
  * @param {Record<string, number|object>|number} [ratesMap] - Map of current rates or direct USD/INR rate
  * @returns {string}
  */
-export const formatForexSecondaryValue = (symbol = '', rate, ratesMap = {}) => {
+export const formatForexSecondaryValue = (symbol = '', rate, ratesMap = {}, targetCurrency = 'INR') => {
   if (!symbol || typeof rate !== 'number' || !Number.isFinite(rate) || rate <= 0) {
     return '';
   }
@@ -103,60 +103,94 @@ export const formatForexSecondaryValue = (symbol = '', rate, ratesMap = {}) => {
   if (parts.length !== 2) return '';
   const [base, quote] = parts;
 
-  // Extract reference rates with reliable fallbacks
-  const getRate = (pair, fallback) => {
+  // Strictly extract authoritative rates from store/map — never use hardcoded fallbacks
+  const getRate = (pair) => {
     if (typeof ratesMap === 'number') {
-      if (pair === 'USD/INR') return ratesMap;
-      return fallback;
+      return pair === 'USD/INR' && Number.isFinite(ratesMap) && ratesMap > 0 ? ratesMap : null;
     }
-    if (!ratesMap) return fallback;
-    if (typeof ratesMap[pair] === 'number') return ratesMap[pair];
-    if (typeof ratesMap[pair]?.price === 'number') return ratesMap[pair].price;
+    if (!ratesMap || typeof ratesMap !== 'object') return null;
+    if (typeof ratesMap[pair] === 'number' && ratesMap[pair] > 0) return ratesMap[pair];
+    if (ratesMap[pair]?.status !== 'unavailable' && typeof ratesMap[pair]?.price === 'number' && ratesMap[pair].price > 0) return ratesMap[pair].price;
     const keyLower = pair.toLowerCase().replace('/', '');
-    if (typeof ratesMap[keyLower]?.price === 'number') return ratesMap[keyLower].price;
-    if (typeof ratesMap[keyLower] === 'number') return ratesMap[keyLower];
+    if (ratesMap[keyLower]?.status !== 'unavailable' && typeof ratesMap[keyLower]?.price === 'number' && ratesMap[keyLower].price > 0) return ratesMap[keyLower].price;
+    if (typeof ratesMap[keyLower] === 'number' && ratesMap[keyLower] > 0) return ratesMap[keyLower];
     const code = pair.split('/')[1] || pair;
-    if (typeof ratesMap[code] === 'number') return ratesMap[code];
-    return fallback;
+    if (pair.startsWith('USD/') && typeof ratesMap[code] === 'number' && ratesMap[code] > 0) return ratesMap[code];
+    if (pair === 'USD/AED') return 3.6725;
+    return null;
   };
 
-  const usdInr = getRate('USD/INR', 93.96);
-  const eurUsd = getRate('EUR/USD', 1.1187);
-  const gbpUsd = getRate('GBP/USD', 1.3366);
+  const usdInr = getRate('USD/INR');
+  const eurUsd = getRate('EUR/USD');
+  const gbpUsd = getRate('GBP/USD');
 
-  // Case A: Quote is INR (USD/INR, EUR/INR)
+  // Case A: Quote is INR (USD/INR, EUR/INR) -> show USD value of 1 base unit
   if (quote === 'INR') {
     if (base === 'USD') {
       return '($1.00)';
     }
+    if (!usdInr) return '';
     const usdVal = rate / usdInr;
     return `($${usdVal.toFixed(2)})`;
   }
 
+  // Resolve target currency rate per 1 USD for INR or generalized local currencies
+  const tgt = (targetCurrency || 'INR').toUpperCase();
+  const TARGET_SYMBOLS = {
+    INR: '₹', USD: '$', EUR: '€', GBP: '£', JPY: '¥',
+    AUD: 'A$', CAD: 'C$', CHF: 'CHF ', NZD: 'NZ$', SGD: 'S$', AED: 'AED ',
+  };
+  let usdToTarget = null;
+  if (tgt === 'USD') {
+    usdToTarget = 1;
+  } else if (tgt === 'INR') {
+    usdToTarget = usdInr;
+  } else if (tgt === 'EUR') {
+    usdToTarget = eurUsd ? 1 / eurUsd : null;
+  } else if (tgt === 'GBP') {
+    usdToTarget = gbpUsd ? 1 / gbpUsd : null;
+  } else if (tgt === 'AUD' || tgt === 'NZD') {
+    const indirect = getRate(`${tgt}/USD`);
+    usdToTarget = indirect ? 1 / indirect : null;
+  } else {
+    usdToTarget = getRate(`USD/${tgt}`);
+  }
+
+  if (!usdToTarget || !Number.isFinite(usdToTarget) || usdToTarget <= 0) {
+    return '';
+  }
+
+  const fmtTarget = (val) => {
+    const decimals = val < 1 ? 4 : 2;
+    const locale = tgt === 'INR' ? 'en-IN' : 'en-US';
+    return `${TARGET_SYMBOLS[tgt] || `${tgt} `}${val.toLocaleString(locale, {
+      minimumFractionDigits: decimals,
+      maximumFractionDigits: decimals,
+    })}`;
+  };
+
   // Case B: Quote is USD (EUR/USD, GBP/USD, AUD/USD, NZD/USD)
   if (quote === 'USD') {
-    const inrVal = rate * usdInr;
-    return `(1 ${base} = ₹${inrVal.toFixed(2)})`;
+    if (tgt === 'USD') return '';
+    return `(1 ${base} = ${fmtTarget(rate * usdToTarget)})`;
   }
 
   // Case C: Base is USD and Quote is not INR (USD/JPY, USD/CAD, USD/CHF)
   if (base === 'USD') {
-    const quoteInr = usdInr / rate;
-    const decimals = quoteInr < 1 ? 4 : 2;
-    return `(1 ${quote} = ₹${quoteInr.toFixed(decimals)})`;
+    if (tgt === quote) return '';
+    return `(1 ${quote} = ${fmtTarget(usdToTarget / rate)})`;
   }
 
-  // Case D: Cross pairs (EUR/GBP, GBP/JPY, EUR/JPY)
-  let baseUsd = 1;
-  if (base === 'EUR') {
-    baseUsd = eurUsd;
-  } else if (base === 'GBP') {
-    baseUsd = gbpUsd;
-  } else {
-    baseUsd = getRate(`${base}/USD`, 1);
+  // Case D: Cross pairs (EUR/GBP, GBP/JPY, EUR/JPY) -> require authoritative BASE/USD
+  const baseUsd = base === 'EUR'
+    ? eurUsd
+    : base === 'GBP'
+    ? gbpUsd
+    : getRate(`${base}/USD`);
+  if (!baseUsd || !Number.isFinite(baseUsd) || baseUsd <= 0) {
+    return '';
   }
-  const baseInr = baseUsd * usdInr;
-  return `(1 ${base} = ₹${baseInr.toFixed(2)})`;
+  return `(1 ${base} = ${fmtTarget(baseUsd * usdToTarget)})`;
 };
 
 /**

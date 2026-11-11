@@ -9,6 +9,7 @@ import PriceDisplay from './PriceDisplay';
 import TimeRangeToggles from './TimeRangeToggles';
 import { FreshnessBadge, FallbackNotice } from './FreshnessBadge';
 import { getFreshnessLevel } from '../lib/freshness';
+import { detectLocalCurrency } from '../hooks/useCurrencyRates';
 import { useMarketStore } from '../store/marketStore';
 
 export default function AssetCard({
@@ -23,6 +24,7 @@ export default function AssetCard({
   isStale: propIsStale,
 }) {
   const allQuotes = useMarketStore((s) => s.quotes);
+  const fxExtras = useMarketStore((s) => s.fxExtras);
   const storeQuote = useMarketStore((s) => {
     const key = (propSymbol || propAsset?.symbol || propAsset?.id || '').toLowerCase();
     return s.quotes[key] || (propSymbol ? s.quotes[propSymbol] : null);
@@ -82,20 +84,23 @@ export default function AssetCard({
   );
   const isForexInr = isForex && (asset.symbol?.endsWith('/INR') || asset.symbol?.endsWith('INR'));
   const pricePrefix = isForexInr ? '₹' : (isForex ? '' : '$');
-  const unitSuffix = formatCardUnitSuffix(asset.sector, asset.unit, asset.symbol);
+  const unitSuffix = hasPrice ? formatCardUnitSuffix(asset.sector, asset.unit, asset.symbol) : '';
   const precision = getAssetPrecision(asset.symbol, asset.sector, asset.price);
 
-  const rawSecondary = isForex
-    ? formatForexSecondaryValue(asset.symbol, asset.price, allQuotes)
-    : (formatLocalPrice ? formatLocalPrice(asset.price) : null);
+  const fxRatesSource = { ...allQuotes, ...fxExtras };
+  const rawSecondary = !hasPrice
+    ? null
+    : (isForex
+        ? formatForexSecondaryValue(asset.symbol, asset.price, fxRatesSource, detectLocalCurrency())
+        : (formatLocalPrice ? formatLocalPrice(asset.price) : null));
   const secondaryDisplay = rawSecondary
     ? (rawSecondary.startsWith('(') ? rawSecondary : `(${rawSecondary})`)
     : null;
 
   function showTooltip() {
     if (shareOpen) return;
-    if (convertPrice && !isForex) {
-      setConversions(convertPrice(asset.price));
+    if (convertPrice && hasPrice) {
+      setConversions(convertPrice(asset));
     }
     timerRef.current = setTimeout(() => {
       const rect = cardRef.current && cardRef.current.getBoundingClientRect();

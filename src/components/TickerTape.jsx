@@ -1,5 +1,6 @@
 import React, { useMemo } from 'react';
 import { formatUsdPrice, formatForexSecondaryValue } from '../utils/formatters';
+import { detectLocalCurrency } from '../hooks/useCurrencyRates';
 import { formatChange } from '../data/markets';
 
 export default function TickerTape({ allAssets = [], formatLocalPrice, isStale }) {
@@ -7,6 +8,9 @@ export default function TickerTape({ allAssets = [], formatLocalPrice, isStale }
     const map = {};
     if (Array.isArray(allAssets)) {
       for (const item of allAssets) {
+        if (item.status === 'unavailable' || typeof item.price !== 'number' || !Number.isFinite(item.price) || item.price <= 0) {
+          continue;
+        }
         if (item.symbol) map[item.symbol] = item.price;
         if (item.id) map[item.id] = item.price;
       }
@@ -15,6 +19,7 @@ export default function TickerTape({ allAssets = [], formatLocalPrice, isStale }
   }, [allAssets]);
 
   const renderItem = (a, key) => {
+    const hasPrice = a.status !== 'unavailable' && typeof a.price === 'number' && Number.isFinite(a.price);
     const rawChange = a.changePercent ?? a.change;
     const changeVal = a.status !== 'unavailable' && typeof rawChange === 'number' && Number.isFinite(rawChange) ? rawChange : null;
     const isFlat = changeVal !== null && Math.abs(changeVal) < 0.005;
@@ -24,16 +29,20 @@ export default function TickerTape({ allAssets = [], formatLocalPrice, isStale }
       || a.status === 'unavailable';
     const isFx = (a.sector || '').toLowerCase() === 'forex';
     const isFxInr = isFx && (a.symbol?.endsWith('INR') || a.symbol?.endsWith('/INR'));
-    const rawSecondary = isFx
-      ? formatForexSecondaryValue(a.symbol, a.price, ratesMap)
-      : (formatLocalPrice ? formatLocalPrice(a.price) : null);
+    const rawSecondary = !hasPrice
+      ? null
+      : (isFx
+          ? formatForexSecondaryValue(a.symbol, a.price, ratesMap, detectLocalCurrency())
+          : (formatLocalPrice ? formatLocalPrice(a.price) : null));
     const secondaryDisplay = rawSecondary
       ? (rawSecondary.startsWith('(') ? rawSecondary : `(${rawSecondary})`)
       : null;
 
-    const priceDisplay = isFxInr
-      ? `₹${formatUsdPrice(a.symbol, a.price, a.sector)}`
-      : formatUsdPrice(a.symbol, a.price, a.sector);
+    const priceDisplay = !hasPrice
+      ? '—'
+      : (isFxInr
+          ? `₹${formatUsdPrice(a.symbol, a.price, a.sector)}`
+          : formatUsdPrice(a.symbol, a.price, a.sector));
 
     return (
       <span key={key} style={{ ...s.item, opacity: stale ? 0.45 : 1 }}>

@@ -310,13 +310,13 @@ export default function MarketMap({ allAssets, hotspots = [], onSelectAsset, con
   function handleNodeEnter(asset) {
     setHovered(asset.id);
     clearTimeout(currTimerRef.current);
-    const isFx = (asset.sector || '').toLowerCase() === 'forex';
-    if (convertPrice && !isFx) setConversions(convertPrice(asset.price));
+    const hasPrice = asset.status !== 'unavailable' && typeof asset.price === 'number' && Number.isFinite(asset.price) && asset.price > 0;
+    if (convertPrice && hasPrice) setConversions(convertPrice(asset));
     else setConversions([]);
 
     currTimerRef.current = setTimeout(() => {
       const pos = nodePositions[asset.id];
-      if (!pos || !containerRef.current || isFx) return;
+      if (!pos || !containerRef.current || !hasPrice) return;
       const rect = containerRef.current.getBoundingClientRect();
       const scale = INTERNAL_W > 0 ? rect.width / INTERNAL_W : 1;
       const absX = rect.left + pos.x * INTERNAL_W * scale;

@@ -1,7 +1,13 @@
 import React from 'react'
+import { useMarketStore } from '../store/marketStore'
+import { formatRatesMeta } from '../hooks/useCurrencyRates'
 
-export default function CurrencyTooltip({ conversions, visible, x, y }) {
+export default function CurrencyTooltip({ conversions, visible, x, y, ratesMeta }) {
+  const storeQuotes = useMarketStore((s) => s.quotes)
+  const generatedAt = useMarketStore((s) => s.generatedAt)
   if (!visible || !conversions?.length) return null
+
+  const resolvedMeta = ratesMeta || formatRatesMeta(storeQuotes, generatedAt)
 
   return (
     <div style={{
@@ -18,7 +24,7 @@ export default function CurrencyTooltip({ conversions, visible, x, y }) {
           <span style={s.value}>{c.display}</span>
         </div>
       ))}
-      <div style={s.footer}>Rates updated daily · fawazahmed0/exchange-api</div>
+      <div style={s.footer}>{resolvedMeta}</div>
     </div>
   )
 }

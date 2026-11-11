@@ -1,4 +1,6 @@
+import React from 'react';
 import { describe, it, expect } from 'vitest';
+import { renderToStaticMarkup } from 'react-dom/server';
 import {
   formatAssetPrice,
   formatUsdPrice,
@@ -7,6 +9,12 @@ import {
   formatChangePercentage,
   getAssetPrecision,
 } from './formatters';
+import {
+  computeCurrencyConversions,
+  resolveBaseUsdAmount,
+  formatRatesMeta,
+} from '../hooks/useCurrencyRates';
+import CurrencyTooltip from '../components/CurrencyTooltip';
 
 describe('Formatters & Financial Math Suite', () => {
   describe('1. formatForexSecondaryValue — Currency Triangulation', () => {
@@ -148,6 +156,72 @@ describe('Formatters & Financial Math Suite', () => {
       expect(formatChangePercentage(null)).toBe('—');
       expect(formatChangePercentage(undefined)).toBe('—');
       expect(formatChangePercentage(NaN)).toBe('—');
+    });
+  });
+
+  describe('5. Phase 4 Store-Only FX, Crypto <$2, 8-Currency Popover & Real Meta', () => {
+    it('hides ₹ values cleanly when store USD/INR is missing (zero hardcoded fallback)', () => {
+      expect(formatForexSecondaryValue('EUR/USD', 1.1187, {})).toBe('');
+      expect(formatForexSecondaryValue('USD/JPY', 158.56, {})).toBe('');
+      expect(formatForexSecondaryValue('EUR/INR', 105.10, {})).toBe('');
+      expect(formatForexSecondaryValue('USD/INR', 93.96, {})).toBe('($1.00)');
+    });
+
+    it('generalizes secondary conversion to other local currencies via store FX', () => {
+      const storeQuotes = {
+        usdinr: { price: 93.96 },
+        eurusd: { price: 1.1187 },
+        usdjpy: { price: 158.56 },
+      };
+      // 1 JPY in EUR = (1 / 1.1187) / 158.56 = 0.0056 EUR -> €0.0056
+      expect(formatForexSecondaryValue('USD/JPY', 158.56, storeQuotes, 'EUR')).toBe('(1 JPY = €0.0056)');
+    });
+
+    it('applies 4 decimals for crypto < $2 and 2 decimals >= $2', () => {
+      expect(getAssetPrecision('XRP', 'crypto', 1.25)).toBe(4);
+      expect(getAssetPrecision('ADA', 'crypto', 0.42)).toBe(4);
+      expect(getAssetPrecision('SOL', 'crypto', 142.5)).toBe(2);
+      expect(getAssetPrecision('NGAS', 'energy', 2.854)).toBe(3);
+    });
+
+    it('converts 1 unit of BASE currency for USD/JPY, EUR/USD, and EUR/GBP in 8-currency popover', () => {
+      const storeQuotes = {
+        usdinr: { price: 93.96, source: 'Yahoo Finance', quoteTs: Date.UTC(2026, 4, 1, 14, 30, 0) },
+        eurusd: { price: 1.1187, source: 'Yahoo Finance', quoteTs: Date.UTC(2026, 4, 1, 14, 30, 0) },
+        gbpusd: { price: 1.3366, source: 'Yahoo Finance', quoteTs: Date.UTC(2026, 4, 1, 14, 30, 0) },
+        usdjpy: { price: 158.56, source: 'Yahoo Finance', quoteTs: Date.UTC(2026, 4, 1, 14, 30, 0) },
+        btc: { price: 80000, source: 'Binance Live', quoteTs: Date.UTC(2026, 4, 1, 14, 30, 0) },
+      };
+      const fxExtras = { usdsgd: 1.34, usdaed: 3.6725 };
+
+      expect(resolveBaseUsdAmount({ symbol: 'USD/JPY', sector: 'forex', price: 158.56 }, storeQuotes)).toBe(1.0);
+      const usdJpyRows = computeCurrencyConversions({ symbol: 'USD/JPY', sector: 'forex', price: 158.56 }, storeQuotes, fxExtras);
+      expect(usdJpyRows).toHaveLength(8);
+      const byCode = Object.fromEntries(usdJpyRows.map((r) => [r.code, r.display]));
+      expect(byCode.USD).toBe('$1.00');
+      expect(byCode.INR).toBe('₹93.96');
+      expect(byCode.JPY).toBe('¥158.56');
+      expect(byCode.SGD).toBe('S$1.34');
+      expect(byCode.AED).toBe('AED 3.67');
+
+      const eurGbpRows = computeCurrencyConversions({ symbol: 'EUR/GBP', sector: 'forex', price: 0.837 }, storeQuotes, fxExtras);
+      const eurByCode = Object.fromEntries(eurGbpRows.map((r) => [r.code, r.display]));
+      expect(eurByCode.USD).toBe('$1.12');
+      expect(eurByCode.INR).toBe('₹105.11');
+      expect(eurByCode.EUR).toBe('€1.00');
+
+      const meta = formatRatesMeta(storeQuotes, '2026-05-01T14:30:05.000Z');
+      expect(meta).toContain('Yahoo Finance');
+      expect(meta).not.toMatch(/fawazahmed0/i);
+
+      const html = renderToStaticMarkup(
+        React.createElement(CurrencyTooltip, { conversions: usdJpyRows, visible: true, x: 10, y: 10, ratesMeta: meta })
+      );
+      expect(html).toContain('PRICE IN 8 CURRENCIES');
+      expect(html).toContain('$1.00');
+      expect(html).toContain('¥158.56');
+      expect(html).toContain(meta);
+      expect(html).not.toMatch(/fawazahmed0/i);
     });
   });
 });

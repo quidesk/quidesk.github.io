@@ -6,10 +6,12 @@ import MiniChart from './MiniChart';
 import PriceDisplay from './PriceDisplay';
 import { FreshnessBadge, FallbackNotice } from './FreshnessBadge';
 import { getFreshnessLevel } from '../lib/freshness';
+import { detectLocalCurrency } from '../hooks/useCurrencyRates';
 import { useMarketStore } from '../store/marketStore';
 
 export default function MarketCard({ asset: propAsset, onClick, isWatched, onToggleWatch, formatLocalPrice }) {
   const allQuotes = useMarketStore((s) => s.quotes);
+  const fxExtras = useMarketStore((s) => s.fxExtras);
   const storeQuote = useMarketStore((s) => {
     const key = (propAsset?.symbol || propAsset?.id || '').toLowerCase();
     return s.quotes[key] || (propAsset?.symbol ? s.quotes[propAsset.symbol] : null);
@@ -55,12 +57,15 @@ export default function MarketCard({ asset: propAsset, onClick, isWatched, onTog
   );
   const isForexInr = isForex && (asset.symbol?.endsWith('/INR') || asset.symbol?.endsWith('INR'));
   const pricePrefix = isForexInr ? '₹' : (isForex ? '' : '$');
-  const unitSuffix = formatCardUnitSuffix(asset.sector, asset.unit, asset.symbol);
+  const unitSuffix = hasPrice ? formatCardUnitSuffix(asset.sector, asset.unit, asset.symbol) : '';
   const precision = getAssetPrecision(asset.symbol, asset.sector, asset.price);
 
-  const rawSecondary = isForex
-    ? formatForexSecondaryValue(asset.symbol, asset.price, allQuotes)
-    : (formatLocalPrice ? formatLocalPrice(asset.price) : null);
+  const fxRatesSource = { ...allQuotes, ...fxExtras };
+  const rawSecondary = !hasPrice
+    ? null
+    : (isForex
+        ? formatForexSecondaryValue(asset.symbol, asset.price, fxRatesSource, detectLocalCurrency())
+        : (formatLocalPrice ? formatLocalPrice(asset.price) : null));
   const secondaryDisplay = rawSecondary
     ? (rawSecondary.startsWith('(') ? rawSecondary : `(${rawSecondary})`)
     : null;
