@@ -9,33 +9,91 @@
  */
 
 /**
- * Maps Yahoo trading periods to standardized market session state.
- * @param {object} currentTradingPeriod
+ * Extracts DST-safe Eastern Time weekday/hour/minute via Intl.DateTimeFormat (America/New_York).
+ * Never uses fixed UTC offsets.
+ * @param {number} epochSeconds
+ * @returns {{ weekday: string, minutesOfDay: number }}
+ */
+function getNewYorkTimeParts(epochSeconds) {
+  const formatter = new Intl.DateTimeFormat('en-US', {
+    timeZone: 'America/New_York',
+    weekday: 'short',
+    hour: '2-digit',
+    minute: '2-digit',
+    hour12: false,
+  });
+  const parts = formatter.formatToParts(new Date(epochSeconds * 1000));
+  const map = {};
+  for (const p of parts) {
+    if (p.type !== 'literal') map[p.type] = p.value;
+  }
+  const hour = Number(map.hour) === 24 ? 0 : Number(map.hour);
+  const minute = Number(map.minute);
+  return {
+    weekday: map.weekday || '',
+    minutesOfDay: hour * 60 + minute,
+  };
+}
+
+/**
+ * Maps Yahoo trading periods / marketState (with DST-safe America/New_York fallback)
+ * to standardized market session state.
+ * @param {object|null} currentTradingPeriod
  * @param {number} nowSeconds
  * @param {string} sector
+ * @param {string|null} [marketState=null]
  * @returns {'regular'|'pre'|'post'|'closed'|'24x7'}
  */
-export function determineSessionState(currentTradingPeriod, nowSeconds, sector) {
+export function determineSessionState(currentTradingPeriod, nowSeconds, sector, marketState = null) {
   if (sector === 'crypto') return '24x7';
-  if (!currentTradingPeriod) return 'regular';
 
-  const { pre, regular, post } = currentTradingPeriod;
+  const ms = typeof marketState === 'string' ? marketState.toUpperCase() : '';
+  if (ms === 'CLOSED') return 'closed';
 
-  if (regular && nowSeconds >= regular.start && nowSeconds < regular.end) {
-    return 'regular';
-  }
-  if (pre && nowSeconds >= pre.start && nowSeconds < pre.end) {
-    return 'pre';
-  }
-  if (post && nowSeconds >= post.start && nowSeconds < post.end) {
-    return 'post';
+  if (currentTradingPeriod) {
+    const { pre, regular, post } = currentTradingPeriod;
+
+    if (regular && typeof regular.start === 'number' && typeof regular.end === 'number' &&
+        nowSeconds >= regular.start && nowSeconds < regular.end) {
+      return 'regular';
+    }
+    if (pre && typeof pre.start === 'number' && typeof pre.end === 'number' &&
+        nowSeconds >= pre.start && nowSeconds < pre.end) {
+      return 'pre';
+    }
+    if (post && typeof post.start === 'number' && typeof post.end === 'number' &&
+        nowSeconds >= post.start && nowSeconds < post.end) {
+      return 'post';
+    }
+    if (regular || pre || post) {
+      return 'closed';
+    }
   }
 
-  return 'closed';
+  if (ms === 'REGULAR') return 'regular';
+  if (ms === 'PRE' || ms === 'PREPRE') return 'pre';
+  if (ms === 'POST' || ms === 'POSTPOST') return 'post';
+
+  // DST-safe America/New_York schedule fallback
+  const { weekday, minutesOfDay } = getNewYorkTimeParts(nowSeconds);
+  if (sector === 'equities') {
+    if (weekday === 'Sat' || weekday === 'Sun') return 'closed';
+    if (minutesOfDay >= 570 && minutesOfDay < 960) return 'regular'; // 09:30-16:00 ET
+    if (minutesOfDay >= 240 && minutesOfDay < 570) return 'pre';     // 04:00-09:30 ET
+    if (minutesOfDay >= 960 && minutesOfDay < 1200) return 'post';   // 16:00-20:00 ET
+    return 'closed';
+  }
+
+  // 24x5 FX & CME Globex futures schedule (Sun 18:00 ET - Fri 17:00 ET)
+  if (weekday === 'Sat') return 'closed';
+  if (weekday === 'Sun') return minutesOfDay >= 1080 ? 'regular' : 'closed';
+  if (weekday === 'Fri') return minutesOfDay < 1020 ? 'regular' : 'closed';
+  return 'regular';
 }
 
 /**
  * Extracts and filters a clean sparkline from chart indicators.
+ * Preserves unrounded floats to avoid staircase quantization on energy/FX series.
  * @param {number[]} timestamps
  * @param {number[]} closes
  * @param {number} maxPoints
@@ -49,7 +107,7 @@ export function extractSparkline(timestamps, closes, maxPoints = 60) {
     const t = timestamps[i];
     const c = closes[i];
     if (typeof t === 'number' && typeof c === 'number' && Number.isFinite(c) && c > 0) {
-      points.push([t * 1000, parseFloat(c.toFixed(4))]);
+      points.push([t * 1000, c]);
     }
   }
 
@@ -99,8 +157,13 @@ export async function fetchYahooChart(symbol, options = {}) {
 
   const meta = result.meta;
   const rawPrice = meta.regularMarketPrice;
-  const prevClose = meta.chartPreviousClose || meta.previousClose;
-  const quoteTs = (meta.regularMarketTime || Math.floor(Date.now() / 1000)) * 1000;
+  const candidatePrev = meta.chartPreviousClose ?? meta.previousClose;
+  const prevClose = (typeof candidatePrev === 'number' && Number.isFinite(candidatePrev) && candidatePrev > 0)
+    ? candidatePrev
+    : null;
+  const quoteTs = (typeof meta.regularMarketTime === 'number' && Number.isFinite(meta.regularMarketTime) && meta.regularMarketTime > 0)
+    ? meta.regularMarketTime * 1000
+    : null;
 
   if (typeof rawPrice !== 'number' || !Number.isFinite(rawPrice) || rawPrice <= 0) {
     throw new Error(`Invalid price ${rawPrice} for ${symbol}`);
@@ -113,8 +176,9 @@ export async function fetchYahooChart(symbol, options = {}) {
   return {
     symbol,
     price: rawPrice,
-    prevClose: (typeof prevClose === 'number' && prevClose > 0) ? prevClose : rawPrice,
+    prevClose,
     quoteTs,
+    marketState: meta.marketState || null,
     currentTradingPeriod: meta.currentTradingPeriod,
     spark1d,
     rawMeta: meta,
@@ -137,12 +201,12 @@ export async function fetchFinnhubQuote(symbol, apiKey, timeoutMs = 6000) {
   });
   if (!res.ok) throw new Error(`Finnhub HTTP ${res.status}`);
   const json = await res.json();
-  if (!json || typeof json.c !== 'number' || json.c <= 0) return null;
+  if (!json || typeof json.c !== 'number' || !Number.isFinite(json.c) || json.c <= 0) return null;
 
   return {
     symbol,
     price: json.c,
-    prevClose: json.pc || json.c,
-    quoteTs: (json.t || Math.floor(Date.now() / 1000)) * 1000,
+    prevClose: (typeof json.pc === 'number' && Number.isFinite(json.pc) && json.pc > 0) ? json.pc : null,
+    quoteTs: (typeof json.t === 'number' && Number.isFinite(json.t) && json.t > 0) ? json.t * 1000 : null,
   };
 }

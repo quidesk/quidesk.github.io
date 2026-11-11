@@ -71,23 +71,24 @@ export async function handleHistory(request, env) {
       if (typeof c === 'number' && Number.isFinite(c) && c > 0) {
         points.push({
           time: timestamps[i] * 1000,
-          open: opens[i] ? parseFloat(opens[i].toFixed(def.decimals)) : parseFloat(c.toFixed(def.decimals)),
-          high: highs[i] ? parseFloat(highs[i].toFixed(def.decimals)) : parseFloat(c.toFixed(def.decimals)),
-          low: lows[i] ? parseFloat(lows[i].toFixed(def.decimals)) : parseFloat(c.toFixed(def.decimals)),
-          close: parseFloat(c.toFixed(def.decimals)),
+          open: typeof opens[i] === 'number' && Number.isFinite(opens[i]) ? opens[i] : c,
+          high: typeof highs[i] === 'number' && Number.isFinite(highs[i]) ? highs[i] : c,
+          low: typeof lows[i] === 'number' && Number.isFinite(lows[i]) ? lows[i] : c,
+          close: c,
           volume: volumes[i] || 0,
         });
       }
     }
 
-    const prevClose = result.meta.chartPreviousClose || result.meta.previousClose || (points.length ? points[0].close : null);
+    const rawPrev = result.meta?.chartPreviousClose ?? result.meta?.previousClose ?? null;
+    const prevClose = (typeof rawPrev === 'number' && Number.isFinite(rawPrev) && rawPrev > 0) ? rawPrev : null;
 
     return {
       id: def.id,
       symbol: def.symbol,
       range: rangeParam,
       interval: rangeCfg.interval,
-      previousClose: prevClose !== null ? parseFloat(prevClose.toFixed(def.decimals)) : null,
+      previousClose: prevClose,
       pointCount: points.length,
       points,
     };

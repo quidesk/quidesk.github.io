@@ -51,8 +51,10 @@ export async function fetchFrankfurterFallback(timeoutMs = 8000) {
   const curRates = { ...json.rates[curDate], USD: 1 };
   const prevRates = { ...json.rates[prevDate], USD: 1 };
 
+  const ecbParsed = Date.parse(`${curDate}T00:00:00Z`);
+  const ecbQuoteTs = Number.isFinite(ecbParsed) ? ecbParsed : null;
+
   const results = {};
-  const now = Date.now();
 
   for (const [id, cfg] of Object.entries(FX_CONFIGS)) {
     const curVal = cfg.calc(curRates);
@@ -60,22 +62,40 @@ export async function fetchFrankfurterFallback(timeoutMs = 8000) {
 
     if (typeof curVal === 'number' && Number.isFinite(curVal) && curVal > 0) {
       const price = parseFloat(curVal.toFixed(cfg.decimals));
-      const prevClose = (typeof prevVal === 'number' && prevVal > 0)
+      const prevClose = (typeof prevVal === 'number' && Number.isFinite(prevVal) && prevVal > 0)
         ? parseFloat(prevVal.toFixed(cfg.decimals))
-        : price;
+        : null;
 
       results[id] = {
         id,
         symbol: cfg.symbol,
         price,
         prevClose,
-        quoteTs: now,
+        quoteTs: ecbQuoteTs,
+        rateDate: curDate,
         source: 'ECB daily ref',
-        changeBasis: 'prev_close',
+        changeBasis: 'vs prior ECB fix',
         session: 'regular',
         status: 'delayed',
       };
     }
+  }
+
+  if (typeof curRates.SGD === 'number' && Number.isFinite(curRates.SGD) && curRates.SGD > 0) {
+    results.usdsgd = {
+      id: 'usdsgd',
+      symbol: 'USD/SGD',
+      price: parseFloat(curRates.SGD.toFixed(4)),
+      prevClose: (typeof prevRates.SGD === 'number' && Number.isFinite(prevRates.SGD) && prevRates.SGD > 0)
+        ? parseFloat(prevRates.SGD.toFixed(4))
+        : null,
+      quoteTs: ecbQuoteTs,
+      rateDate: curDate,
+      source: 'ECB daily ref',
+      changeBasis: 'vs prior ECB fix',
+      session: 'regular',
+      status: 'delayed',
+    };
   }
 
   return results;

@@ -45,8 +45,14 @@ export async function fetchBinanceCrypto(timeoutMs = 6000) {
     if (!meta) continue;
 
     const price = parseFloat(item.lastPrice);
-    const prevClose = parseFloat(item.prevClosePrice) || parseFloat(item.openPrice) || price;
-    const ts = typeof item.closeTime === 'number' && item.closeTime > 0 ? item.closeTime : now;
+    const parsedPrev = parseFloat(item.prevClosePrice);
+    const parsedOpen = parseFloat(item.openPrice);
+    const prevClose = (Number.isFinite(parsedPrev) && parsedPrev > 0)
+      ? parsedPrev
+      : ((Number.isFinite(parsedOpen) && parsedOpen > 0) ? parsedOpen : null);
+    const ts = (typeof item.closeTime === 'number' && Number.isFinite(item.closeTime) && item.closeTime > 0)
+      ? item.closeTime
+      : null;
 
     if (Number.isFinite(price) && price > 0) {
       results[meta.id] = {
@@ -58,7 +64,7 @@ export async function fetchBinanceCrypto(timeoutMs = 6000) {
         source: 'binance',
         changeBasis: 'rolling_24h',
         session: '24x7',
-        status: (now - ts > 120000) ? 'stale' : 'live',
+        status: ts === null ? 'stale' : ((now - ts > 120000) ? 'stale' : 'live'),
       };
     }
   }
@@ -73,7 +79,7 @@ export async function fetchBinanceCrypto(timeoutMs = 6000) {
  */
 export async function fetchCoinGeckoCrypto(timeoutMs = 8000) {
   const ids = Object.values(CRYPTO_MAP).map(m => m.coingeckoId).join(',');
-  const url = `https://api.coingecko.com/api/v3/simple/price?ids=${ids}&vs_currencies=usd&include_24hr_change=true`;
+  const url = `https://api.coingecko.com/api/v3/simple/price?ids=${ids}&vs_currencies=usd&include_24hr_change=true&include_last_updated_at=true`;
 
   const res = await fetch(url, {
     headers: { 'Accept': 'application/json' },
@@ -90,21 +96,28 @@ export async function fetchCoinGeckoCrypto(timeoutMs = 8000) {
 
   for (const meta of Object.values(CRYPTO_MAP)) {
     const data = json[meta.coingeckoId];
-    if (data && typeof data.usd === 'number' && data.usd > 0) {
+    if (data && typeof data.usd === 'number' && Number.isFinite(data.usd) && data.usd > 0) {
       const price = data.usd;
-      const chgPercent = data.usd_24h_change || 0;
-      const prevClose = chgPercent !== 0 ? price / (1 + chgPercent / 100) : price;
+      const chgPercent = (typeof data.usd_24h_change === 'number' && Number.isFinite(data.usd_24h_change))
+        ? data.usd_24h_change
+        : null;
+      const prevClose = chgPercent !== null && (1 + chgPercent / 100) > 0
+        ? price / (1 + chgPercent / 100)
+        : null;
+      const ts = (typeof data.last_updated_at === 'number' && Number.isFinite(data.last_updated_at) && data.last_updated_at > 0)
+        ? data.last_updated_at * 1000
+        : null;
 
       results[meta.id] = {
         id: meta.id,
         symbol: meta.symbol,
         price,
         prevClose,
-        quoteTs: now,
+        quoteTs: ts,
         source: 'coingecko',
         changeBasis: 'rolling_24h',
         session: '24x7',
-        status: 'live',
+        status: ts === null ? 'stale' : ((now - ts > 120000) ? 'stale' : 'live'),
       };
     }
   }

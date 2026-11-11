@@ -9,53 +9,58 @@
 import { RSS_FEEDS } from '../config.js';
 
 /**
- * Strict regex boundary definitions for OSINT financial news tagging.
- * Uppercase ticker codes are case-sensitive. Names are case-insensitive.
- * Excludes generic words like 'ev', 'elon', bare 'eth', 'oil', 'crude', 'gas price', 'crypto'.
+ * Strict word-boundary ticker -> asset-id rules for OSINT financial news tagging.
+ * Uppercase tickers are case-sensitive unless noted; names use exact phrases/word boundaries.
+ * Zero substring keywords ('ev', 'elon', 'eth', 'sol', 'ada', 'dow', 'oil', 'crude', 'gas price').
  */
 export const STRICT_ASSET_TAGGERS = [
   // Crypto
-  { symbol: 'BTC', regex: /\b(Bitcoin|BTC|Satoshi)\b/i },
-  { symbol: 'ETH', regex: /\b(Ethereum|Ether)\b/i }, // bare 'eth' excluded
-  { symbol: 'SOL', regex: /(?:\bSolana\b|\bSOL\b)/ }, // 'SOL' case-sensitive; 'Solana' case-insensitive
-  { symbol: 'BNB', regex: /(?:\bBinance\s*Coin\b|\bBNB\b)/ },
-  { symbol: 'XRP', regex: /\b(Ripple|XRP)\b/i },
-  { symbol: 'ADA', regex: /(?:\bCardano\b|\bADA\b)/ }, // 'ADA' case-sensitive; prevents matching 'Canada'
+  { id: 'btc', regex: /\b(BTC|Bitcoin)\b/i },
+  { id: 'eth', regex: /\b(ETH|Ethereum)\b/i },
+  { id: 'sol', regex: /\b(SOL|Solana)\b/ },
+  { id: 'bnb', regex: /\b(BNB|Binance\s+Coin)\b/i },
+  { id: 'xrp', regex: /\b(XRP|Ripple)\b/i },
+  { id: 'ada', regex: /\bCardano\b|\bADA\b(?!\s+compliance)/ },
 
   // Equities
-  { symbol: 'SPY', regex: /\b(S&P\s*500|SP500|SPY)\b/i },
-  { symbol: 'QQQ', regex: /\b(Nasdaq\s*100|QQQ)\b/i },
-  { symbol: 'DIA', regex: /(?:\bDow\s*Jones\b|\bDJIA\b)/i }, // DOW requires "Dow Jones" or "DJIA"
-  { symbol: 'AAPL', regex: /(?:\bApple\s*Inc\b|\bAAPL\b)/i },
-  { symbol: 'NVDA', regex: /\b(NVIDIA|NVDA)\b/i },
-  { symbol: 'TSLA', regex: /(?:\bTesla\b|\bTSLA\b)/ }, // bare 'ev' / 'elon' removed
+  { id: 'nvda', regex: /\b(NVDA|Nvidia)\b/i },
+  { id: 'tsla', regex: /\b(TSLA|Tesla)\b/i },
+  { id: 'aapl', regex: /\b(AAPL|Apple\s+Inc|Apple['’]s)\b/ },
+  { id: 'meta', regex: /\b(META|Meta\s+Platforms)\b/ },
+  { id: 'spx', regex: /\b(SPY|S&P\s+500|SPX)\b/ },
+  { id: 'ndx', regex: /\b(QQQ|Nasdaq)\b/i },
+  { id: 'dow', regex: /\b(DIA|DJIA|Dow\s+Jones)\b/ },
+
+  // Energy
+  { id: 'wti', regex: /\b(WTI|West\s+Texas)\b/i },
+  { id: 'brent', regex: /\bBrent\b/i },
+  { id: 'ng', regex: /\b(NGAS|Natural\s+Gas|LNG|European\s+Gas)\b/i },
+  { id: 'hoil', regex: /\b(HOIL|Heating\s+Oil)\b/i },
 
   // Metals
-  { symbol: 'XAU/USD', regex: /\b(Gold\s*Bullion|Gold\s*Price|XAU)\b/i },
-  { symbol: 'XAG/USD', regex: /\b(Silver\s*Bullion|Silver\s*Price|XAG)\b/i },
-  { symbol: 'XPT/USD', regex: /\b(Platinum\s*Bullion|XPT)\b/i },
-
-  // Energy (bare 'oil', 'crude', 'gas price' removed)
-  { symbol: 'WTI', regex: /\b(WTI\s*Crude|WTI\s*Oil|West\s*Texas\s*Intermediate)\b/i },
-  { symbol: 'BRENT', regex: /\b(Brent\s*Crude|Brent\s*Oil)\b/i },
-  { symbol: 'NGAS', regex: /\b(Natural\s*Gas\s*Futures|Henry\s*Hub|LNG\s*export)\b/i },
-  { symbol: 'HOIL', regex: /\b(Heating\s*Oil\s*Futures|ULSD)\b/i },
+  { id: 'gold', regex: /\b(Gold|XAU|Bullion)\b/ },
+  { id: 'silver', regex: /\b(Silver|XAG)\b/ },
+  { id: 'platinum', regex: /\b(XPT|Platinum)\b/ },
 
   // Forex
-  { symbol: 'EUR/USD', regex: /\b(EUR\/USD|EURUSD)\b/i },
-  { symbol: 'GBP/USD', regex: /\b(GBP\/USD|GBPUSD)\b/i },
-  { symbol: 'USD/JPY', regex: /\b(USD\/JPY|USDJPY)\b/i },
-  { symbol: 'AUD/USD', regex: /\b(AUD\/USD|AUDUSD)\b/i },
-  { symbol: 'USD/CAD', regex: /\b(USD\/CAD|USDCAD)\b/i },
-  { symbol: 'USD/CHF', regex: /\b(USD\/CHF|USDCHF)\b/i },
-  { symbol: 'USD/INR', regex: /\b(USD\/INR|USDINR)\b/i },
-  { symbol: 'EUR/INR', regex: /\b(EUR\/INR|EURINR)\b/i },
+  { id: 'usdinr', regex: /\b(USD\/INR|Rupee|RBI)\b/i },
+  { id: 'usdjpy', regex: /\b(USD\/JPY|Yen|BOJ)\b/i },
+  { id: 'eurusd', regex: /\b(EUR\/USD|ECB)\b/i },
+  { id: 'gbpusd', regex: /\b(GBP\/USD|BoE)\b/i },
+  { id: 'audusd', regex: /\bAUD\/USD\b/i },
+  { id: 'usdcad', regex: /\bUSD\/CAD\b/i },
+  { id: 'usdchf', regex: /\bUSD\/CHF\b/i },
+  { id: 'nzdusd', regex: /\bNZD\/USD\b/i },
+  { id: 'eurgbp', regex: /\bEUR\/GBP\b/i },
+  { id: 'gbpjpy', regex: /\bGBP\/JPY\b/i },
+  { id: 'eurjpy', regex: /\bEUR\/JPY\b/i },
+  { id: 'eurinr', regex: /\bEUR\/INR\b/i },
 ];
 
 /**
- * Extracts matching asset tags from title and summary.
+ * Extracts matching asset IDs from title and summary (max 3 tags, no defaults).
  * @param {string} text
- * @returns {string[]} Max 3 tags
+ * @returns {string[]} Max 3 canonical asset IDs
  */
 export function extractStrictAssetTags(text) {
   if (!text || typeof text !== 'string') return [];
@@ -63,7 +68,7 @@ export function extractStrictAssetTags(text) {
 
   for (const tagger of STRICT_ASSET_TAGGERS) {
     if (tagger.regex.test(text)) {
-      matches.push(tagger.symbol);
+      matches.push(tagger.id);
       if (matches.length >= 3) break;
     }
   }
@@ -139,7 +144,7 @@ export function parseRssXml(xml, sourceName, sector) {
       source: sourceName,
       sector,
       summary: desc.slice(0, 280),
-      assetTags: assetTags.length > 0 ? assetTags : [sector.toUpperCase()],
+      assetTags,
       isSponsored: false,
     });
   }

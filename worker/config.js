@@ -147,7 +147,7 @@ export const ASSET_DEFINITIONS = {
   gold: {
     id: 'gold',
     symbol: 'XAU/USD',
-    name: 'Gold (COMEX Continuous)',
+    name: 'Gold (fut.)',
     sector: 'metals',
     unit: 'oz',
     decimals: 2,
@@ -157,7 +157,7 @@ export const ASSET_DEFINITIONS = {
   silver: {
     id: 'silver',
     symbol: 'XAG/USD',
-    name: 'Silver (COMEX Continuous)',
+    name: 'Silver (fut.)',
     sector: 'metals',
     unit: 'oz',
     decimals: 2,
@@ -167,7 +167,7 @@ export const ASSET_DEFINITIONS = {
   platinum: {
     id: 'platinum',
     symbol: 'XPT/USD',
-    name: 'Platinum (NYMEX Continuous)',
+    name: 'Platinum (fut.)',
     sector: 'metals',
     unit: 'oz',
     decimals: 2,
