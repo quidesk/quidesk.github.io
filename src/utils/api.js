@@ -9,7 +9,7 @@
 
 const FEED_BASE = (
   import.meta.env?.VITE_FEED_URL ||
-  'https://quidesk-market-engine.quidesk0.workers.dev'
+  'https://quidesk-market-engine.librepisteme.workers.dev'
 ).replace(/\/$/, '').replace(/\/v1\/quotes$/, '');
 
 /**

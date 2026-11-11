@@ -2,10 +2,10 @@
  * Quidesk Market Stream Service
  * 
  * Live edge client connecting the frontend directly to the Cloudflare Worker market aggregator
- * at https://quidesk-market-engine.quidesk0.workers.dev
+ * at https://quidesk-market-engine.librepisteme.workers.dev
  */
 
-const WORKER_BASE = (import.meta.env?.VITE_MARKET_WORKER_URL || 'https://quidesk-market-engine.quidesk0.workers.dev').replace(/\/$/, '');
+const WORKER_BASE = (import.meta.env?.VITE_MARKET_WORKER_URL || 'https://quidesk-market-engine.librepisteme.workers.dev').replace(/\/$/, '');
 
 /**
  * Fetch all market quotes from Cloudflare Worker edge aggregator
