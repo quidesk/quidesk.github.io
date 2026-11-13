@@ -3,8 +3,8 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <link rel="icon" type="image/png" href="/logo.png" />
-    <link rel="apple-touch-icon" href="/logo.png" />
+    <link rel="icon" type="image/svg+xml" href="./logo.svg" />
+    <link rel="apple-touch-icon" href="./logo.svg" />
     <link rel="manifest" href="/site.webmanifest" />
     <meta name="mobile-web-app-capable" content="yes" />
     <meta name="apple-mobile-web-app-capable" content="yes" />
@@ -79,8 +79,8 @@
           "logo": {
             "@type": "ImageObject",
             "@id": "https://quidesk.github.io/#logo",
-            "url": "https://quidesk.github.io/logo.png",
-            "caption": "Quidesk Master Sovereign Logo"
+            "url": "https://quidesk.github.io/logo.svg",
+            "caption": "Quidesk Imperial Astrolabe Logo"
           },
           "sameAs": [
             "https://github.com/quidesk"
@@ -225,15 +225,178 @@
 
       gtag('config', 'G-16STFZVGWN');
     </script>
+    <!-- ═══ Navbar Brand Lockup Rhythm & Logo Styling ═══════════════════ -->
+    <style>
+      /* BEGIN CSS: NAVBAR BRAND LOCKUP RHYTHM */
+      .qd-brand-lockup {
+        display: inline-flex;
+        align-items: center;
+        gap: 12px;
+        text-decoration: none;
+        padding: 4px 8px;
+        border-radius: 10px;
+        position: relative;
+        z-index: 20;
+        transition: transform 0.18s ease, background-color 0.18s ease;
+      }
+      .qd-brand-lockup:hover {
+        background: rgba(212, 175, 55, 0.06);
+      }
+      .qd-brand-lockup:focus-visible {
+        outline: 2px solid #10B981;
+        outline-offset: 3px;
+      }
+      .qd-logo-badge {
+        display: inline-flex;
+        width: 40px;
+        height: 40px;
+        flex-shrink: 0;
+        filter: drop-shadow(0 2px 10px rgba(16, 185, 129, 0.22));
+      }
+      .qd-logo-badge svg {
+        width: 100%;
+        height: 100%;
+        display: block;
+      }
+      .qd-brand-text {
+        display: flex;
+        flex-direction: column;
+        line-height: 1;
+      }
+      .qd-brand-row {
+        display: flex;
+        align-items: center;
+        gap: 7px;
+      }
+      .qd-brand-title {
+        font-family: 'JetBrains Mono', 'Inter', monospace, sans-serif;
+        font-size: 16px;
+        font-weight: 800;
+        letter-spacing: 0.16em;
+        background: linear-gradient(95deg, #FEF08A 0%, #D4AF37 55%, #34D399 100%);
+        -webkit-background-clip: text;
+        -webkit-text-fill-color: transparent;
+      }
+      .qd-brand-pill {
+        font-family: 'JetBrains Mono', monospace;
+        font-size: 9.5px;
+        font-weight: 700;
+        letter-spacing: 0.08em;
+        color: #34D399;
+        background: rgba(16, 185, 129, 0.14);
+        border: 1px solid rgba(212, 175, 55, 0.35);
+        padding: 2px 5px;
+        border-radius: 4px;
+      }
+      .qd-brand-subtitle {
+        margin-top: 4px;
+        font-size: 10.5px;
+        font-weight: 500;
+        letter-spacing: 0.04em;
+        color: #94A3B8;
+      }
+      /* END CSS */
+    </style>
   </head>
   <body>
     <div id="root">
       <!-- Semantic SEO Shell & Pre-Rendered Fallback for Search Crawlers -->
-      <header style="padding: 24px; max-width: 1400px; margin: 0 auto; font-family: system-ui, sans-serif;">
-        <h1 style="font-size: 28px; font-weight: 900; color: #ffffff;">Quidesk — Live Market Intelligence Terminal</h1>
-        <p style="font-size: 14px; color: #8899A6; margin-top: 6px;">
-          Master Sovereign Edition · Real-time edge financial tracking across Equities, Cryptocurrencies, Precious Metals, Energy Commodities, and Foreign Exchange.
-        </p>
+      <header style="padding: 16px 24px; max-width: 1400px; margin: 0 auto; display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 16px;">
+        <a href="https://quidesk.github.io/" class="qd-brand-lockup" aria-label="Quidesk — Live Market Intelligence and OSINT Dashboard Home">
+          <span class="qd-logo-badge" aria-hidden="true">
+            <svg viewBox="0 0 120 120" width="40" height="40" fill="none" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="Quidesk Imperial Astrolabe and Order-Book Matrix Logo">
+              <defs>
+                <linearGradient id="qd-gold-2a2-nav" x1="12" y1="10" x2="108" y2="110" gradientUnits="userSpaceOnUse">
+                  <stop offset="0%" stop-color="#FEF08A"/>
+                  <stop offset="28%" stop-color="#D4AF37"/>
+                  <stop offset="65%" stop-color="#9A6F1A"/>
+                  <stop offset="100%" stop-color="#FDE047"/>
+                </linearGradient>
+                <linearGradient id="qd-gold-rim-nav" x1="0" y1="120" x2="120" y2="0" gradientUnits="userSpaceOnUse">
+                  <stop offset="0%" stop-color="#B45309"/>
+                  <stop offset="50%" stop-color="#FDE68A"/>
+                  <stop offset="100%" stop-color="#D4AF37"/>
+                </linearGradient>
+                <linearGradient id="qd-emerald-2a2-nav" x1="36" y1="44" x2="108" y2="108" gradientUnits="userSpaceOnUse">
+                  <stop offset="0%" stop-color="#6EE7B7"/>
+                  <stop offset="45%" stop-color="#10B981"/>
+                  <stop offset="100%" stop-color="#047857"/>
+                </linearGradient>
+                <radialGradient id="qd-core-glow-nav" cx="50%" cy="50%" r="50%">
+                  <stop offset="0%" stop-color="#10B981" stop-opacity="0.16"/>
+                  <stop offset="70%" stop-color="#D4AF37" stop-opacity="0.05"/>
+                  <stop offset="100%" stop-color="#080C14" stop-opacity="0"/>
+                </radialGradient>
+              </defs>
+
+              <!-- Ambient Core Backlight -->
+              <circle cx="58" cy="58" r="52" fill="url(#qd-core-glow-nav)"/>
+
+              <!-- 1. Outer Horological Vernier Ring & Cardinal Indices -->
+              <circle cx="58" cy="58" r="53" stroke="url(#qd-gold-rim-nav)" stroke-opacity="0.35" stroke-width="0.9" stroke-dasharray="3 5"/>
+              <circle cx="58" cy="58" r="49.5" stroke="#D4AF37" stroke-opacity="0.22" stroke-width="0.6"/>
+              <!-- Cardinal Diamond Markers (N, E, S, W) -->
+              <polygon points="58,3 60,8 58,11 56,8" fill="url(#qd-gold-2a2-nav)"/>
+              <polygon points="113,58 108,60 105,58 108,56" fill="url(#qd-gold-2a2-nav)"/>
+              <polygon points="58,113 60,108 58,105 56,108" fill="url(#qd-gold-2a2-nav)"/>
+              <polygon points="3,58 8,60 11,58 8,56" fill="url(#qd-gold-2a2-nav)"/>
+
+              <!-- 2. Primary 24k Gold Q Crescent with 36-Degree Negative-Space Breakout Channel -->
+              <path d="M 97.2 77.9 A 44 44 0 1 0 77.9 97.2 L 72.5 87.4 A 33 33 0 1 1 87.4 72.5 Z" fill="url(#qd-gold-2a2-nav)" stroke="url(#qd-gold-rim-nav)" stroke-width="0.8"/>
+              <!-- Inner & Outer Filigree Bevel Lines -->
+              <path d="M 99.8 79.3 A 47 47 0 1 0 79.3 99.8" stroke="#FEF08A" stroke-opacity="0.45" stroke-width="0.8" stroke-linecap="round"/>
+
+              <!-- 3. 12-Sided Dodecagonal Inner Chamfered Bezel -->
+              <polygon points="58,27 73.5,31.2 84.8,42.5 89,58 84.8,73.5 73.5,84.8 58,89 42.5,84.8 31.2,73.5 27,58 31.2,42.5 42.5,31.2" stroke="url(#qd-gold-2a2-nav)" stroke-opacity="0.7" stroke-width="1.3" fill="#080C14" fill-opacity="0.55"/>
+
+              <!-- 4. Astrolabe Guilloche Grid -->
+              <g stroke="#94A3B8" stroke-opacity="0.2" stroke-width="0.7">
+                <line x1="29" y1="58" x2="87" y2="58"/>
+                <line x1="58" y1="29" x2="58" y2="87"/>
+                <ellipse cx="58" cy="58" rx="22" ry="11"/>
+                <ellipse cx="58" cy="58" rx="11" ry="22"/>
+              </g>
+
+              <!-- 5. Order-Book Depth Matrix (Left Ask Gold Rungs / Right Bid Emerald Rungs) -->
+              <g opacity="0.9">
+                <!-- Left Ask Rungs (Gold) -->
+                <rect x="35" y="42" width="14" height="2.4" rx="1" fill="#FDE047"/>
+                <rect x="33" y="47" width="18" height="2.4" rx="1" fill="#D4AF37"/>
+                <rect x="37" y="52" width="11" height="2.4" rx="1" fill="#B45309"/>
+                <rect x="34" y="64" width="15" height="2.4" rx="1" fill="#D4AF37"/>
+                <rect x="38" y="69" width="10" height="2.4" rx="1" fill="#9A6F1A"/>
+                <!-- Right Bid Rungs (Emerald) -->
+                <rect x="65" y="42" width="15" height="2.4" rx="1" fill="#34D399"/>
+                <rect x="62" y="47" width="19" height="2.4" rx="1" fill="#10B981"/>
+                <rect x="66" y="52" width="13" height="2.4" rx="1" fill="#059669"/>
+                <rect x="64" y="64" width="17" height="2.4" rx="1" fill="#10B981"/>
+                <rect x="67" y="69" width="11" height="2.4" rx="1" fill="#047857"/>
+              </g>
+
+              <!-- 6. Sparkline Pulse & Sculpted Gold-Rimmed Emerald Q-Tail Spearhead -->
+              <path d="M 33 58 L 43 58 L 49 44 L 56 72 L 63 49 L 70 60 L 103 93" stroke="#080C14" stroke-width="6.5" stroke-linecap="round" stroke-linejoin="round"/>
+              <path d="M 33 58 L 43 58 L 49 44 L 56 72 L 63 49 L 70 60 L 103 93" stroke="url(#qd-emerald-2a2-nav)" stroke-width="3.6" stroke-linecap="round" stroke-linejoin="round"/>
+              <path d="M 33 58 L 43 58 L 49 44 L 56 72 L 63 49 L 70 60 L 103 93" stroke="#FEF08A" stroke-opacity="0.75" stroke-width="1" stroke-linecap="round" stroke-linejoin="round"/>
+
+              <!-- Faceted Breakout Spearhead (Q Tail Tip) -->
+              <polygon points="112,102 93,100 99,94 100,88" fill="url(#qd-emerald-2a2-nav)" stroke="url(#qd-gold-2a2-nav)" stroke-width="1.2" stroke-linejoin="round"/>
+              <circle cx="114" cy="104" r="2.6" fill="#6EE7B7" stroke="#FEF08A" stroke-width="0.9"/>
+            </svg>
+          </span>
+          <span class="qd-brand-text">
+            <span class="qd-brand-row">
+              <span class="qd-brand-title">QUIDESK</span>
+              <span class="qd-brand-pill">OSINT</span>
+            </span>
+            <span class="qd-brand-subtitle">Live Market Intelligence</span>
+          </span>
+        </a>
+        <div>
+          <h1 style="font-size: 20px; font-weight: 800; color: #ffffff; margin: 0;">Quidesk — Live Market Intelligence Terminal</h1>
+          <p style="font-size: 13px; color: #8899A6; margin-top: 4px; margin-bottom: 0;">
+            Master Sovereign Edition · Real-time edge financial tracking across Equities, Cryptocurrencies, Precious Metals, Energy Commodities, and Foreign Exchange.
+          </p>
+        </div>
       </header>
       <main style="padding: 20px 24px; max-width: 1400px; margin: 0 auto; font-family: system-ui, sans-serif; color: #CBD5E1;">
         <section aria-labelledby="overview-heading" style="margin-bottom: 24px;">
@@ -253,6 +416,72 @@
           </ul>
         </section>
       </main>
+      <footer style="padding: 20px 24px; max-width: 1400px; margin: 0 auto; display: flex; align-items: center; justify-content: space-between; border-top: 1px solid rgba(148, 163, 184, 0.12); flex-wrap: wrap; gap: 12px;">
+        <div style="display: flex; align-items: center; gap: 10px;">
+          <span class="qd-logo-badge" style="width: 28px; height: 28px;" aria-hidden="true">
+            <svg viewBox="0 0 120 120" width="28" height="28" fill="none" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="Quidesk Imperial Astrolabe Logo">
+              <defs>
+                <linearGradient id="qd-gold-2a2-ft" x1="12" y1="10" x2="108" y2="110" gradientUnits="userSpaceOnUse">
+                  <stop offset="0%" stop-color="#FEF08A"/>
+                  <stop offset="28%" stop-color="#D4AF37"/>
+                  <stop offset="65%" stop-color="#9A6F1A"/>
+                  <stop offset="100%" stop-color="#FDE047"/>
+                </linearGradient>
+                <linearGradient id="qd-gold-rim-ft" x1="0" y1="120" x2="120" y2="0" gradientUnits="userSpaceOnUse">
+                  <stop offset="0%" stop-color="#B45309"/>
+                  <stop offset="50%" stop-color="#FDE68A"/>
+                  <stop offset="100%" stop-color="#D4AF37"/>
+                </linearGradient>
+                <linearGradient id="qd-emerald-2a2-ft" x1="36" y1="44" x2="108" y2="108" gradientUnits="userSpaceOnUse">
+                  <stop offset="0%" stop-color="#6EE7B7"/>
+                  <stop offset="45%" stop-color="#10B981"/>
+                  <stop offset="100%" stop-color="#047857"/>
+                </linearGradient>
+                <radialGradient id="qd-core-glow-ft" cx="50%" cy="50%" r="50%">
+                  <stop offset="0%" stop-color="#10B981" stop-opacity="0.16"/>
+                  <stop offset="70%" stop-color="#D4AF37" stop-opacity="0.05"/>
+                  <stop offset="100%" stop-color="#080C14" stop-opacity="0"/>
+                </radialGradient>
+              </defs>
+              <circle cx="58" cy="58" r="52" fill="url(#qd-core-glow-ft)"/>
+              <circle cx="58" cy="58" r="53" stroke="url(#qd-gold-rim-ft)" stroke-opacity="0.35" stroke-width="0.9" stroke-dasharray="3 5"/>
+              <circle cx="58" cy="58" r="49.5" stroke="#D4AF37" stroke-opacity="0.22" stroke-width="0.6"/>
+              <polygon points="58,3 60,8 58,11 56,8" fill="url(#qd-gold-2a2-ft)"/>
+              <polygon points="113,58 108,60 105,58 108,56" fill="url(#qd-gold-2a2-ft)"/>
+              <polygon points="58,113 60,108 58,105 56,108" fill="url(#qd-gold-2a2-ft)"/>
+              <polygon points="3,58 8,60 11,58 8,56" fill="url(#qd-gold-2a2-ft)"/>
+              <path d="M 97.2 77.9 A 44 44 0 1 0 77.9 97.2 L 72.5 87.4 A 33 33 0 1 1 87.4 72.5 Z" fill="url(#qd-gold-2a2-ft)" stroke="url(#qd-gold-rim-ft)" stroke-width="0.8"/>
+              <path d="M 99.8 79.3 A 47 47 0 1 0 79.3 99.8" stroke="#FEF08A" stroke-opacity="0.45" stroke-width="0.8" stroke-linecap="round"/>
+              <polygon points="58,27 73.5,31.2 84.8,42.5 89,58 84.8,73.5 73.5,84.8 58,89 42.5,84.8 31.2,73.5 27,58 31.2,42.5 42.5,31.2" stroke="url(#qd-gold-2a2-ft)" stroke-opacity="0.7" stroke-width="1.3" fill="#080C14" fill-opacity="0.55"/>
+              <g stroke="#94A3B8" stroke-opacity="0.2" stroke-width="0.7">
+                <line x1="29" y1="58" x2="87" y2="58"/>
+                <line x1="58" y1="29" x2="58" y2="87"/>
+                <ellipse cx="58" cy="58" rx="22" ry="11"/>
+                <ellipse cx="58" cy="58" rx="11" ry="22"/>
+              </g>
+              <g opacity="0.9">
+                <rect x="35" y="42" width="14" height="2.4" rx="1" fill="#FDE047"/>
+                <rect x="33" y="47" width="18" height="2.4" rx="1" fill="#D4AF37"/>
+                <rect x="37" y="52" width="11" height="2.4" rx="1" fill="#B45309"/>
+                <rect x="34" y="64" width="15" height="2.4" rx="1" fill="#D4AF37"/>
+                <rect x="38" y="69" width="10" height="2.4" rx="1" fill="#9A6F1A"/>
+                <rect x="65" y="42" width="15" height="2.4" rx="1" fill="#34D399"/>
+                <rect x="62" y="47" width="19" height="2.4" rx="1" fill="#10B981"/>
+                <rect x="66" y="52" width="13" height="2.4" rx="1" fill="#059669"/>
+                <rect x="64" y="64" width="17" height="2.4" rx="1" fill="#10B981"/>
+                <rect x="67" y="69" width="11" height="2.4" rx="1" fill="#047857"/>
+              </g>
+              <path d="M 33 58 L 43 58 L 49 44 L 56 72 L 63 49 L 70 60 L 103 93" stroke="#080C14" stroke-width="6.5" stroke-linecap="round" stroke-linejoin="round"/>
+              <path d="M 33 58 L 43 58 L 49 44 L 56 72 L 63 49 L 70 60 L 103 93" stroke="url(#qd-emerald-2a2-ft)" stroke-width="3.6" stroke-linecap="round" stroke-linejoin="round"/>
+              <path d="M 33 58 L 43 58 L 49 44 L 56 72 L 63 49 L 70 60 L 103 93" stroke="#FEF08A" stroke-opacity="0.75" stroke-width="1" stroke-linecap="round" stroke-linejoin="round"/>
+              <polygon points="112,102 93,100 99,94 100,88" fill="url(#qd-emerald-2a2-ft)" stroke="url(#qd-gold-2a2-ft)" stroke-width="1.2" stroke-linejoin="round"/>
+              <circle cx="114" cy="104" r="2.6" fill="#6EE7B7" stroke="#FEF08A" stroke-width="0.9"/>
+            </svg>
+          </span>
+          <span style="font-family: 'JetBrains Mono', 'Inter', monospace, sans-serif; font-size: 13px; font-weight: 800; color: #D4AF37; letter-spacing: 0.12em;">QUIDÈSK</span>
+        </div>
+        <span style="font-size: 12px; color: #64748B;">Open-source financial intelligence terminal · Market Telemetry &amp; OSINT Signals</span>
+      </footer>
       <noscript>
         <div style="background: #1e293b; color: #f8fafc; padding: 16px; text-align: center; font-family: sans-serif;">
           Quidesk is an interactive real-time market intelligence terminal. Please enable JavaScript to access live price streaming, 3D interactive heatmaps, and OSINT news signals.

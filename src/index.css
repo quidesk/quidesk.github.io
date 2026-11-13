@@ -176,3 +176,72 @@ body::before {
   .table-scroll      { overflow-x:auto !important; }
   .nav-clock         { display:none !important; }
 }
+
+/* ── NAVBAR BRAND LOCKUP RHYTHM (Edition 2A-II) ── */
+.qd-brand-lockup {
+  display: inline-flex;
+  align-items: center;
+  gap: 12px;
+  text-decoration: none;
+  padding: 4px 8px;
+  border-radius: 10px;
+  position: relative;
+  z-index: 20;
+  transition: transform 0.18s ease, background-color 0.18s ease;
+}
+.qd-brand-lockup:hover {
+  background: rgba(212, 175, 55, 0.06);
+}
+.qd-brand-lockup:focus-visible {
+  outline: 2px solid #10B981;
+  outline-offset: 3px;
+}
+.qd-logo-badge {
+  display: inline-flex;
+  width: 40px;
+  height: 40px;
+  flex-shrink: 0;
+  filter: drop-shadow(0 2px 10px rgba(16, 185, 129, 0.22));
+}
+.qd-logo-badge svg {
+  width: 100%;
+  height: 100%;
+  display: block;
+}
+.qd-brand-text {
+  display: flex;
+  flex-direction: column;
+  line-height: 1;
+}
+.qd-brand-row {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+}
+.qd-brand-title {
+  font-family: 'JetBrains Mono', 'Inter', monospace, sans-serif;
+  font-size: 16px;
+  font-weight: 800;
+  letter-spacing: 0.16em;
+  background: linear-gradient(95deg, #FEF08A 0%, #D4AF37 55%, #34D399 100%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+}
+.qd-brand-pill {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 9.5px;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  color: #34D399;
+  background: rgba(16, 185, 129, 0.14);
+  border: 1px solid rgba(212, 175, 55, 0.35);
+  padding: 2px 5px;
+  border-radius: 4px;
+}
+.qd-brand-subtitle {
+  margin-top: 4px;
+  font-size: 10.5px;
+  font-weight: 500;
+  letter-spacing: 0.04em;
+  color: #94A3B8;
+}

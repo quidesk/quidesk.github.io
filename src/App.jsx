@@ -295,7 +295,7 @@ export default function App() {
         </div>
         <div style={fS.inner}>
           <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-            <Logo size={24} />
+            <Logo size={28} />
             <span style={fS.brand}>QUIDESK</span>
           </div>
           <span style={fS.text}>Market intelligence terminal · For informational purposes only</span>
