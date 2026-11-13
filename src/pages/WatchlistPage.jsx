@@ -174,7 +174,7 @@ const s = {
   emptyIcon: { fontSize:'32px', color:'var(--text-dim)' },
   emptyText: { fontFamily:'var(--font-display)', fontSize:'14px', color:'var(--text-secondary)', letterSpacing:'0.04em' },
   emptySub: { fontFamily:'var(--font-body)', fontSize:'12px', color:'var(--text-dim)' },
-  grid: { display:'grid', gridTemplateColumns:'repeat(auto-fill, minmax(200px,1fr))', gap:'12px' },
+  grid: { display:'grid', gridTemplateColumns:'repeat(auto-fill, minmax(300px, 1fr))', gap:'16px' },
   cardActions: { display:'flex', gap:'4px', marginTop:'4px' },
   actionBtn: {
     flex:1, display:'flex', alignItems:'center', justifyContent:'center', gap:'4px',

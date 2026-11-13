@@ -3,59 +3,59 @@ import { formatPrice, formatChange, CORRELATIONS, SECTOR_META, formatChangeBubbl
 import CurrencyTooltip from './CurrencyTooltip';
 
 // Fixed internal SVG coordinate system — CSS width:100% + height:auto scales it
-export const INTERNAL_W = 900;
-export const INTERNAL_H = 504;
+export const INTERNAL_W = 1000;
+export const INTERNAL_H = 500;
 
 // Initial positions as fractions of canvas
 export const INITIAL_POSITIONS = {
-  spx:      { x:0.10, y:0.14 },
-  ndx:      { x:0.20, y:0.09 },
-  dow:      { x:0.07, y:0.26 },
-  aapl:     { x:0.24, y:0.20 },
-  nvda:     { x:0.14, y:0.34 },
-  tsla:     { x:0.08, y:0.42 },
-  meta:     { x:0.25, y:0.38 },
-  btc:      { x:0.76, y:0.12 },
-  eth:      { x:0.86, y:0.22 },
-  sol:      { x:0.90, y:0.12 },
-  bnb:      { x:0.80, y:0.34 },
-  xrp:      { x:0.70, y:0.26 },
-  ada:      { x:0.91, y:0.38 },
-  gold:     { x:0.12, y:0.69 },
-  silver:   { x:0.22, y:0.81 },
-  platinum: { x:0.08, y:0.82 },
-  wti:      { x:0.68, y:0.68 },
-  brent:    { x:0.78, y:0.79 },
-  ng:       { x:0.86, y:0.68 },
-  hoil:     { x:0.61, y:0.79 },
-  // Forex — center horizontal band
-  eurusd:   { x:0.38, y:0.46 },
-  gbpusd:   { x:0.46, y:0.42 },
-  usdjpy:   { x:0.56, y:0.46 },
-  audusd:   { x:0.38, y:0.55 },
-  usdcad:   { x:0.50, y:0.55 },
-  usdchf:   { x:0.60, y:0.42 },
-  nzdusd:   { x:0.34, y:0.54 },
-  eurgbp:   { x:0.43, y:0.50 },
-  gbpjpy:   { x:0.49, y:0.39 },
-  eurjpy:   { x:0.53, y:0.44 },
-  usdinr:   { x:0.57, y:0.55 },
-  eurinr:   { x:0.61, y:0.52 },
+  spx:      { x:0.13, y:0.23 },
+  ndx:      { x:0.23, y:0.21 },
+  dow:      { x:0.11, y:0.34 },
+  aapl:     { x:0.24, y:0.29 },
+  nvda:     { x:0.18, y:0.36 },
+  tsla:     { x:0.12, y:0.41 },
+  meta:     { x:0.25, y:0.39 },
+  btc:      { x:0.76, y:0.22 },
+  eth:      { x:0.86, y:0.25 },
+  sol:      { x:0.88, y:0.19 },
+  bnb:      { x:0.80, y:0.35 },
+  xrp:      { x:0.74, y:0.31 },
+  ada:      { x:0.87, y:0.37 },
+  gold:     { x:0.14, y:0.76 },
+  silver:   { x:0.23, y:0.81 },
+  platinum: { x:0.15, y:0.83 },
+  wti:      { x:0.76, y:0.76 },
+  brent:    { x:0.85, y:0.81 },
+  ng:       { x:0.86, y:0.73 },
+  hoil:     { x:0.76, y:0.83 },
+  // Forex — 12 pairs distributed evenly across the FOREX circle (center: 0.50, 0.50, r: 155)
+  eurusd:   { x:0.45, y:0.43 },
+  gbpusd:   { x:0.55, y:0.43 },
+  usdjpy:   { x:0.50, y:0.37 },
+  audusd:   { x:0.42, y:0.51 },
+  usdcad:   { x:0.58, y:0.51 },
+  usdchf:   { x:0.50, y:0.58 },
+  nzdusd:   { x:0.38, y:0.46 },
+  eurgbp:   { x:0.62, y:0.46 },
+  gbpjpy:   { x:0.44, y:0.35 },
+  eurjpy:   { x:0.56, y:0.35 },
+  usdinr:   { x:0.44, y:0.61 },
+  eurinr:   { x:0.56, y:0.61 },
 };
 
 export const ZONES = [
-  { id:'equities', label:'EQUITIES', cx:0.17, cy:0.26, rx:0.20, ry:0.26, color:'#4d9eff' },
-  { id:'crypto',   label:'CRYPTO',   cx:0.81, cy:0.26, rx:0.20, ry:0.26, color:'#a78bfa' },
-  { id:'metals',   label:'METALS',   cx:0.17, cy:0.76, rx:0.20, ry:0.18, color:'#f0a500' },
-  { id:'energy',   label:'ENERGY',   cx:0.75, cy:0.76, rx:0.22, ry:0.18, color:'#f97316' },
-  { id:'forex',    label:'FOREX',    cx:0.50, cy:0.50, rx:0.22, ry:0.16, color:'#22d3ee' },
+  { id:'equities', label:'EQUITIES', cx:0.19, cy:0.31, r:135, rx:0.22, ry:0.27, color:'#4d9eff' },
+  { id:'crypto',   label:'CRYPTO',   cx:0.81, cy:0.31, r:135, rx:0.22, ry:0.27, color:'#a78bfa' },
+  { id:'metals',   label:'METALS',   cx:0.19, cy:0.79, r:90,  rx:0.20, ry:0.18, color:'#f0a500' },
+  { id:'energy',   label:'ENERGY',   cx:0.81, cy:0.79, r:95,  rx:0.22, ry:0.19, color:'#f97316' },
+  { id:'forex',    label:'FOREX',    cx:0.50, cy:0.50, r:155, rx:0.22, ry:0.20, color:'#22d3ee' },
 ];
 
 export const ZONE_HOME = {
-  equities: { x:0.17, y:0.26 },
-  crypto:   { x:0.81, y:0.26 },
-  metals:   { x:0.17, y:0.76 },
-  energy:   { x:0.75, y:0.76 },
+  equities: { x:0.19, y:0.31 },
+  crypto:   { x:0.81, y:0.31 },
+  metals:   { x:0.19, y:0.79 },
+  energy:   { x:0.81, y:0.79 },
   forex:    { x:0.50, y:0.50 },
 };
 
@@ -94,7 +94,7 @@ export function getMapNodeLabel(asset) {
 }
 
 /**
- * Projects a node inside its assigned zone ellipse with 30px header clearance
+ * Projects a node inside its assigned zone circle/ellipse with 30px header clearance
  * and halves velocity components when clamped at the boundary.
  */
 export function clampNodeToEllipse(xPx, yPx, vx, vy, zone, nr, internalW = INTERNAL_W, internalH = INTERNAL_H) {
@@ -111,16 +111,27 @@ export function clampNodeToEllipse(xPx, yPx, vx, vy, zone, nr, internalW = INTER
     };
   }
 
-  const rxp = Math.max(1, zone.rx * internalW - nr - 6);
-  const ryp = Math.max(1, zone.ry * internalH - nr - 6);
   const cxPx = zone.cx * internalW;
   const cyPx = zone.cy * internalH;
+  const rxp = Math.max(1, zone.rx * internalW - nr - 6);
+  const ryp = Math.max(1, zone.ry * internalH - nr - 6);
   const minYPx = (zone.cy - zone.ry) * internalH + 30 + nr;
 
   let nx = xPx;
   let ny = yPx;
   let nvx = vx;
   let nvy = vy;
+
+  if (zone.r) {
+    const maxR = Math.max(10, zone.r - nr - 8);
+    const cdist = Math.hypot(nx - cxPx, ny - cyPx);
+    if (cdist > maxR) {
+      nx = cxPx + ((nx - cxPx) / cdist) * maxR;
+      ny = cyPx + ((ny - cyPx) / cdist) * maxR;
+      nvx *= 0.5;
+      nvy *= 0.5;
+    }
+  }
 
   const dx = nx - cxPx;
   const dy = ny - cyPx;
@@ -149,6 +160,90 @@ export function clampNodeToEllipse(xPx, yPx, vx, vy, zone, nr, internalW = INTER
   };
 }
 
+/**
+ * 50-iteration circle-packing repulsion + radial clamping loop
+ * (dist <= zone.r - node.r - 8) so nodes distribute evenly inside category circles.
+ */
+export function packCategoryNodes(pos, assets, zones = ZONES, internalW = INTERNAL_W, internalH = INTERNAL_H) {
+  const result = {};
+  assets.forEach(a => {
+    const p = pos[a.id] || INITIAL_POSITIONS[a.id] || { x: 0.5, y: 0.5 };
+    result[a.id] = {
+      x: p.x * internalW,
+      y: p.y * internalH,
+      vx: 0,
+      vy: 0,
+    };
+  });
+
+  const zoneMap = new Map(zones.map(z => [z.id, z]));
+
+  for (let iter = 0; iter < 50; iter++) {
+    // 1. Repulsion between nodes in the same category
+    for (let i = 0; i < assets.length; i++) {
+      const a1 = assets[i];
+      const p1 = result[a1.id];
+      if (!p1) continue;
+      const r1 = getAssetRadius(a1);
+
+      for (let j = i + 1; j < assets.length; j++) {
+        const a2 = assets[j];
+        if (a1.sector !== a2.sector) continue;
+        const p2 = result[a2.id];
+        if (!p2) continue;
+        const r2 = getAssetRadius(a2);
+
+        const dx = p2.x - p1.x;
+        const dy = p2.y - p1.y;
+        const dist = Math.hypot(dx, dy) || 0.1;
+        const targetDist = r1 + r2 + 4;
+
+        if (dist < targetDist) {
+          const overlap = (targetDist - dist) * 0.5;
+          const nx = (dx / dist) * overlap;
+          const ny = (dy / dist) * overlap;
+          p1.x -= nx;
+          p1.y -= ny;
+          p2.x += nx;
+          p2.y += ny;
+        }
+      }
+    }
+
+    // 2. Radial clamping: dist <= zone.r - node.r - 8
+    assets.forEach(asset => {
+      const p = result[asset.id];
+      const z = zoneMap.get(asset.sector);
+      if (!p || !z) return;
+      const nr = getAssetRadius(asset);
+      const cxPx = z.cx * internalW;
+      const cyPx = z.cy * internalH;
+      const maxR = Math.max(10, (z.r || 100) - nr - 8);
+
+      const dx = p.x - cxPx;
+      const dy = p.y - cyPx;
+      const dist = Math.hypot(dx, dy);
+      if (dist > maxR) {
+        p.x = cxPx + (dx / dist) * maxR;
+        p.y = cyPx + (dy / dist) * maxR;
+      }
+    });
+  }
+
+  // Convert back to fractions
+  const normalized = {};
+  assets.forEach(a => {
+    const p = result[a.id];
+    normalized[a.id] = {
+      x: p.x / internalW,
+      y: p.y / internalH,
+      vx: 0,
+      vy: 0,
+    };
+  });
+  return normalized;
+}
+
 export function initNodeState(allAssets) {
   const state = {};
   allAssets.forEach(asset => {
@@ -160,7 +255,7 @@ export function initNodeState(allAssets) {
       vy: 0,
     };
   });
-  return state;
+  return packCategoryNodes(state, allAssets, ZONES, INTERNAL_W, INTERNAL_H);
 }
 
 /**
@@ -487,28 +582,27 @@ export default function MarketMap({ allAssets, hotspots = [], onSelectAsset, con
           <path id="liquidWave" d="M -90 0 C -75 -6, -60 -6, -45 0 C -30 6, -15 6, 0 0 C 15 -6, 30 -6, 45 0 C 60 6, 75 6, 90 0 V 60 H -90 Z" />
         </defs>
 
-        {/* Zone boundaries — elliptical category containers */}
+        {/* Zone boundaries — 5-zone category circles inside viewBox="0 0 1000 500" */}
         {ZONES.map(z => {
           const cx = z.cx * INTERNAL_W;
           const cy = z.cy * INTERNAL_H;
-          const rx = z.rx * INTERNAL_W;
-          const ry = z.ry * INTERNAL_H;
+          const r = z.r;
           return (
             <g key={z.id}>
               <ellipse
-                cx={cx} cy={cy} rx={rx} ry={ry}
+                cx={cx} cy={cy} rx={r} ry={r}
                 fill="none"
                 stroke={z.color}
-                strokeWidth="0.7"
-                opacity="0.24"
+                strokeWidth="0.8"
+                opacity="0.25"
                 strokeDasharray="4 3"
               />
               <text
-                x={cx} y={cy - ry + 16}
+                x={cx} y={cy - r + 18}
                 textAnchor="middle"
-                fontSize="9" fontFamily="var(--font-mono)" fontWeight="600"
-                fill={z.color} opacity="0.65"
-                letterSpacing="0.08em"
+                fontSize="10" fontFamily="var(--font-mono)" fontWeight="700"
+                fill={z.color} opacity="0.75"
+                letterSpacing="0.1em"
               >
                 {z.label}
               </text>

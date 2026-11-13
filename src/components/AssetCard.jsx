@@ -1,16 +1,15 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { Star, Share2 } from 'lucide-react';
 import { formatChange, SECTOR_META } from '../data/markets';
-import { formatForexSecondaryValue, formatCardUnitSuffix, getAssetPrecision } from '../utils/formatters';
-import MiniChart, { fetchCachedRangeHistory, MIN_REAL_CHART_POINTS } from './MiniChart';
+import { formatCardUnitSuffix, getAssetPrecision } from '../utils/formatters';
+import { fetchCachedRangeHistory, MIN_REAL_CHART_POINTS } from './MiniChart';
 import CurrencyTooltip from './CurrencyTooltip';
 import ShareModal from './ShareModal';
-import PriceDisplay from './PriceDisplay';
 import TimeRangeToggles from './TimeRangeToggles';
 import { FreshnessBadge, FallbackNotice } from './FreshnessBadge';
 import { getFreshnessLevel } from '../lib/freshness';
-import { detectLocalCurrency } from '../hooks/useCurrencyRates';
 import { useMarketStore } from '../store/marketStore';
+import { D, formatAssetPriceDisplay, computeEightCurrencies, getSessionStatus, drawCardCanvasChart } from '../utils/marketEngine';
 
 export default function AssetCard({
   asset: propAsset,
@@ -23,8 +22,6 @@ export default function AssetCard({
   formatLocalPrice,
   isStale: propIsStale,
 }) {
-  const allQuotes = useMarketStore((s) => s.quotes);
-  const fxExtras = useMarketStore((s) => s.fxExtras);
   const storeQuote = useMarketStore((s) => {
     const key = (propSymbol || propAsset?.symbol || propAsset?.id || '').toLowerCase();
     return s.quotes[key] || (propSymbol ? s.quotes[propSymbol] : null);
@@ -45,6 +42,7 @@ export default function AssetCard({
   const [conversions, setConversions] = useState([]);
   const [shareOpen, setShareOpen] = useState(false);
   const cardRef = useRef(null);
+  const canvasRef = useRef(null);
   const timerRef = useRef(null);
 
   useEffect(() => {
@@ -70,16 +68,26 @@ export default function AssetCard({
     }
   }, [asset.price, prev]);
 
+  // Render high-DPI HTML5 canvas chart
+  useEffect(() => {
+    if (canvasRef.current) {
+      const hist = (tf === '24H'
+        ? (asset.history?.['24H'] || asset.history)
+        : (asset.history?.[tf] || rangeHistory[`${asset.id}-${tf}`]?.points?.map(p => p.value))) || asset.history;
+      drawCardCanvasChart(canvasRef.current, { ...asset, history: hist });
+    }
+  }, [asset.price, asset.prevClose, asset.change24h, asset.change, asset.history, tf, rangeHistory, asset.id]);
+
   if (!asset.price && !asset.symbol) {
     return (
-      <div className="card" style={{ padding: '16px', background: 'var(--bg-card)', borderRadius: '8px' }}>
+      <div className="card qd-skeleton" style={{ padding: '16px', borderRadius: '12px', minHeight: '180px' }}>
         <div style={{ color: 'var(--text-dim)', fontSize: '11px', fontFamily: 'var(--font-mono)' }}>Loading asset data...</div>
       </div>
     );
   }
 
   const hasPrice = asset.status !== 'unavailable' && typeof asset.price === 'number' && Number.isFinite(asset.price);
-  const rawChange = asset.changePercent ?? asset.change;
+  const rawChange = asset.change24h ?? asset.changePercent ?? asset.change;
   const changeVal = asset.status !== 'unavailable' && typeof rawChange === 'number' && Number.isFinite(rawChange)
     ? rawChange
     : null;
@@ -87,36 +95,25 @@ export default function AssetCard({
   const isUp = changeVal !== null && changeVal >= 0;
   const meta = SECTOR_META[asset.sector] || {};
 
-  // Session status and staleness evaluation (derived strictly from Worker status / quoteTs)
-  const isClosed = asset.status === 'closed' || asset.tradingPeriod === 'closed';
-  const freshness = isClosed ? 'closed' : getFreshnessLevel(asset);
+  // Session status and staleness evaluation
+  const sessionStatus = getSessionStatus(asset.sector || asset.category, Date.now());
+  const isClosed = sessionStatus === 'CLOSED' || asset.status === 'closed' || asset.tradingPeriod === 'closed';
+  const freshness = isClosed ? 'closed' : (sessionStatus === 'LIVE' ? 'fresh' : getFreshnessLevel(asset));
   const staleFromProp = typeof propIsStale === 'function' ? propIsStale(asset.id, asset.sector) : Boolean(propIsStale);
   const isStale = !isClosed && (staleFromProp || freshness === 'stale' || freshness === 'very_stale');
 
-  const isForex = (asset.sector || '').toLowerCase() === 'forex' || (
-    asset.symbol && asset.symbol.includes('/') &&
-    !asset.symbol.startsWith('XAU') && !asset.symbol.startsWith('XAG') && !asset.symbol.startsWith('XPT')
-  );
-  const isForexInr = isForex && (asset.symbol?.endsWith('/INR') || asset.symbol?.endsWith('INR'));
-  const pricePrefix = isForexInr ? '₹' : (isForex ? '' : '$');
-  const unitSuffix = hasPrice ? formatCardUnitSuffix(asset.sector, asset.unit, asset.symbol) : '';
-  const precision = getAssetPrecision(asset.symbol, asset.sector, asset.price);
+  // Exact Module 3 price and secondary displays
+  const priceDisplayData = formatAssetPriceDisplay(asset);
 
-  const fxRatesSource = { ...allQuotes, ...fxExtras };
-  const rawSecondary = !hasPrice
-    ? null
-    : (isForex
-        ? formatForexSecondaryValue(asset.symbol, asset.price, fxRatesSource, detectLocalCurrency())
-        : (formatLocalPrice ? formatLocalPrice(asset.price) : null));
-  const secondaryDisplay = rawSecondary
-    ? (rawSecondary.startsWith('(') ? rawSecondary : `(${rawSecondary})`)
-    : null;
+  // Module 2 strict positive/negative card tints
+  const chgDecimal = D(changeVal ?? 0);
+  const cardTintClass = changeVal === null
+    ? (hasPrice ? 'card-positive' : 'qd-skeleton')
+    : (chgDecimal.gte(0) ? 'card-positive' : 'card-negative');
 
   function showTooltip() {
     if (shareOpen) return;
-    if (convertPrice && hasPrice) {
-      setConversions(convertPrice(asset));
-    }
+    setConversions(computeEightCurrencies(asset));
     timerRef.current = setTimeout(() => {
       const rect = cardRef.current && cardRef.current.getBoundingClientRect();
       if (!rect) return;
@@ -151,14 +148,13 @@ export default function AssetCard({
     <div style={{ position: 'relative' }}>
       <div
         ref={cardRef}
-        className={`card asset-card freshness-${freshness}`}
+        className={`card asset-card ${cardTintClass} freshness-${freshness}`}
         style={{
           padding: compact ? '12px' : '16px',
           cursor: 'pointer',
           background: bg,
           transition: 'background 0.4s ease, border-color 0.15s, transform 0.15s, box-shadow 0.15s',
-          borderRadius: '8px',
-          border: '1px solid var(--border-subtle, rgba(255,255,255,0.08))',
+          borderRadius: '12px',
         }}
         onClick={() => { if (onClick) onClick(asset); }}
         onMouseEnter={showTooltip}
@@ -167,31 +163,42 @@ export default function AssetCard({
         {/* Header */}
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: compact ? '6px' : '10px' }}>
           <div>
-            <div style={{ display: 'flex', alignItems: 'center', gap: '6px', flexWrap: 'wrap' }}>
-              <span style={{ fontFamily: 'var(--font-display)', fontSize: '13px', fontWeight: 700, color: meta.color || 'var(--text-primary)', letterSpacing: '0.04em' }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '6px', flexWrap: 'nowrap' }}>
+              <span
+                className="card-ticker-symbol asset-symbol"
+                style={{
+                  fontFamily: 'var(--font-display)',
+                  fontSize: '13px',
+                  fontWeight: 700,
+                  color: meta.color || 'var(--text-primary)',
+                  letterSpacing: '0.04em',
+                  whiteSpace: 'nowrap',
+                  flexShrink: 0
+                }}
+              >
                 {asset.symbol}
               </span>
               {!compact && (
-                <span style={{ fontFamily: 'var(--font-mono)', fontSize: '8px', color: meta.color || 'var(--accent)', background: (meta.color || '#f0a500') + '14', border: '1px solid ' + (meta.color || '#f0a500') + '30', borderRadius: '3px', padding: '0 5px', lineHeight: '14px' }}>
+                <span style={{ fontFamily: 'var(--font-mono)', fontSize: '8px', color: meta.color || 'var(--accent)', background: (meta.color || '#f0a500') + '14', border: '1px solid ' + (meta.color || '#f0a500') + '30', borderRadius: '3px', padding: '0 5px', lineHeight: '14px', whiteSpace: 'nowrap', flexShrink: 0 }}>
                   {meta.label}
                 </span>
               )}
               {/* Authoritative Worker Status & Quote Age Badge */}
               <FreshnessBadge
                 level={freshness}
-                status={asset.status}
+                status={isClosed ? 'closed' : (sessionStatus === 'LIVE' ? 'LIVE' : asset.status)}
                 timestamp={asset.quoteTs ?? asset.timestamp}
                 source={asset.source}
                 compact={compact}
               />
             </div>
             {!compact && (
-              <div style={{ fontFamily: 'var(--font-body)', fontSize: '10px', color: 'var(--text-dim)', marginTop: '2px' }}>
+              <div style={{ fontFamily: 'var(--font-body)', fontSize: '10px', color: 'var(--text-dim)', marginTop: '2px', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
                 {asset.name}
               </div>
             )}
           </div>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '6px', flexShrink: 0 }}>
             <span
               className={changeVal === null ? 'badge' : isFlat ? 'badge' : (isUp ? 'badge badge-bull' : 'badge badge-bear')}
               style={
@@ -200,8 +207,10 @@ export default function AssetCard({
                       color: 'var(--text-dim, #8b949e)',
                       background: 'rgba(139, 148, 158, 0.12)',
                       border: '1px solid rgba(139, 148, 158, 0.25)',
+                      whiteSpace: 'nowrap',
+                      flexShrink: 0,
                     }
-                  : {}
+                  : { whiteSpace: 'nowrap', flexShrink: 0 }
               }
             >
               {changeVal !== null && !isFlat && (
@@ -224,7 +233,9 @@ export default function AssetCard({
                 fontSize: '11px',
                 fontWeight: 500,
                 transition: 'all 0.2s ease',
-                boxShadow: '0 2px 4px rgba(0,0,0,0.1)'
+                boxShadow: '0 2px 4px rgba(0,0,0,0.1)',
+                whiteSpace: 'nowrap',
+                flexShrink: 0
               }}
               onMouseEnter={e => {
                 e.currentTarget.style.borderColor = 'var(--accent)';
@@ -258,11 +269,11 @@ export default function AssetCard({
           <FallbackNotice source={asset.source} />
         )}
 
-        {/* Price Display with Consistent Decimal Precision */}
+        {/* Price Display with Strict Arbitrary Precision & Secondary Cross Rates */}
         <div style={{
           fontFamily: 'var(--font-mono)',
           fontSize: compact ? '16px' : '20px',
-          fontWeight: 500,
+          fontWeight: 600,
           color: changeVal === null || isFlat ? 'var(--text-primary)' : (isUp ? 'var(--bull)' : 'var(--bear)'),
           marginBottom: compact ? '6px' : '10px',
           letterSpacing: '0.02em',
@@ -272,20 +283,16 @@ export default function AssetCard({
           flexWrap: 'wrap'
         }}>
           <div>
-            <PriceDisplay
-              value={asset.price}
-              prefix={pricePrefix}
-              precision={precision}
-            />
-            {unitSuffix && (
+            <span>{priceDisplayData.primary}</span>
+            {priceDisplayData.unit && (
               <span style={{ fontSize: '11px', color: 'var(--text-dim)', marginLeft: '3px' }}>
-                {unitSuffix}
+                {priceDisplayData.unit}
               </span>
             )}
           </div>
-          {secondaryDisplay && (
+          {priceDisplayData.secondary && (
             <span style={{ fontSize: '13px', color: 'var(--text-secondary)', fontWeight: 400 }}>
-              {secondaryDisplay}
+              {priceDisplayData.secondary}
             </span>
           )}
         </div>
@@ -299,18 +306,16 @@ export default function AssetCard({
           />
         </div>
 
-        {/* Chart */}
-        <MiniChart
-          data={tf === '24H'
-            ? (asset.history?.['24H'] || asset.chartData)
-            : (asset.history?.[tf] || rangeHistory[`${asset.id}-${tf}`]?.points || [])}
-          positive={isUp}
-          change={changeVal}
-          height={compact ? 36 : 48}
-          currentPrice={asset.price}
-          prevClose={tf === '24H' ? asset.prevClose : rangeHistory[`${asset.id}-${tf}`]?.previousClose}
-          includePrevClose={tf === '24H'}
-        />
+        {/* High-DPI HTML5 Canvas Chart Engine (Zero "no chart data" states) */}
+        <div style={{ width: '100%', height: '52px', marginTop: '4px', marginBottom: '4px' }}>
+          <canvas
+            ref={canvasRef}
+            className="qd-card-canvas"
+            data-symbol={asset.symbol}
+            height="52"
+            style={{ width: '100%', height: '52px', display: 'block' }}
+          />
+        </div>
 
         {!compact && (asset.volume || (asset.marketCap && asset.marketCap !== '—')) && (
           <div style={{ display: 'flex', gap: '14px', marginTop: '8px', paddingTop: '8px', borderTop: '1px solid var(--border-subtle)' }}>

@@ -282,8 +282,8 @@ const styles = {
   },
   miniGrid: {
     display: 'grid',
-    gridTemplateColumns: 'repeat(auto-fill, minmax(180px, 1fr))',
-    gap: '12px',
+    gridTemplateColumns: 'repeat(auto-fill, minmax(300px, 1fr))',
+    gap: '16px',
   },
   miniCard: {
     background: 'var(--bg-card)',

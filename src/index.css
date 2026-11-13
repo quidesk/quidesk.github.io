@@ -176,3 +176,93 @@ body::before {
   .table-scroll      { overflow-x:auto !important; }
   .nav-clock         { display:none !important; }
 }
+
+/* ══════════════════════════════════════════════════════════════════════
+   SOVEREIGN V3 & EDITION 2A-II ARCHITECTURAL LAYOUT & BRANDING
+   ══════════════════════════════════════════════════════════════════════ */
+
+/* Header Isolation & Backdrop Blur */
+header, .hero-nav-header {
+  position: sticky !important;
+  top: 0 !important;
+  z-index: 1000 !important;
+  isolation: isolate !important;
+  background: rgba(8, 12, 20, 0.97) !important;
+  backdrop-filter: blur(16px) !important;
+  -webkit-backdrop-filter: blur(16px) !important;
+}
+
+/* Unstretched Wordmark */
+.qd-brand-wordmark {
+  letter-spacing: 0.16em !important;
+  font-weight: 800 !important;
+  transform: none !important;
+}
+
+/* Unified Stream Status Pill */
+#qd-stream-status.qd-status-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-family: var(--font-mono);
+  font-size: 9px;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  padding: 3px 8px;
+  border-radius: 4px;
+  background: rgba(240, 64, 96, 0.08);
+  border: 1px solid rgba(240, 64, 96, 0.25);
+  color: var(--bear);
+  transition: all 0.2s ease;
+}
+#qd-stream-status.qd-status-pill.is-live {
+  background: rgba(34, 212, 122, 0.08);
+  border: 1px solid rgba(34, 212, 122, 0.25);
+  color: var(--bull);
+  box-shadow: 0 0 8px rgba(34, 212, 122, 0.2);
+}
+
+/* 4-Column Responsive Card Grid */
+.qd-card-grid, .sector-cards-grid, .category-card-grid, .cards-grid-4col {
+  display: grid !important;
+  grid-template-columns: repeat(auto-fill, minmax(300px, 1fr)) !important;
+  gap: 16px !important;
+}
+
+/* Prevent Card Symbol Wrapping */
+.card-ticker-symbol, .asset-symbol, .qd-symbol {
+  white-space: nowrap !important;
+  flex-shrink: 0 !important;
+}
+
+/* Strict Positive/Negative Card Tints */
+.card.card-positive, .card-positive {
+  background: linear-gradient(180deg, rgba(16, 185, 129, 0.08) 0%, rgba(16, 185, 129, 0.02) 100%), var(--bg-card) !important;
+  border-color: rgba(16, 185, 129, 0.28) !important;
+  box-shadow: inset 0 1px 0 rgba(16, 185, 129, 0.15), 0 4px 20px rgba(0, 0, 0, 0.16) !important;
+}
+
+.card.card-negative, .card-negative {
+  background: linear-gradient(180deg, rgba(239, 68, 68, 0.08) 0%, rgba(239, 68, 68, 0.02) 100%), var(--bg-card) !important;
+  border-color: rgba(239, 68, 68, 0.28) !important;
+  box-shadow: inset 0 1px 0 rgba(239, 68, 68, 0.15), 0 4px 20px rgba(0, 0, 0, 0.16) !important;
+}
+
+/* Shimmer Skeleton Animation */
+@keyframes qdShimmer {
+  0% { background-position: -200% 0; }
+  100% { background-position: 200% 0; }
+}
+
+.qd-skeleton {
+  background: linear-gradient(90deg, rgba(255,255,255,0.04) 25%, rgba(255,255,255,0.10) 50%, rgba(255,255,255,0.04) 75%);
+  background-size: 200% 100%;
+  animation: qdShimmer 1.5s infinite;
+}
+
+/* Card Canvas Element */
+canvas.qd-card-canvas {
+  width: 100%;
+  height: 52px;
+  display: block;
+}

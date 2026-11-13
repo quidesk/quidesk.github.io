@@ -17,6 +17,9 @@ import OSINTMap from './components/OSINTMap'
 import Logo from './components/Logo'
 import SocialShareBar from './components/SocialShareBar'
 import { Share2 } from 'lucide-react'
+import { cryptoStreamEngine } from './services/cryptoStream'
+import { fetchFrankfurterForexHistory } from './services/forexHistory'
+import { mergeAssetState, renderAllCardCanvases } from './utils/marketEngine'
 
 const VALID_TABS = ['map', 'equities', 'crypto', 'metals', 'energy', 'forex', 'compare', 'watchlist', 'portfolio'];
 
@@ -160,6 +163,42 @@ export default function App() {
     return () => window.removeEventListener('hashchange', onHashChange);
   }, []);
 
+  // Initialize multi-tier crypto streaming & multi-day forex history
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
+    cryptoStreamEngine.init();
+    fetchFrankfurterForexHistory();
+
+    const fxInterval = setInterval(() => {
+      fetchFrankfurterForexHistory();
+    }, 60000);
+
+    return () => {
+      clearInterval(fxInterval);
+      cryptoStreamEngine.destroy();
+    };
+  }, []);
+
+  // Synchronize all assets into window.marketState
+  useEffect(() => {
+    if (typeof window !== 'undefined' && allAssets?.length) {
+      allAssets.forEach(a => {
+        if (a && a.symbol) {
+          mergeAssetState(a.symbol, {
+            ...a,
+            price: a.price,
+            prevClose: a.prevClose,
+            change24h: a.change24h ?? a.change,
+            history: a.history?.['24H'] || a.history || a.chartData?.map(pt => pt.value),
+            status: a.status,
+            timestampUtc: a.timestamp || a.quoteTs,
+          });
+        }
+      });
+      renderAllCardCanvases();
+    }
+  }, [allAssets]);
+
   const watchlistProps = {
     isWatched: watchlist.isWatched,
     onToggleWatch: watchlist.toggleWatch,
@@ -295,7 +334,7 @@ export default function App() {
         </div>
         <div style={fS.inner}>
           <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-            <Logo size={24} />
+            <Logo size={28} />
             <span style={fS.brand}>QUIDESK</span>
           </div>
           <span style={fS.text}>Market intelligence terminal · For informational purposes only</span>

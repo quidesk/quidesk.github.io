@@ -297,8 +297,8 @@ const s = {
     display:'flex', alignItems:'center', gap:'12px', marginBottom:'16px',
   },
   sectorCards: {
-    display:'grid',
-    gridTemplateColumns:'repeat(auto-fill, minmax(180px, 1fr))',
-    gap:'16px',
+    display: 'grid',
+    gridTemplateColumns: 'repeat(auto-fill, minmax(300px, 1fr))',
+    gap: '16px',
   },
 };

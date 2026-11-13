@@ -73,20 +73,31 @@ export default function Navbar({
           {/* Brand — Hero Emblem + Sovereign Typography */}
           <button style={s.heroBrand} onClick={() => setActive('map')} title="Quidesk — Sovereign Terminal">
             <div style={s.logoGlowWrapper}>
-              <Logo size={68} />
+              <Logo size={42} />
             </div>
             <div style={s.heroBrandText}>
               <div style={s.heroTitleRow}>
-                <span style={s.heroTitle}>QUIDESK</span>
+                <span style={s.heroTitle} className="qd-brand-wordmark">QUIDESK</span>
                 <span style={s.heroBadge}>SOVEREIGN EDITION</span>
-                <div style={s.heroLiveBadge}>
+                <div
+                  id="qd-stream-status"
+                  className={`qd-status-pill ${feedStatus.key === 'live' ? 'is-live' : ''}`}
+                  style={{
+                    ...s.heroLiveBadge,
+                    background: feedStatus.key === 'live' ? 'rgba(34, 212, 122, 0.08)' : 'rgba(240, 64, 96, 0.08)',
+                    borderColor: feedStatus.key === 'live' ? 'rgba(34, 212, 122, 0.25)' : 'rgba(240, 64, 96, 0.25)',
+                    color: feedStatus.key === 'live' ? 'var(--bull)' : 'var(--bear)',
+                  }}
+                >
                   <span style={{
                     ...s.heroLiveDot,
                     background: pillActiveColor,
                     boxShadow: feedStatus.key === 'live' ? '0 0 8px var(--bull)' : 'none',
                     animation: feedStatus.key === 'live' ? 'pulseDot 1.6s ease-in-out infinite' : 'none',
                   }} />
-                  <span style={s.heroLiveText}>{feedStatus.badgeText}</span>
+                  <span style={{ ...s.heroLiveText, color: pillActiveColor }}>
+                    {feedStatus.key === 'live' ? '● LIVE STREAM' : '● DELAYED'}
+                  </span>
                 </div>
               </div>
               <span style={s.heroTagline}>
@@ -120,20 +131,6 @@ export default function Navbar({
                 </span>
               </div>
             )}
-
-            <button
-              style={{ ...s.liveBtn, ...(isLive && feedStatus.key !== 'offline' ? s.liveBtnOn : s.liveBtnOff), borderColor: pillActiveColor, color: pillActiveColor }}
-              onClick={() => setIsLive(v => !v)}
-              title={isLive ? `Feed status: ${feedStatus.label} (click to pause polling)` : 'Polling paused (click to resume)'}
-            >
-              <span style={{
-                ...s.liveDot,
-                background: pillActiveColor,
-                boxShadow: feedStatus.key === 'live' ? '0 0 6px var(--bull)' : 'none',
-                animation: feedStatus.key === 'live' ? 'pulseDot 1.6s ease-in-out infinite' : 'none',
-              }}/>
-              {feedStatus.label}
-            </button>
 
             <button style={s.iconBtn} onClick={() => window.location.reload()} title="Refresh telemetry">
               <RefreshCw size={14} color="var(--text-secondary)"/>
@@ -294,9 +291,11 @@ export default function Navbar({
 
 const s = {
   heroNav: {
-    position: 'sticky', top: 0, zIndex: 100,
-    background: 'var(--bg-overlay)',
-    backdropFilter: 'blur(24px)',
+    position: 'sticky', top: 0, zIndex: 1000,
+    isolation: 'isolate',
+    background: 'rgba(8, 12, 20, 0.97)',
+    backdropFilter: 'blur(16px)',
+    WebkitBackdropFilter: 'blur(16px)',
     borderBottom: '1px solid var(--border-subtle)',
     boxShadow: '0 8px 32px rgba(0,0,0,0.3)',
   },
@@ -352,11 +351,12 @@ const s = {
   },
   heroTitle: {
     fontFamily: 'var(--font-display)',
-    fontSize: '28px',
-    fontWeight: 900,
+    fontSize: '26px',
+    fontWeight: 800,
     color: '#ffffff',
-    letterSpacing: '0.08em',
+    letterSpacing: '0.16em',
     lineHeight: 1,
+    whiteSpace: 'nowrap',
     textShadow: '0 2px 10px rgba(0,0,0,0.5)',
   },
   heroBadge: {

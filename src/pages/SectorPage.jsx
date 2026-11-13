@@ -82,10 +82,10 @@ export default function SectorPage({ sector, assets, watchlistProps, convertPric
         </div>
       )}
 
-      {/* Cards grid */}
-      <div className="row row-cols-1 row-cols-sm-2 row-cols-md-3 row-cols-xl-5 g-3 fade-up-2">
+      {/* Cards grid (4-Column Responsive Grid) */}
+      <div className="fade-up-2 category-card-grid" style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(300px, 1fr))', gap: '16px' }}>
         {sorted.map(asset => (
-          <div className="col" key={asset.id}>
+          <div key={asset.id} style={{ minWidth: 0 }}>
             <AssetCard asset={asset}
               onClick={setSelected}
               isWatched={watchlistProps?.isWatched(asset.id)}
@@ -164,7 +164,7 @@ const s = {
     fontFamily:'var(--font-body)', fontSize:'11px', fontWeight:500,
     padding:'4px 12px', cursor:'pointer', transition:'all 0.12s',
   },
-  grid: { display:'grid', gridTemplateColumns:'repeat(auto-fill, minmax(200px, 1fr))', gap:'12px' },
+  grid: { display:'grid', gridTemplateColumns:'repeat(auto-fill, minmax(300px, 1fr))', gap:'16px' },
   table: {
     background:'var(--bg-card)', border:'1px solid var(--border-subtle)', borderRadius:'10px', overflow:'hidden',
   },
