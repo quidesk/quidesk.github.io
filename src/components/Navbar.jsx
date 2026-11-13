@@ -73,12 +73,12 @@ export default function Navbar({
           {/* Brand — Hero Emblem + Sovereign Typography */}
           <button style={s.heroBrand} onClick={() => setActive('map')} title="Quidesk — Sovereign Terminal">
             <div style={s.logoGlowWrapper}>
-              <Logo size={40} />
+              <Logo size={68} />
             </div>
             <div style={s.heroBrandText}>
               <div style={s.heroTitleRow}>
                 <span style={s.heroTitle}>QUIDESK</span>
-                <span style={s.heroBadge}>OSINT</span>
+                <span style={s.heroBadge}>SOVEREIGN EDITION</span>
                 <div style={s.heroLiveBadge}>
                   <span style={{
                     ...s.heroLiveDot,
@@ -225,16 +225,16 @@ export default function Navbar({
       {/* ── Mobile top bar ── */}
       <nav style={s.mobileTop} className="d-md-none">
         <button style={s.heroBrandMobile} onClick={() => setActive('map')}>
-          <div style={{ ...s.logoGlowWrapper, width: '32px', height: '32px' }}>
-            <Logo size={32} />
+          <div style={{ ...s.logoGlowWrapper, boxShadow: '0 2px 14px rgba(212, 175, 55, 0.22)' }}>
+            <Logo size={46} />
           </div>
           <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-start', gap: '2px' }}>
-            <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-              <span style={{ fontFamily: "'JetBrains Mono', 'Inter', monospace, sans-serif", fontSize: '15px', fontWeight: 800, background: 'linear-gradient(95deg, #FEF08A 0%, #D4AF37 55%, #34D399 100%)', WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent', letterSpacing: '0.12em', lineHeight: 1 }}>
+            <div style={{ display: 'flex', alignItems: 'baseline', gap: '6px' }}>
+              <span style={{ fontFamily: 'var(--font-display)', fontSize: '18px', fontWeight: 900, color: '#fff', letterSpacing: '0.06em', lineHeight: 1 }}>
                 QUIDESK
               </span>
-              <span style={{ fontFamily: "'JetBrains Mono', monospace", fontSize: '8.5px', color: '#34D399', fontWeight: 700, letterSpacing: '0.08em', background: 'rgba(16, 185, 129, 0.14)', border: '1px solid rgba(212, 175, 55, 0.35)', borderRadius: '3px', padding: '1px 5px' }}>
-                OSINT
+              <span style={{ fontFamily: 'var(--font-mono)', fontSize: '8px', color: '#D4AF37', fontWeight: 700, letterSpacing: '0.12em', background: 'rgba(212,175,55,0.1)', border: '1px solid rgba(212,175,55,0.3)', borderRadius: '3px', padding: '1px 5px' }}>
+                SOVEREIGN
               </span>
             </div>
             <div style={{ display: 'flex', alignItems: 'center', gap: '8px', paddingTop: '2px' }}>
@@ -310,18 +310,14 @@ const s = {
     gap: '24px',
   },
   heroBrand: {
-    display: 'inline-flex',
+    display: 'flex',
     alignItems: 'center',
-    gap: '12px',
+    gap: '16px',
     background: 'none',
     border: 'none',
     cursor: 'pointer',
-    padding: '4px 8px',
-    borderRadius: '10px',
-    position: 'relative',
-    zIndex: 20,
+    padding: 0,
     textAlign: 'left',
-    transition: 'transform 0.18s ease, background-color 0.18s ease',
   },
   heroBrandMobile: {
     display: 'flex',
@@ -334,44 +330,46 @@ const s = {
     textAlign: 'left',
   },
   logoGlowWrapper: {
-    display: 'inline-flex',
-    width: '40px',
-    height: '40px',
+    display: 'flex',
     alignItems: 'center',
     justifyContent: 'center',
     flexShrink: 0,
-    filter: 'drop-shadow(0 2px 10px rgba(16, 185, 129, 0.22))',
+    padding: '2px',
+    borderRadius: '16px',
+    background: 'radial-gradient(circle, rgba(212, 175, 55, 0.16) 0%, rgba(11, 14, 20, 0) 75%)',
+    boxShadow: '0 4px 20px rgba(212, 175, 55, 0.25)',
   },
   heroBrandText: {
     display: 'flex',
     flexDirection: 'column',
-    lineHeight: 1,
+    gap: '4px',
   },
   heroTitleRow: {
     display: 'flex',
     alignItems: 'center',
-    gap: '7px',
+    gap: '10px',
+    flexWrap: 'wrap',
   },
   heroTitle: {
-    fontFamily: "'JetBrains Mono', 'Inter', monospace, sans-serif",
-    fontSize: '16px',
-    fontWeight: 800,
-    letterSpacing: '0.16em',
-    background: 'linear-gradient(95deg, #FEF08A 0%, #D4AF37 55%, #34D399 100%)',
-    WebkitBackgroundClip: 'text',
-    WebkitTextFillColor: 'transparent',
+    fontFamily: 'var(--font-display)',
+    fontSize: '28px',
+    fontWeight: 900,
+    color: '#ffffff',
+    letterSpacing: '0.08em',
     lineHeight: 1,
+    textShadow: '0 2px 10px rgba(0,0,0,0.5)',
   },
   heroBadge: {
-    fontFamily: "'JetBrains Mono', monospace",
-    fontSize: '9.5px',
+    fontFamily: 'var(--font-mono)',
+    fontSize: '10px',
     fontWeight: 700,
-    letterSpacing: '0.08em',
-    color: '#34D399',
-    background: 'rgba(16, 185, 129, 0.14)',
+    color: '#D4AF37',
+    letterSpacing: '0.14em',
+    background: 'rgba(212, 175, 55, 0.08)',
     border: '1px solid rgba(212, 175, 55, 0.35)',
     borderRadius: '4px',
-    padding: '2px 5px',
+    padding: '3px 8px',
+    textTransform: 'uppercase',
   },
   heroLiveBadge: {
     display: 'inline-flex',
@@ -380,7 +378,7 @@ const s = {
     background: 'rgba(34, 212, 122, 0.08)',
     border: '1px solid rgba(34, 212, 122, 0.25)',
     borderRadius: '4px',
-    padding: '2px 6px',
+    padding: '3px 8px',
   },
   heroLiveDot: {
     width: '6px',
@@ -395,11 +393,11 @@ const s = {
     letterSpacing: '0.08em',
   },
   heroTagline: {
-    marginTop: '4px',
-    fontSize: '10.5px',
+    fontFamily: 'var(--font-body)',
+    fontSize: '12px',
+    color: 'var(--text-secondary)',
     fontWeight: 500,
-    letterSpacing: '0.04em',
-    color: '#94A3B8',
+    letterSpacing: '0.02em',
   },
   heroTelemetry: {
     display: 'flex',
