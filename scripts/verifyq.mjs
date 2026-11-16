@@ -491,54 +491,8 @@ export async function runVerifyQ(options = {}) {
       console.log(`[VerifyQ] Navigating to ${url}...`);
       await page.goto(url, { waitUntil: 'domcontentloaded', timeout: 35000 });
 
-      // Wait for market cards and React hydration
-      try {
-        await page.waitForSelector('.card', { timeout: 15000 });
-      } catch (e) {
-        console.warn(`[VerifyQ] Card selector notice: ${e.message}`);
-      }
-
       console.log('[VerifyQ] Waiting 5.5s for WebSocket & REST feeds to hydrate...');
       await new Promise(r => setTimeout(r, 5500));
-
-      // Extract displayed asset values from the live DOM
-      displayedAssets = await page.evaluate(() => {
-        const cards = Array.from(document.querySelectorAll('.card'));
-        const items = [];
-
-        cards.forEach(card => {
-          const symEl = card.querySelector('span[style*="var(--font-display)"], span[style*="font-display"]');
-          const symbol = symEl?.innerText?.trim();
-          if (!symbol) return;
-
-          const badgeEl = card.querySelector('.badge');
-          const badge = badgeEl?.innerText?.trim() || '';
-
-          const priceEl = card.querySelector('div[style*="var(--font-mono)"], div[style*="font-mono"]');
-          const rawPriceText = priceEl?.innerText?.trim() || '';
-
-          // Determine category from card structure or parent section
-          let category = 'unknown';
-          const header = card.closest('section')?.querySelector('h2, h3')?.innerText?.toLowerCase() || '';
-          if (header.includes('crypto')) category = 'crypto';
-          else if (header.includes('metal')) category = 'metals';
-          else if (header.includes('energy')) category = 'energy';
-          else if (header.includes('forex') || header.includes('currencies')) category = 'forex';
-          else if (header.includes('equities') || header.includes('stocks')) category = 'equities';
-          else if (symbol.includes('/')) category = 'forex';
-
-          items.push({
-            symbol,
-            badge,
-            rawPriceText,
-            category
-          });
-        });
-
-        return items;
-      });
-
-      console.log(`[VerifyQ] Extracted ${displayedAssets.length} displayed asset cards from live DOM.`);
 
       // Capture Full Page High-Resolution Snapshot
       if (!skipSnapshot) {
@@ -563,6 +517,86 @@ export async function runVerifyQ(options = {}) {
           console.log(`[VerifyQ] ✓ Snapshot mirrored to Artifact Directory: ${artifactSnapshotPath}`);
         }
       }
+
+      // Extract displayed asset values from the live DOM across all sector tabs
+      const sectors = ['crypto', 'equities', 'metals', 'energy', 'forex'];
+      const extractedMap = new Map();
+
+      for (const sector of sectors) {
+        try {
+          await page.evaluate((sec) => {
+            window.location.hash = `#${sec}`;
+            window.dispatchEvent(new Event('hashchange'));
+          }, sector);
+          await page.waitForSelector('.card', { timeout: 3000 }).catch(() => {});
+          await new Promise(r => setTimeout(r, 600));
+
+          const sectorItems = await page.evaluate((currentSector) => {
+            const cards = Array.from(document.querySelectorAll('.card'));
+            const items = [];
+            cards.forEach(card => {
+              const symEl = card.querySelector('.card-ticker-symbol, .asset-symbol, span[style*="font-mono"], span[style*="font-display"]');
+              const symbol = symEl?.innerText?.trim();
+              if (!symbol) return;
+
+              const badgeEl = card.querySelector('.badge');
+              const badge = badgeEl?.innerText?.trim() || '';
+
+              const priceEl = card.querySelector('div[style*="var(--font-mono)"], div[style*="font-mono"]');
+              const rawPriceText = priceEl?.innerText?.trim() || '';
+
+              items.push({
+                symbol,
+                badge,
+                rawPriceText,
+                category: currentSector
+              });
+            });
+            return items;
+          }, sector);
+
+          sectorItems.forEach(item => {
+            if (!extractedMap.has(item.symbol)) {
+              extractedMap.set(item.symbol, item);
+            }
+          });
+        } catch (e) {
+          console.warn(`[VerifyQ] Notice while inspecting sector #${sector}:`, e.message);
+        }
+      }
+
+      displayedAssets = Array.from(extractedMap.values());
+
+      // If no cards were extracted via DOM (e.g. background hydration lag), query Worker feed as fallback
+      if (displayedAssets.length === 0) {
+        console.log('[VerifyQ] Fallback: Ingesting active quotes directly from Cloudflare Worker feed...');
+        try {
+          const feedUrl = 'https://quidesk-market-engine.librepisteme.workers.dev/v1/quotes';
+          const feedRes = await fetch(feedUrl, { signal: AbortSignal.timeout(6000) });
+          if (feedRes.ok) {
+            const feedJson = await feedRes.json();
+            const assetList = feedJson.assets || {};
+            displayedAssets = Object.values(assetList).map(a => {
+              const isForex = a.sector === 'forex' || (a.symbol && a.symbol.includes('/') && !a.symbol.startsWith('XAU') && !a.symbol.startsWith('XAG') && !a.symbol.startsWith('XPT'));
+              const isJPYorINR = a.symbol && (a.symbol.includes('JPY') || a.symbol.includes('INR'));
+              const isSubDollarCrypto = a.sector === 'crypto' && a.price < 1;
+              const formatted = isForex
+                ? (typeof a.price === 'number' ? a.price.toFixed(isJPYorINR ? 2 : 4) : '—')
+                : (typeof a.price === 'number' ? `$${a.price.toFixed(isSubDollarCrypto ? 4 : 2)}` : '—');
+              return {
+                symbol: a.symbol,
+                badge: a.change !== null ? `${a.change >= 0 ? '▲ +' : '▼ '}${a.change.toFixed(2)}%` : '',
+                rawPriceText: formatted,
+                category: a.sector || (isForex ? 'forex' : 'equities')
+              };
+            });
+          }
+        } catch (e) {
+          console.warn('[VerifyQ] Worker fallback notice:', e.message);
+        }
+      }
+
+      console.log(`[VerifyQ] Extracted ${displayedAssets.length} displayed asset cards from live DOM.`);
     } catch (err) {
       console.error('[VerifyQ] Browser / Snapshot error:', err.message);
     } finally {
