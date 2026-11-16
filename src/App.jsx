@@ -23,12 +23,16 @@ import { mergeAssetState, renderAllCardCanvases } from './utils/marketEngine'
 
 const VALID_TABS = ['map', 'equities', 'crypto', 'metals', 'energy', 'forex', 'compare', 'watchlist', 'portfolio'];
 
-const BUILD_SHA = typeof __BUILD_SHA__ !== 'undefined'
-  ? __BUILD_SHA__
-  : (import.meta.env?.VITE_BUILD_SHA || 'dev');
-const BUILD_TIME = typeof __BUILD_TIME__ !== 'undefined'
-  ? __BUILD_TIME__
-  : (import.meta.env?.VITE_BUILD_TIME || '');
+const BUILD_SHA = typeof BUILD_SHA !== 'undefined'
+  ? BUILD_SHA
+  : (typeof __BUILD_SHA__ !== 'undefined'
+    ? __BUILD_SHA__
+    : (import.meta.env?.VITE_BUILD_SHA || 'dev'));
+const BUILD_TIME = typeof BUILD_TIME !== 'undefined'
+  ? BUILD_TIME
+  : (typeof __BUILD_TIME__ !== 'undefined'
+    ? __BUILD_TIME__
+    : (import.meta.env?.VITE_BUILD_TIME || ''));
 
 function formatBuildIdentity(sha, iso) {
   if (!iso) return `build ${sha}`;
