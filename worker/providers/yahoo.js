@@ -47,6 +47,19 @@ function getNewYorkTimeParts(epochSeconds) {
 export function determineSessionState(currentTradingPeriod, nowSeconds, sector, marketState = null) {
   if (sector === 'crypto') return '24x7';
 
+  // CME / ICE Globex electronic futures schedule for energy & metals:
+  // Sunday 18:00 ET to Friday 17:00 ET with daily 17:00-18:00 ET trading break.
+  // Active electronic session must NOT be prematurely marked closed by pit settlement marketState.
+  const { weekday, minutesOfDay } = getNewYorkTimeParts(nowSeconds);
+  if (sector === 'energy' || sector === 'metals') {
+    if (weekday === 'Sat') return 'closed';
+    if (weekday === 'Sun') return minutesOfDay >= 1080 ? 'regular' : 'closed';
+    if (weekday === 'Fri') return minutesOfDay < 1020 ? 'regular' : 'closed';
+    // Mon-Thu: 17:00-18:00 ET (1020-1080 min) daily maintenance break
+    if (minutesOfDay >= 1020 && minutesOfDay < 1080) return 'closed';
+    return 'regular';
+  }
+
   const ms = typeof marketState === 'string' ? marketState.toUpperCase() : '';
   if (ms === 'CLOSED') return 'closed';
 
@@ -75,7 +88,6 @@ export function determineSessionState(currentTradingPeriod, nowSeconds, sector, 
   if (ms === 'POST' || ms === 'POSTPOST') return 'post';
 
   // DST-safe America/New_York schedule fallback
-  const { weekday, minutesOfDay } = getNewYorkTimeParts(nowSeconds);
   if (sector === 'equities') {
     if (weekday === 'Sat' || weekday === 'Sun') return 'closed';
     if (minutesOfDay >= 570 && minutesOfDay < 960) return 'regular'; // 09:30-16:00 ET
@@ -84,7 +96,7 @@ export function determineSessionState(currentTradingPeriod, nowSeconds, sector, 
     return 'closed';
   }
 
-  // 24x5 FX & CME Globex futures schedule (Sun 18:00 ET - Fri 17:00 ET)
+  // 24x5 FX schedule (Sun 18:00 ET - Fri 17:00 ET)
   if (weekday === 'Sat') return 'closed';
   if (weekday === 'Sun') return minutesOfDay >= 1080 ? 'regular' : 'closed';
   if (weekday === 'Fri') return minutesOfDay < 1020 ? 'regular' : 'closed';

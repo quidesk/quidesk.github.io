@@ -19,6 +19,15 @@ export function normalizeWorkerNewsItem(item = {}, index = 0) {
     ? item.assetTags.map((t) => String(t).toLowerCase()).slice(0, 3)
     : [];
 
+  const rawDate = item.publishedAt || item.published;
+  let published = null;
+  if (rawDate) {
+    const parsed = new Date(rawDate);
+    if (!isNaN(parsed.getTime())) {
+      published = parsed;
+    }
+  }
+
   return {
     id: item.id || `news-${index}-${Date.now()}`,
     title,
@@ -27,7 +36,7 @@ export function normalizeWorkerNewsItem(item = {}, index = 0) {
     source: item.source || 'OSINT Feed',
     sector: item.sector || 'equities',
     color: item.color || '#4d9eff',
-    published: item.published ? new Date(item.published) : new Date(),
+    published,
     mentionedAssets: assetTags,
     isSponsored,
   };

@@ -1,15 +1,16 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { Star, Share2 } from 'lucide-react';
 import { formatChange, SECTOR_META } from '../data/markets';
-import { formatCardUnitSuffix, getAssetPrecision } from '../utils/formatters';
-import { fetchCachedRangeHistory, MIN_REAL_CHART_POINTS } from './MiniChart';
+import { formatForexSecondaryValue, formatCardUnitSuffix, getAssetPrecision } from '../utils/formatters';
+import MiniChart, { fetchCachedRangeHistory, MIN_REAL_CHART_POINTS } from './MiniChart';
 import CurrencyTooltip from './CurrencyTooltip';
 import ShareModal from './ShareModal';
+import PriceDisplay from './PriceDisplay';
 import TimeRangeToggles from './TimeRangeToggles';
 import { FreshnessBadge, FallbackNotice } from './FreshnessBadge';
 import { getFreshnessLevel } from '../lib/freshness';
 import { useMarketStore } from '../store/marketStore';
-import { D, formatAssetPriceDisplay, computeEightCurrencies, getSessionStatus, drawCardCanvasChart } from '../utils/marketEngine';
+import { computeCurrencyConversions } from '../hooks/useCurrencyRates';
 
 export default function AssetCard({
   asset: propAsset,
@@ -22,6 +23,8 @@ export default function AssetCard({
   formatLocalPrice,
   isStale: propIsStale,
 }) {
+  const allQuotes = useMarketStore((s) => s.quotes);
+  const fxExtras = useMarketStore((s) => s.fxExtras);
   const storeQuote = useMarketStore((s) => {
     const key = (propSymbol || propAsset?.symbol || propAsset?.id || '').toLowerCase();
     return s.quotes[key] || (propSymbol ? s.quotes[propSymbol] : null);
@@ -42,7 +45,6 @@ export default function AssetCard({
   const [conversions, setConversions] = useState([]);
   const [shareOpen, setShareOpen] = useState(false);
   const cardRef = useRef(null);
-  const canvasRef = useRef(null);
   const timerRef = useRef(null);
 
   useEffect(() => {
@@ -68,16 +70,6 @@ export default function AssetCard({
     }
   }, [asset.price, prev]);
 
-  // Render high-DPI HTML5 canvas chart
-  useEffect(() => {
-    if (canvasRef.current) {
-      const hist = (tf === '24H'
-        ? (asset.history?.['24H'] || asset.history)
-        : (asset.history?.[tf] || rangeHistory[`${asset.id}-${tf}`]?.points?.map(p => p.value))) || asset.history;
-      drawCardCanvasChart(canvasRef.current, { ...asset, history: hist });
-    }
-  }, [asset.price, asset.prevClose, asset.change24h, asset.change, asset.history, tf, rangeHistory, asset.id]);
-
   if (!asset.price && !asset.symbol) {
     return (
       <div className="card qd-skeleton" style={{ padding: '16px', borderRadius: '12px', minHeight: '180px' }}>
@@ -95,25 +87,46 @@ export default function AssetCard({
   const isUp = changeVal !== null && changeVal >= 0;
   const meta = SECTOR_META[asset.sector] || {};
 
-  // Session status and staleness evaluation
-  const sessionStatus = getSessionStatus(asset.sector || asset.category, Date.now());
-  const isClosed = sessionStatus === 'CLOSED' || asset.status === 'closed' || asset.tradingPeriod === 'closed';
-  const freshness = isClosed ? 'closed' : (sessionStatus === 'LIVE' ? 'fresh' : getFreshnessLevel(asset));
+  // Session status and staleness evaluation strictly from Worker (no client clock override)
+  const isClosed = asset.session === 'closed' || asset.status === 'closed' || asset.tradingPeriod === 'closed';
+  const freshness = isClosed ? 'closed' : getFreshnessLevel(asset);
   const staleFromProp = typeof propIsStale === 'function' ? propIsStale(asset.id, asset.sector) : Boolean(propIsStale);
   const isStale = !isClosed && (staleFromProp || freshness === 'stale' || freshness === 'very_stale');
 
-  // Exact Module 3 price and secondary displays
-  const priceDisplayData = formatAssetPriceDisplay(asset);
+  // Forex detection and exact currency prefix
+  const isForex = (asset.sector || '').toLowerCase() === 'forex' || (
+    asset.symbol?.includes('/') && !asset.symbol?.startsWith('XAU') && !asset.symbol?.startsWith('XAG') && !asset.symbol?.startsWith('XPT')
+  );
+  const pricePrefix = isForex
+    ? (asset.symbol?.endsWith('/INR') ? '₹' : '')
+    : '$';
+  const precision = getAssetPrecision(asset.symbol, asset.sector, asset.price);
+  const unitSuffix = formatCardUnitSuffix(asset.sector, asset.unit, asset.symbol);
 
-  // Module 2 strict positive/negative card tints
-  const chgDecimal = D(changeVal ?? 0);
+  let secondaryDisplay = null;
+  if (isForex) {
+    secondaryDisplay = formatForexSecondaryValue(asset.symbol, asset.price, allQuotes, 'INR');
+  } else if (hasPrice && asset.price > 0) {
+    const usdInr = allQuotes?.['usdinr']?.price || allQuotes?.['USD/INR']?.price;
+    if (typeof usdInr === 'number' && usdInr > 0) {
+      const inrRaw = asset.price * usdInr;
+      secondaryDisplay = `(₹${inrRaw >= 100 ? Math.round(inrRaw).toLocaleString('en-IN') : inrRaw.toFixed(2)})`;
+    }
+  }
+
+  const isFuturesDivergence = asset.flags?.includes('spot_futures_basis');
+  const basisLabel = (asset.sector === 'crypto' || asset.changeBasis === 'rolling_24h') ? '24H' : '1D';
+
   const cardTintClass = changeVal === null
     ? (hasPrice ? 'card-positive' : 'qd-skeleton')
-    : (chgDecimal.gte(0) ? 'card-positive' : 'card-negative');
+    : (isUp ? 'card-positive' : 'card-negative');
 
   function showTooltip() {
     if (shareOpen) return;
-    setConversions(computeEightCurrencies(asset));
+    const convs = convertPrice
+      ? convertPrice(asset.price, asset.symbol, asset.sector)
+      : computeCurrencyConversions(asset, allQuotes, fxExtras);
+    setConversions(convs);
     timerRef.current = setTimeout(() => {
       const rect = cardRef.current && cardRef.current.getBoundingClientRect();
       if (!rect) return;
@@ -145,36 +158,31 @@ export default function AssetCard({
     : 'var(--bg-card)';
 
   return (
-    <div style={{ position: 'relative' }}>
-      <div
-        ref={cardRef}
-        className={`card asset-card ${cardTintClass} freshness-${freshness}`}
-        style={{
-          padding: compact ? '12px' : '16px',
-          cursor: 'pointer',
-          background: bg,
-          transition: 'background 0.4s ease, border-color 0.15s, transform 0.15s, box-shadow 0.15s',
-          borderRadius: '12px',
-        }}
-        onClick={() => { if (onClick) onClick(asset); }}
-        onMouseEnter={showTooltip}
-        onMouseLeave={hideTooltip}
-      >
+    <div
+      ref={cardRef}
+      className={`card ${cardTintClass} freshness-${freshness}`}
+      style={{
+        background: bg,
+        border: `1px solid ${isStale ? 'var(--border-subtle)' : flash ? 'var(--border-glow)' : 'var(--border-subtle)'}`,
+        borderRadius: '12px',
+        padding: compact ? '12px 14px' : '16px',
+        cursor: onClick ? 'pointer' : 'default',
+        transition: 'all 0.2s cubic-bezier(0.4, 0, 0.2, 1)',
+        position: 'relative',
+        userSelect: 'none',
+      }}
+      onClick={() => onClick && onClick(asset)}
+      onMouseEnter={showTooltip}
+      onMouseLeave={hideTooltip}
+    >
+      <div>
         {/* Header */}
-        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: compact ? '6px' : '10px' }}>
-          <div>
+        <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', marginBottom: compact ? '8px' : '12px', gap: '8px' }}>
+          <div style={{ minWidth: 0, flex: 1 }}>
             <div style={{ display: 'flex', alignItems: 'center', gap: '6px', flexWrap: 'nowrap' }}>
               <span
                 className="card-ticker-symbol asset-symbol"
-                style={{
-                  fontFamily: 'var(--font-display)',
-                  fontSize: '13px',
-                  fontWeight: 700,
-                  color: meta.color || 'var(--text-primary)',
-                  letterSpacing: '0.04em',
-                  whiteSpace: 'nowrap',
-                  flexShrink: 0
-                }}
+                style={{ fontFamily: 'var(--font-mono)', fontSize: compact ? '13px' : '15px', fontWeight: 700, color: 'var(--text-primary)', letterSpacing: '0.04em', whiteSpace: 'nowrap', flexShrink: 0 }}
               >
                 {asset.symbol}
               </span>
@@ -186,7 +194,7 @@ export default function AssetCard({
               {/* Authoritative Worker Status & Quote Age Badge */}
               <FreshnessBadge
                 level={freshness}
-                status={isClosed ? 'closed' : (sessionStatus === 'LIVE' ? 'LIVE' : asset.status)}
+                status={isClosed ? 'closed' : asset.status}
                 timestamp={asset.quoteTs ?? asset.timestamp}
                 source={asset.source}
                 compact={compact}
@@ -217,6 +225,9 @@ export default function AssetCard({
                 <span aria-hidden="true" style={{ marginRight: '3px' }}>{isUp ? '▲' : '▼'}</span>
               )}
               <span>{changeVal === null ? '—' : formatChange(changeVal)}</span>
+              {changeVal !== null && (
+                <span style={{ opacity: 0.75, fontSize: '8.5px', marginLeft: '3px' }}>{basisLabel}</span>
+              )}
             </span>
             <button
               style={{
@@ -269,7 +280,7 @@ export default function AssetCard({
           <FallbackNotice source={asset.source} />
         )}
 
-        {/* Price Display with Strict Arbitrary Precision & Secondary Cross Rates */}
+        {/* Price Display with Consistent Decimal Precision & Secondary Cross Rates */}
         <div style={{
           fontFamily: 'var(--font-mono)',
           fontSize: compact ? '16px' : '20px',
@@ -283,16 +294,40 @@ export default function AssetCard({
           flexWrap: 'wrap'
         }}>
           <div>
-            <span>{priceDisplayData.primary}</span>
-            {priceDisplayData.unit && (
+            <PriceDisplay
+              value={asset.price}
+              prefix={pricePrefix}
+              precision={precision}
+            />
+            {unitSuffix && (
               <span style={{ fontSize: '11px', color: 'var(--text-dim)', marginLeft: '3px' }}>
-                {priceDisplayData.unit}
+                {unitSuffix}
+              </span>
+            )}
+            {isFuturesDivergence && (
+              <span
+                className="badge-fut"
+                title="Spot/futures basis divergence > 0.50%"
+                style={{
+                  fontSize: '10px',
+                  fontFamily: 'var(--font-mono)',
+                  color: 'var(--amber, #f59e0b)',
+                  background: 'rgba(245, 158, 11, 0.12)',
+                  border: '1px solid rgba(245, 158, 11, 0.3)',
+                  borderRadius: '3px',
+                  padding: '0 4px',
+                  marginLeft: '4px',
+                  lineHeight: '14px',
+                  verticalAlign: 'middle',
+                }}
+              >
+                (fut.)
               </span>
             )}
           </div>
-          {priceDisplayData.secondary && (
+          {secondaryDisplay && (
             <span style={{ fontSize: '13px', color: 'var(--text-secondary)', fontWeight: 400 }}>
-              {priceDisplayData.secondary}
+              {secondaryDisplay}
             </span>
           )}
         </div>
@@ -306,14 +341,16 @@ export default function AssetCard({
           />
         </div>
 
-        {/* High-DPI HTML5 Canvas Chart Engine (Zero "no chart data" states) */}
+        {/* Worker-Served Real MiniChart (< 10 points => dashed line, no fake vectors) */}
         <div style={{ width: '100%', height: '52px', marginTop: '4px', marginBottom: '4px' }}>
-          <canvas
-            ref={canvasRef}
-            className="qd-card-canvas"
-            data-symbol={asset.symbol}
-            height="52"
-            style={{ width: '100%', height: '52px', display: 'block' }}
+          <MiniChart
+            data={tf === '24H'
+              ? (asset.history?.['24H'] || asset.chartData || asset.spark1d || asset.history)
+              : (asset.history?.[tf] || rangeHistory[`${asset.id}-${tf}`]?.points || [])}
+            prevClose={asset.prevClose}
+            change={changeVal}
+            width={compact ? 240 : 280}
+            height={52}
           />
         </div>
 

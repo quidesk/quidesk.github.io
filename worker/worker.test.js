@@ -150,6 +150,28 @@ describe('Cloudflare Worker — Phase 1 Contract & Schema Validation', () => {
       expect(determineSessionState(null, summerRegular, 'equities', 'CLOSED')).toBe('closed');
     });
 
+    it('manages CME energy futures electronic trading schedule and daily 17:00-18:00 ET break', () => {
+      // Mon 17:30 EDT = 21:30 UTC -> inside 17:00-18:00 ET maintenance break -> closed
+      const monBreak = Math.floor(Date.parse('2026-07-13T21:30:00Z') / 1000);
+      expect(determineSessionState(null, monBreak, 'energy', null)).toBe('closed');
+
+      // Mon 18:30 EDT = 22:30 UTC -> active electronic trading -> regular
+      const monElectronic = Math.floor(Date.parse('2026-07-13T22:30:00Z') / 1000);
+      expect(determineSessionState(null, monElectronic, 'energy', null)).toBe('regular');
+
+      // Sun 17:00 EDT = 21:00 UTC -> before 18:00 ET open -> closed
+      const sunBeforeOpen = Math.floor(Date.parse('2026-07-12T21:00:00Z') / 1000);
+      expect(determineSessionState(null, sunBeforeOpen, 'energy', null)).toBe('closed');
+
+      // Sun 18:15 EDT = 22:15 UTC -> electronic session open -> regular
+      const sunOpen = Math.floor(Date.parse('2026-07-12T22:15:00Z') / 1000);
+      expect(determineSessionState(null, sunOpen, 'energy', null)).toBe('regular');
+
+      // Fri 17:15 EDT = 21:15 UTC -> after 17:00 ET close -> closed
+      const friAfterClose = Math.floor(Date.parse('2026-07-17T21:15:00Z') / 1000);
+      expect(determineSessionState(null, friAfterClose, 'energy', null)).toBe('closed');
+    });
+
     it('labels Frankfurter ECB fallback with ECB rate date, status delayed, and vs prior ECB fix', async () => {
       vi.spyOn(globalThis, 'fetch').mockResolvedValueOnce(new Response(JSON.stringify({
         base: 'USD',
@@ -277,18 +299,19 @@ describe('Cloudflare Worker — Phase 1 Contract & Schema Validation', () => {
     });
 
     it('parses RSS XML feed blocks with asset IDs and keeps zero-match items empty (sector tag only)', () => {
+      const recentDate = new Date(Date.now() - 3600000).toUTCString();
       const sampleXml = `
         <rss><channel>
           <item>
             <title><![CDATA[Bitcoin Breaks Higher As Inflation Cools]]></title>
             <link>https://decrypt.co/12345?utm_source=rss</link>
-            <pubDate>Wed, 11 Nov 2026 03:00:00 GMT</pubDate>
+            <pubDate>${recentDate}</pubDate>
             <description><![CDATA[Crypto markets reacted positively to the latest consumer price index.]]></description>
           </item>
           <item>
             <title><![CDATA[Fed Officials Debate Policy Path Amid Sticky Inflation]]></title>
             <link>https://cnbc.com/999?utm_source=rss</link>
-            <pubDate>Wed, 11 Nov 2026 03:05:00 GMT</pubDate>
+            <pubDate>${recentDate}</pubDate>
             <description><![CDATA[Policymakers signaled patience before easing rates further.]]></description>
           </item>
         </channel></rss>
@@ -303,6 +326,52 @@ describe('Cloudflare Worker — Phase 1 Contract & Schema Validation', () => {
       // Zero matches => sector tag remains, assetTags stays empty (no default asset tag)
       expect(articles[1].sector).toBe('crypto');
       expect(articles[1].assetTags).toEqual([]);
+    });
+
+    it('drops items older than 24 hours or with unparseable dates', () => {
+      const oldDate = new Date(Date.now() - 25 * 3600 * 1000).toUTCString();
+      const freshDate = new Date(Date.now() - 2 * 3600 * 1000).toUTCString();
+      const xml = `
+        <rss><channel>
+          <item>
+            <title>Old Story</title>
+            <link>https://example.com/old</link>
+            <pubDate>${oldDate}</pubDate>
+          </item>
+          <item>
+            <title>Corrupted Date Story</title>
+            <link>https://example.com/corrupt</link>
+            <pubDate>not-a-valid-date-string</pubDate>
+          </item>
+          <item>
+            <title>Fresh Story</title>
+            <link>https://example.com/fresh</link>
+            <pubDate>${freshDate}</pubDate>
+          </item>
+        </channel></rss>
+      `;
+      const articles = parseRssXml(xml, 'Reuters', 'equities');
+      expect(articles).toHaveLength(1);
+      expect(articles[0].title).toBe('Fresh Story');
+    });
+
+    it('tags "U.S. crude oil declines to $85" with WTI and shows in energy sector, NOT equities', () => {
+      const freshDate = new Date(Date.now() - 1800000).toUTCString();
+      const xml = `
+        <rss><channel>
+          <item>
+            <title>U.S. crude oil declines to $85</title>
+            <link>https://example.com/crude-oil-85</link>
+            <pubDate>${freshDate}</pubDate>
+            <description>Energy markets reflect easing supply constraints</description>
+          </item>
+        </channel></rss>
+      `;
+      const articles = parseRssXml(xml, 'Bloomberg Markets', 'equities');
+      expect(articles).toHaveLength(1);
+      expect(articles[0].assetTags).toContain('wti');
+      expect(articles[0].sector).toBe('energy');
+      expect(articles[0].sector).not.toBe('equities');
     });
   });
 

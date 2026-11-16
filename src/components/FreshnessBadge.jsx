@@ -11,16 +11,26 @@ import { formatQuoteAge } from '../lib/freshness';
  * - "FALLBACK" badge when secondary provider is active.
  * - "LIVE" / "WS" badge when stream is active.
  */
+function formatCloseDateTime(ts) {
+  if (typeof ts !== 'number' || !Number.isFinite(ts) || ts <= 0) return '';
+  const d = new Date(ts);
+  const dateStr = d.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+  const timeStr = d.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', hour12: false });
+  return `${dateStr} ${timeStr}`;
+}
+
 export function FreshnessBadge({ level, status, timestamp, source, compact = false }) {
   const ageText = typeof timestamp === 'number' && Number.isFinite(timestamp)
     ? formatQuoteAge(timestamp)
     : null;
 
   if (level === 'closed' || status === 'closed') {
+    const closeTime = formatCloseDateTime(timestamp);
+    const closeLabel = compact ? 'CLOSED' : `CLOSED · last close${closeTime ? ` ${closeTime}` : ''}`;
     return (
       <span
         className="freshness-badge badge-closed"
-        title={`CLOSED — last close${ageText ? ` (${ageText})` : ''}`}
+        title={`CLOSED — last close${closeTime ? ` ${closeTime}` : ''}${ageText ? ` (${ageText})` : ''}`}
         style={{
           fontFamily: 'var(--font-mono, monospace)',
           fontSize: '8px',
@@ -38,7 +48,7 @@ export function FreshnessBadge({ level, status, timestamp, source, compact = fal
         }}
       >
         <span style={{ width: '4px', height: '4px', borderRadius: '50%', background: 'var(--text-dim, #8b949e)' }} />
-        {compact ? 'CLOSED' : 'CLOSED · last close'}
+        {closeLabel}
         {!compact && ageText && (
           <span style={{ opacity: 0.75, fontSize: '7.5px' }}>
             ({ageText})

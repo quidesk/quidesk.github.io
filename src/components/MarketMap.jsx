@@ -52,7 +52,7 @@ export function computeGoldenSpiralPositions(assets, zones = ZONES) {
       const effRx = z.rx * 0.85;
       const effRy = z.ry * 0.85;
       const px = z.cx + rFrac * effRx * Math.cos(angle);
-      const py = z.cy + rFrac * effRy * Math.sin(angle);
+      const py = z.cy + rFrac * effRy * Math.cos(angle - Math.PI / 2);
       positions[item.id] = { x: px, y: py };
     });
   }

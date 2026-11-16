@@ -50,7 +50,7 @@ export default function HotspotPanel({ hotspots = [], allAssets = [], onSelect }
                 )}
               </div>
               <div style={s.itemDesc}>
-                {h.desc || `${h.symbol} ${typeof h.change === 'number' ? `${h.change >= 0 ? '+' : ''}${h.change.toFixed(2)}%` : '—'} 24H move`}
+                {h.desc || `${h.symbol} ${typeof h.change === 'number' ? `${h.change >= 0 ? '+' : ''}${h.change.toFixed(2)}%` : '—'} ${(h.sector === 'crypto' || asset?.sector === 'crypto') ? '24H' : '1D'} move`}
               </div>
             </div>
             {asset && (
