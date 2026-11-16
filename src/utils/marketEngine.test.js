@@ -145,4 +145,27 @@ describe('Market Engine (Sovereign V3 / Module 3 & 6)', () => {
     expect(getSessionStatus('forex', sat12Utc)).toBe('CLOSED');
     expect(getSessionStatus('equities', sat12Utc)).toBe('CLOSED');
   });
+
+  it('formatAssetPriceDisplay strictly guards against zero or missing prices, never returning $0.0000', () => {
+    expect(formatAssetPriceDisplay(null)).toEqual({ primary: '—', unit: '', secondary: '', chgStr: '—', isLoading: true });
+    expect(formatAssetPriceDisplay({ symbol: 'BTC', price: 0 })).toEqual({ primary: '—', unit: '', secondary: '', chgStr: '—', isLoading: true });
+    expect(formatAssetPriceDisplay({ symbol: 'BTC', price: -50 })).toEqual({ primary: '—', unit: '', secondary: '', chgStr: '—', isLoading: true });
+    expect(formatAssetPriceDisplay({ symbol: 'BTC', price: NaN })).toEqual({ primary: '—', unit: '', secondary: '', chgStr: '—', isLoading: true });
+    expect(formatAssetPriceDisplay({ symbol: 'BTC' })).toEqual({ primary: '—', unit: '', secondary: '', chgStr: '—', isLoading: true });
+  });
+
+  it('mergeAssetState rejects ticks where price <= 0 and never stores 0 in window.marketState', () => {
+    mergeAssetState('BTC', { price: 0, category: 'crypto' });
+    expect(window.marketState['BTC']).toBeUndefined();
+
+    mergeAssetState('BTC', { price: -10, category: 'crypto' });
+    expect(window.marketState['BTC']).toBeUndefined();
+
+    mergeAssetState('BTC', { price: 80000, category: 'crypto', prevClose: 78000 });
+    expect(window.marketState['BTC'].price).toBe(80000);
+
+    // Incoming 0-price tick should be rejected and existing price preserved
+    mergeAssetState('BTC', { price: 0 });
+    expect(window.marketState['BTC'].price).toBe(80000);
+  });
 });

@@ -48,6 +48,33 @@ export function FreshnessBadge({ level, status, timestamp, source, compact = fal
     );
   }
 
+  if (level === 'syncing' || status === 'SYNCING') {
+    return (
+      <span
+        className="freshness-badge badge-syncing"
+        title="Syncing live market feed..."
+        style={{
+          fontFamily: 'var(--font-mono, monospace)',
+          fontSize: '8px',
+          fontWeight: 600,
+          color: 'var(--amber, #f59e0b)',
+          background: 'rgba(245, 158, 11, 0.12)',
+          border: '1px solid rgba(245, 158, 11, 0.3)',
+          borderRadius: '3px',
+          padding: '0 5px',
+          lineHeight: '14px',
+          letterSpacing: '0.04em',
+          display: 'inline-flex',
+          alignItems: 'center',
+          gap: '4px',
+        }}
+      >
+        <span style={{ width: '4px', height: '4px', borderRadius: '50%', background: 'var(--amber, #f59e0b)' }} />
+        SYNCING
+      </span>
+    );
+  }
+
   if (level === 'delayed' || status === 'delayed') {
     return (
       <span

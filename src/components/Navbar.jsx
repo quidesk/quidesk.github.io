@@ -67,9 +67,9 @@ export default function Navbar({
   return (
     <>
       {/* ── Desktop Hero Header ── */}
-      <header style={s.heroNav} className="d-none d-md-block">
+      <header style={s.heroNav} className="site-header top-navbar d-none d-md-block">
         {/* Tier 1: Sovereign Brand Crown & Live Telemetry */}
-        <div style={s.heroTopTier}>
+        <div style={s.heroTopTier} className="brand-tier">
           {/* Brand — Hero Emblem + Sovereign Typography */}
           <button style={s.heroBrand} onClick={() => setActive('map')} title="Quidesk — Sovereign Terminal">
             <div style={s.logoGlowWrapper}>
@@ -89,12 +89,6 @@ export default function Navbar({
                     color: feedStatus.key === 'live' ? 'var(--bull)' : 'var(--bear)',
                   }}
                 >
-                  <span style={{
-                    ...s.heroLiveDot,
-                    background: pillActiveColor,
-                    boxShadow: feedStatus.key === 'live' ? '0 0 8px var(--bull)' : 'none',
-                    animation: feedStatus.key === 'live' ? 'pulseDot 1.6s ease-in-out infinite' : 'none',
-                  }} />
                   <span style={{ ...s.heroLiveText, color: pillActiveColor }}>
                     {feedStatus.key === 'live' ? '● LIVE STREAM' : '● DELAYED'}
                   </span>
@@ -165,7 +159,7 @@ export default function Navbar({
         </div>
 
         {/* Tier 2: Navigation Tabs & Search Command */}
-        <div style={s.heroNavTier}>
+        <div style={s.heroNavTier} className="sub-navbar">
           <div style={s.tabs}>
             {NAV_TABS.map(t => (
               <button
@@ -220,7 +214,7 @@ export default function Navbar({
       />
 
       {/* ── Mobile top bar ── */}
-      <nav style={s.mobileTop} className="d-md-none">
+      <nav style={s.mobileTop} className="site-header mobile-navbar d-md-none">
         <button style={s.heroBrandMobile} onClick={() => setActive('map')}>
           <div style={{ ...s.logoGlowWrapper, boxShadow: '0 2px 14px rgba(212, 175, 55, 0.22)' }}>
             <Logo size={46} />
@@ -293,11 +287,10 @@ const s = {
   heroNav: {
     position: 'sticky', top: 0, zIndex: 1000,
     isolation: 'isolate',
-    background: 'rgba(8, 12, 20, 0.97)',
-    backdropFilter: 'blur(16px)',
-    WebkitBackdropFilter: 'blur(16px)',
+    backgroundColor: '#080C14',
+    background: '#080C14',
     borderBottom: '1px solid var(--border-subtle)',
-    boxShadow: '0 8px 32px rgba(0,0,0,0.3)',
+    boxShadow: '0 8px 32px rgba(0,0,0,0.5)',
   },
   heroTopTier: {
     display: 'flex',
@@ -307,6 +300,7 @@ const s = {
     maxWidth: '1700px',
     margin: '0 auto',
     gap: '24px',
+    backgroundColor: '#080C14',
   },
   heroBrand: {
     display: 'flex',
@@ -437,6 +431,7 @@ const s = {
     margin: '0 auto',
     borderTop: '1px solid var(--border-subtle)',
     gap: '20px',
+    backgroundColor: '#080C14',
   },
   heroSearchWrap: {
     display: 'flex',
@@ -510,13 +505,14 @@ const s = {
     color: 'var(--text-dim)', letterSpacing: '0.04em',
   },
   mobileTop: {
-    position: 'sticky', top: 0, zIndex: 100,
-    background: 'var(--bg-overlay)', backdropFilter: 'blur(20px)',
+    position: 'sticky', top: 0, zIndex: 1000,
+    backgroundColor: '#080C14',
+    background: '#080C14',
     borderBottom: '1px solid var(--border-subtle)',
     display: 'flex', alignItems: 'center',
     justifyContent: 'space-between',
     padding: '12px 16px', gap: '10px', minHeight: '76px',
-    boxShadow: '0 4px 20px rgba(0,0,0,0.25)',
+    boxShadow: '0 4px 20px rgba(0,0,0,0.5)',
   },
   shareNavBtn: {
     display: 'flex',

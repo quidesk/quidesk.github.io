@@ -104,7 +104,7 @@ export function validateMarketPayload(raw) {
 export function mergeAssetState(symbol, rawIncoming = {}) {
   const valid = validateMarketPayload({ ...rawIncoming, symbol });
   const state = typeof window !== 'undefined' ? window.marketState : {};
-  if (!valid) return state[symbol] || null;
+  if (!valid || !valid.price || valid.price <= 0) return state[symbol] || null;
 
   const existing = state[symbol] || {};
   const price = valid.price;
@@ -135,7 +135,7 @@ export function mergeAssetState(symbol, rawIncoming = {}) {
   let history = valid.history.length >= 2 ? valid.history : (existing.history || []);
   if (history.length >= 2) {
     history = [...history];
-    if (prevClose && prevClose > 0) history[0] = prevClose;
+    if (history.length === 2 && prevClose && prevClose > 0) history[0] = prevClose;
     history[history.length - 1] = price;
   }
 
@@ -171,8 +171,11 @@ export function mergeAssetState(symbol, rawIncoming = {}) {
  * Format asset price display matching exact Module 3 conventions
  */
 export function formatAssetPriceDisplay(asset, state = (typeof window !== 'undefined' ? window.marketState : {})) {
+  if (!asset || typeof asset.price !== 'number' || !Number.isFinite(asset.price) || asset.price <= 0) {
+    return { primary: '—', unit: '', secondary: '', chgStr: '—', isLoading: true };
+  }
   const usdInr = D(state['USD/INR']?.price || 94.03);
-  const price = D(asset?.price || 0);
+  const price = D(asset.price);
   const priceNum = price.toNumber();
   const sym = String(asset?.symbol || '');
   const cat = String(asset?.category || asset?.sector || '').toLowerCase();
@@ -309,7 +312,7 @@ export function drawCardCanvasChart(canvas, asset) {
     series = [prevClose, price];
   } else {
     series = [...series];
-    series[0] = prevClose;
+    if (series.length === 2) series[0] = prevClose;
     series[series.length - 1] = price;
   }
 
@@ -398,6 +401,18 @@ export function renderAllCardCanvases() {
   });
 }
 
+/**
+ * Synchronize all dashboard widgets & triggers canvas rerenders
+ */
+export function syncAllDashboardWidgets() {
+  renderAllCardCanvases();
+  if (typeof window !== 'undefined' && typeof window.dispatchEvent === 'function') {
+    try {
+      window.dispatchEvent(new CustomEvent('marketStateUpdated', { detail: window.marketState }));
+    } catch (_) {}
+  }
+}
+
 // Bind to window/globalThis for runtime access
 const target = typeof window !== 'undefined' ? window : (typeof globalThis !== 'undefined' ? globalThis : {});
 target.D = D;
@@ -408,3 +423,4 @@ target.computeEightCurrencies = computeEightCurrencies;
 target.getSessionStatus = getSessionStatus;
 target.drawCardCanvasChart = drawCardCanvasChart;
 target.renderAllCardCanvases = renderAllCardCanvases;
+target.syncAllDashboardWidgets = syncAllDashboardWidgets;

@@ -266,3 +266,15 @@ canvas.qd-card-canvas {
   height: 52px;
   display: block;
 }
+
+/* Opaque Sticky Header Stacking to Prevent Card Bleed-Through (Fix 3) */
+header, .site-header, .top-navbar, .sub-navbar, .ticker-bar-wrapper {
+  background-color: #080C14 !important;
+  z-index: 1000 !important;
+  position: sticky;
+}
+
+/* Ticker Tape Left Margin to Prevent Badge Clipping (Fix 5) */
+.ticker-track {
+  padding-left: 88px !important;
+}

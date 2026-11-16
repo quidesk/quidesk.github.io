@@ -78,17 +78,51 @@ export default function AssetCard({
     }
   }, [asset.price, asset.prevClose, asset.change24h, asset.change, asset.history, tf, rangeHistory, asset.id]);
 
-  if (!asset.price && !asset.symbol) {
+  const hasPrice = asset.status !== 'unavailable' && typeof asset.price === 'number' && Number.isFinite(asset.price) && asset.price > 0;
+
+  if (!hasPrice) {
+    const meta = SECTOR_META[asset.sector] || {};
     return (
-      <div className="card qd-skeleton" style={{ padding: '16px', borderRadius: '12px', minHeight: '180px' }}>
-        <div style={{ color: 'var(--text-dim)', fontSize: '11px', fontFamily: 'var(--font-mono)' }}>Loading asset data...</div>
+      <div
+        className="card qd-skeleton"
+        style={{
+          padding: compact ? '12px' : '16px',
+          borderRadius: '12px',
+          minHeight: compact ? '140px' : '180px',
+          display: 'flex',
+          flexDirection: 'column',
+          justifyContent: 'space-between'
+        }}
+      >
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+            <span
+              className="card-ticker-symbol asset-symbol"
+              style={{
+                fontFamily: 'var(--font-display)',
+                fontSize: '13px',
+                fontWeight: 700,
+                color: meta.color || 'var(--text-primary)',
+              }}
+            >
+              {asset.symbol || propSymbol}
+            </span>
+            <FreshnessBadge level="syncing" status="SYNCING" compact={compact} />
+          </div>
+          <span className="badge" style={{ color: 'var(--text-dim)', background: 'rgba(139, 148, 158, 0.12)' }}>—</span>
+        </div>
+        <div style={{ color: 'var(--text-dim)', fontSize: '15px', fontFamily: 'var(--font-mono)', fontWeight: 600, margin: '14px 0' }}>
+          Loading...
+        </div>
+        <div style={{ fontSize: '10px', color: 'var(--text-dim)', fontFamily: 'var(--font-mono)' }}>
+          Syncing market quote
+        </div>
       </div>
     );
   }
 
-  const hasPrice = asset.status !== 'unavailable' && typeof asset.price === 'number' && Number.isFinite(asset.price);
   const rawChange = asset.change24h ?? asset.changePercent ?? asset.change;
-  const changeVal = asset.status !== 'unavailable' && typeof rawChange === 'number' && Number.isFinite(rawChange)
+  const changeVal = typeof rawChange === 'number' && Number.isFinite(rawChange)
     ? rawChange
     : null;
   const isFlat = changeVal !== null && Math.abs(changeVal) < 0.005;

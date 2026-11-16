@@ -19,6 +19,7 @@ import SocialShareBar from './components/SocialShareBar'
 import { Share2 } from 'lucide-react'
 import { cryptoStreamEngine } from './services/cryptoStream'
 import { fetchFrankfurterForexHistory } from './services/forexHistory'
+import { fetchAllYahooIntradayHistory } from './services/yahooHistory'
 import { mergeAssetState, renderAllCardCanvases } from './utils/marketEngine'
 
 const VALID_TABS = ['map', 'equities', 'crypto', 'metals', 'energy', 'forex', 'compare', 'watchlist', 'portfolio'];
@@ -163,27 +164,29 @@ export default function App() {
     return () => window.removeEventListener('hashchange', onHashChange);
   }, []);
 
-  // Initialize multi-tier crypto streaming & multi-day forex history
+  // Initialize multi-tier crypto streaming, forex history & intraday equities/commodities history
   useEffect(() => {
     if (typeof window === 'undefined') return;
     cryptoStreamEngine.init();
     fetchFrankfurterForexHistory();
+    fetchAllYahooIntradayHistory();
 
-    const fxInterval = setInterval(() => {
+    const historyInterval = setInterval(() => {
       fetchFrankfurterForexHistory();
+      fetchAllYahooIntradayHistory();
     }, 60000);
 
     return () => {
-      clearInterval(fxInterval);
+      clearInterval(historyInterval);
       cryptoStreamEngine.destroy();
     };
   }, []);
 
-  // Synchronize all assets into window.marketState
+  // Synchronize all assets into window.marketState (strictly guarded for hydrated assets only)
   useEffect(() => {
     if (typeof window !== 'undefined' && allAssets?.length) {
       allAssets.forEach(a => {
-        if (a && a.symbol) {
+        if (a && a.symbol && typeof a.price === 'number' && Number.isFinite(a.price) && a.price > 0) {
           mergeAssetState(a.symbol, {
             ...a,
             price: a.price,

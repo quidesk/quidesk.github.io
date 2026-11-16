@@ -19,13 +19,6 @@ export default function MarketCard({ asset: propAsset, onClick, isWatched, onTog
     chartData: propAsset?.chartData || storeQuote?.chartData || propAsset?.spark1d || storeQuote?.spark1d,
   };
 
-  const hasPrice = asset.status !== 'unavailable' && typeof asset.price === 'number' && Number.isFinite(asset.price);
-  const rawChange = asset.change24h ?? asset.changePercent ?? asset.change;
-  const changeVal = asset.status !== 'unavailable' && typeof rawChange === 'number' && Number.isFinite(rawChange)
-    ? rawChange
-    : null;
-  const isFlat = changeVal !== null && Math.abs(changeVal) < 0.005;
-  const isPositive = changeVal !== null && changeVal >= 0;
   const [flash, setFlash] = useState(null);
   const [prevPrice, setPrevPrice] = useState(asset.price);
   const canvasRef = useRef(null);
@@ -44,6 +37,44 @@ export default function MarketCard({ asset: propAsset, onClick, isWatched, onTog
       drawCardCanvasChart(canvasRef.current, asset);
     }
   }, [asset.price, asset.prevClose, asset.change24h, asset.change, asset.history]);
+
+  const hasPrice = asset.status !== 'unavailable' && typeof asset.price === 'number' && Number.isFinite(asset.price) && asset.price > 0;
+
+  if (!hasPrice) {
+    return (
+      <div
+        className="card market-card qd-skeleton"
+        style={{
+          ...styles.card,
+          minHeight: '130px',
+          display: 'flex',
+          flexDirection: 'column',
+          justifyContent: 'space-between',
+        }}
+      >
+        <div style={styles.header}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+            <span style={{ ...styles.symbol }}>{asset.symbol}</span>
+            <FreshnessBadge level="syncing" status="SYNCING" compact />
+          </div>
+          <span style={styles.change}>—</span>
+        </div>
+        <div style={{ color: 'var(--text-dim)', fontSize: '15px', fontFamily: 'var(--font-mono)', fontWeight: 600, margin: '12px 0' }}>
+          Loading...
+        </div>
+        <div style={{ fontSize: '10px', color: 'var(--text-dim)', fontFamily: 'var(--font-mono)' }}>
+          Syncing market quote
+        </div>
+      </div>
+    );
+  }
+
+  const rawChange = asset.change24h ?? asset.changePercent ?? asset.change;
+  const changeVal = typeof rawChange === 'number' && Number.isFinite(rawChange)
+    ? rawChange
+    : null;
+  const isFlat = changeVal !== null && Math.abs(changeVal) < 0.005;
+  const isPositive = changeVal !== null && changeVal >= 0;
 
   const sessionStatus = getSessionStatus(asset.sector || asset.category, Date.now());
   const isClosed = sessionStatus === 'CLOSED' || asset.status === 'closed' || asset.tradingPeriod === 'closed';
