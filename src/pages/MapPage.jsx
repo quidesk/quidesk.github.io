@@ -1,45 +1,54 @@
 import React, { useState } from 'react';
 import MarketMap from '../components/MarketMap';
 import HotspotPanel from '../components/HotspotPanel';
-import DetailChart from '../components/DetailChart';
 import AssetCard from '../components/AssetCard';
+import DetailChart from '../components/DetailChart';
 import PriceDisplay from '../components/PriceDisplay';
-import { formatPrice, formatChange, SECTOR_META } from '../data/markets';
+import { formatChange, SECTOR_META } from '../data/markets';
 import { getAssetPrecision } from '../utils/formatters';
 import NewsSignals from '../components/NewsSignals';
-import { computeMarketPulse } from '../utils/marketPulse';
-import { useMarketPulse } from '../selectors/marketPulse';
 import {
   selectGainers,
   selectLosers,
-  selectEquitiesIndexVsStocks,
   selectSectorAverages,
+  selectEquitiesIndexVsStocks,
 } from '../selectors/marketSelectors';
 
+/**
+ * Editorial narrative generated from live market conditions.
+ */
 function NarrativeStrip({ allAssets, hotspots }) {
-  const pulse = computeMarketPulse(allAssets, hotspots);
+  if (!allAssets?.length) return null;
+  const topGain = [...allAssets].sort((a,b) => b.change - a.change)[0];
+  const topLoss = [...allAssets].sort((a,b) => a.change - b.change)[0];
+  const btc = allAssets.find(a => a.id === 'btc');
 
   return (
-    <div style={ns.wrap}>
-      <div style={ns.eyebrow}>MARKET PULSE</div>
-      <div style={ns.text}>{pulse.narrative}</div>
+    <div style={ns.strip}>
+      <span style={ns.tag}>MARKET PULSE</span>
+      <span style={ns.text}>
+        {topGain && `${topGain.symbol} leads gains (${formatChange(topGain.change)}). `}
+        {topLoss && `${topLoss.symbol} under pressure (${formatChange(topLoss.change)}). `}
+        {btc && `BTC trading at $${btc.price?.toLocaleString()} (${formatChange(btc.change)}). `}
+        {hotspots.length > 0 && `${hotspots.length} divergence signal${hotspots.length > 1 ? 's' : ''} active.`}
+      </span>
     </div>
   );
 }
 
 const ns = {
-  wrap: {
-    display:'flex', alignItems:'center', gap:'14px',
-    padding:'10px 20px', borderRadius:'8px',
-    background:'var(--bg-surface)', border:'1px solid var(--border-subtle)',
+  strip: {
+    display:'flex', alignItems:'center', gap:'10px',
+    background:'var(--bg-card)', border:'1px solid var(--border-stone, #639CC5)',
+    borderRadius:'8px', padding:'8px 14px', flexWrap:'wrap',
+    boxShadow: 'inset 0 1px 0 rgba(99, 156, 197, 0.12), 0 4px 20px rgba(2, 24, 39, 0.45)',
   },
-  eyebrow: {
-    fontFamily:'var(--font-mono)', fontSize:'9px', letterSpacing:'0.15em',
-    color:'var(--accent)', flexShrink:0,
+  tag: {
+    fontFamily:'var(--font-mono)', fontSize:'9px', fontWeight:700,
+    color:'var(--accent-scarlet, #EB2F33)', letterSpacing:'0.12em', flexShrink:0,
   },
   text: {
     fontFamily:'var(--font-body)', fontSize:'12px', color:'var(--text-secondary)',
-    lineHeight:1.4,
   },
 };
 
@@ -64,10 +73,10 @@ export default function MapPage({ data, allAssets, hotspots, watchlistProps, con
         <NarrativeStrip allAssets={allAssets} hotspots={hotspots} />
       </div>
 
-      {/* Main layout: map + sidebar */}
-      <div className="row g-4 mb-5">
-        {/* Map — takes most of the space */}
-        <div className="col-12 col-xl-9" style={s.mapCol}>
+      {/* Two-column layout: Market Map & Category grids on left; independent scroll sidebar on right */}
+      <div style={s.layoutGrid} className="map-page-grid">
+        {/* Left Column: Map + Selected Asset Chart + Category Asset Grids */}
+        <div style={s.mainColumn} className="map-main-column">
           <div className="fade-up-1" style={s.mapHeader}>
             <div>
               <div style={s.mapTitle}>Live Market Map</div>
@@ -119,10 +128,55 @@ export default function MapPage({ data, allAssets, hotspots, watchlistProps, con
               isStale={isStale}
             />
           </div>
+
+          {/* Selected Asset Detail Overlay */}
+          {selectedAsset && (
+            <div style={{ marginTop: '16px', marginBottom: '16px' }}>
+              <DetailChart asset={selectedAsset} onClose={() => setSelectedAsset(null)} />
+            </div>
+          )}
+
+          {/* Categorized Asset Grid */}
+          <div style={s.sectorsStrip}>
+            {['equities','crypto','metals','energy','forex'].map(k => {
+              const m = SECTOR_META[k];
+              const sectorAssets = allAssets.filter(a => a.sector === k);
+              if (!sectorAssets.length) return null;
+              return (
+                <div key={k} style={s.sectorBlock}>
+                  <div style={s.sectorBlockHeader}>
+                    <span style={{ color:m.color, fontSize:'14px' }}>{m.icon}</span>
+                    <span style={{ fontFamily:'var(--font-display)', fontSize:'14px', fontWeight:700, color:m.color, letterSpacing:'0.04em' }}>
+                      {m.label.toUpperCase()}
+                    </span>
+                    <span style={{ fontFamily:'var(--font-mono)', fontSize:'11px', color:'var(--text-dim)' }}>
+                      ({sectorAssets.length} assets)
+                    </span>
+                  </div>
+                  <div style={s.sectorCards}>
+                    {sectorAssets.map(asset => (
+                      <div key={asset.id} style={{ minWidth: 0 }}>
+                        <AssetCard
+                          asset={asset}
+                          onClick={setSelectedAsset}
+                          isWatched={watchlistProps?.isWatched(asset.id)}
+                          onToggleWatch={watchlistProps?.onToggleWatch}
+                          compact
+                          convertPrice={convertPrice}
+                          formatLocalPrice={formatLocalPrice}
+                          isStale={isStale}
+                        />
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              );
+            })}
+          </div>
         </div>
 
-        {/* Sidebar */}
-        <div className="col-12 col-xl-3" style={s.sidebar}>
+        {/* Right Column: Independent Scroll Sidebar */}
+        <div style={s.sidebar} className="map-sidebar">
           {/* Top Movers */}
           <div className="fade-up-2" style={s.sideCard}>
             <div style={s.sideHeader}>
@@ -197,58 +251,42 @@ export default function MapPage({ data, allAssets, hotspots, watchlistProps, con
           </div>
         </div>
       </div>
-
-      {/* Selected Asset Detail Overlay */}
-      {selectedAsset && (
-        <div style={{ marginBottom:'40px' }}>
-          <DetailChart asset={selectedAsset} onClose={() => setSelectedAsset(null)} />
-        </div>
-      )}
-
-      {/* Categorized Asset Grid */}
-      <div style={s.sectorsStrip}>
-        {['equities','crypto','metals','energy','forex'].map(k => {
-          const m = SECTOR_META[k];
-          const sectorAssets = allAssets.filter(a => a.sector === k);
-          if (!sectorAssets.length) return null;
-          return (
-            <div key={k} style={s.sectorBlock}>
-              <div style={s.sectorBlockHeader}>
-                <span style={{ color:m.color, fontSize:'14px' }}>{m.icon}</span>
-                <span style={{ fontFamily:'var(--font-display)', fontSize:'14px', fontWeight:700, color:m.color, letterSpacing:'0.04em' }}>
-                  {m.label.toUpperCase()}
-                </span>
-                <span style={{ fontFamily:'var(--font-mono)', fontSize:'11px', color:'var(--text-dim)' }}>
-                  ({sectorAssets.length} assets)
-                </span>
-              </div>
-              <div style={s.sectorCards}>
-                {sectorAssets.map(asset => (
-                  <div key={asset.id} style={{ minWidth: 0 }}>
-                    <AssetCard
-                      asset={asset}
-                      onClick={setSelectedAsset}
-                      isWatched={watchlistProps?.isWatched(asset.id)}
-                      onToggleWatch={watchlistProps?.onToggleWatch}
-                      compact
-                      convertPrice={convertPrice}
-                      formatLocalPrice={formatLocalPrice}
-                      isStale={isStale}
-                    />
-                  </div>
-                ))}
-              </div>
-            </div>
-          );
-        })}
-      </div>
+      <style>{`
+        .map-page-grid {
+          display: grid;
+          grid-template-columns: minmax(0, 1fr) 360px;
+          gap: 24px;
+          align-items: start;
+        }
+        @media (max-width: 1199px) {
+          .map-page-grid {
+            grid-template-columns: 1fr !important;
+          }
+          .map-sidebar {
+            position: static !important;
+            max-height: none !important;
+            overflow-y: visible !important;
+          }
+        }
+      `}</style>
     </div>
   );
 }
 
 const s = {
-  page: { minHeight:'100vh', display:'flex', flexDirection:'column' },
-  mapCol: { minWidth: 0 },
+  page: { minHeight:'100vh', display:'flex', flexDirection:'column', padding: '24px 28px' },
+  layoutGrid: {
+    display: 'grid',
+    gridTemplateColumns: 'minmax(0, 1fr) 360px',
+    gap: '24px',
+    alignItems: 'start',
+  },
+  mainColumn: {
+    minWidth: 0,
+    display: 'flex',
+    flexDirection: 'column',
+    gap: '24px',
+  },
   mapHeader: {
     display:'flex', justifyContent:'space-between', alignItems:'flex-start',
     marginBottom:'16px', flexWrap:'wrap', gap:'12px',
@@ -264,19 +302,25 @@ const s = {
     display:'inline-flex', alignItems:'center', gap:'8px',
     background:'var(--bg-card)', border:'1px solid var(--border-subtle)',
     borderRadius:'8px', padding:'6px 14px',
-    boxShadow: 'inset 0 1px 0 rgba(255,255,255,0.04)',
+    boxShadow: 'inset 0 1px 0 rgba(99, 156, 197, 0.12)',
   },
-  sidebar: { display:'flex', flexDirection:'column', gap:'24px' },
+  sidebar: {
+    display:'flex', flexDirection:'column', gap:'24px',
+    position: 'sticky', top: '80px',
+    maxHeight: 'calc(100vh - 100px)',
+    overflowY: 'auto',
+    scrollbarWidth: 'thin',
+  },
   sideCard: {
-    background:'var(--bg-card)', border:'1px solid var(--border-subtle)', borderRadius:'12px',
+    background:'var(--bg-card)', border:'1px solid var(--border-stone, #639CC5)', borderRadius:'12px',
     overflow:'hidden',
-    boxShadow: 'inset 0 1px 0 rgba(255,255,255,0.06), 0 4px 20px rgba(0,0,0,0.12)',
+    boxShadow: 'inset 0 1px 0 rgba(99, 156, 197, 0.15), 0 4px 24px rgba(2, 24, 39, 0.45)',
     backdropFilter: 'blur(16px)'
   },
   sideHeader: {
     display:'flex', justifyContent:'space-between', alignItems:'center',
     padding:'16px 20px', borderBottom:'1px solid var(--border-subtle)',
-    background:'var(--bg-overlay)',
+    background:'var(--bg-overlay, #032035)',
   },
   sideTitle: {
     fontFamily:'var(--font-body)', fontSize:'14px', fontWeight:600,
@@ -288,7 +332,10 @@ const s = {
     padding:'12px 20px', cursor:'pointer', transition:'background 0.2s',
     borderBottom:'1px solid var(--border-subtle)',
   },
-  moverSym: { fontFamily:'var(--font-mono)', fontSize:'13px', color:'var(--text-primary)', flex:1, fontWeight:600 },
+  moverSym: {
+    fontFamily:'var(--font-mono)', fontSize:'13px', color:'var(--text-primary)',
+    flex:1, fontWeight:600, whiteSpace: 'nowrap', flexShrink: 0
+  },
   moverPrice: { fontFamily:'var(--font-mono)', fontSize:'12px', color:'var(--text-secondary)' },
   moverChg: { fontFamily:'var(--font-mono)', fontSize:'12px', minWidth:'56px', textAlign:'right', fontWeight:600 },
   sectorsStrip: { display:'flex', flexDirection:'column', gap:'32px' },

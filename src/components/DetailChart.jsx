@@ -32,6 +32,7 @@ export default function DetailChart({ asset, onClose }) {
     if (!asset || !asset.id) return;
     const cacheKey = `${asset.id}-${range}`;
 
+    // If local asset already has history for this exact range with >= 10 points
     if (asset.history?.[range]?.length >= MIN_REAL_CHART_POINTS) {
       return;
     }
@@ -71,17 +72,16 @@ export default function DetailChart({ asset, onClose }) {
 
   const cacheKey = `${asset.id}-${range}`;
   const cachedEntry = historyCache[cacheKey];
+
+  // Rule 2f: Strict range mapping. Do NOT fall back to 24H data under a 1M or 1Y label!
   const rawData = asset.history?.[range]
     || cachedEntry?.points
     || (range === '24H' ? (asset.chartData || asset.spark1d || []) : []);
 
-  const includePrevClose = range === '24H';
-  const refPrevClose = includePrevClose ? asset.prevClose : (cachedEntry?.previousClose ?? null);
+  const refPrevClose = range === '24H' ? (asset.prevClose ?? cachedEntry?.previousClose ?? null) : (cachedEntry?.previousClose ?? null);
   const series = buildChartSeries({
     data: rawData,
     prevClose: refPrevClose,
-    currentPrice: asset.price,
-    includePrevClose,
     minRealPoints: MIN_REAL_CHART_POINTS,
   });
 

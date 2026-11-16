@@ -45,7 +45,7 @@ export default function CurrencyTooltip({ conversions, visible, x, y, ratesMeta,
 const s = {
   wrap: {
     position: 'fixed',
-    zIndex: 9999,
+    zIndex: 'var(--z-tooltips, 300)',
     background: 'var(--bg-panel)',
     border: '1px solid var(--border-mid)',
     borderRadius: '10px',

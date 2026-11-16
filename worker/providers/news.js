@@ -32,8 +32,8 @@ export const STRICT_ASSET_TAGGERS = [
   { id: 'dow', regex: /\b(DIA|DJIA|Dow\s+Jones)\b/ },
 
   // Energy
-  { id: 'wti', regex: /\b(WTI|West\s+Texas)\b/i },
-  { id: 'brent', regex: /\bBrent\b/i },
+  { id: 'wti', regex: /\b(WTI|West\s+Texas|crude\s+oil|U\.?S\.?\s+crude|light\s+sweet\s+crude)\b/i },
+  { id: 'brent', regex: /\b(Brent|Brent\s+crude)\b/i },
   { id: 'ng', regex: /\b(NGAS|Natural\s+Gas|LNG|European\s+Gas)\b/i },
   { id: 'hoil', regex: /\b(HOIL|Heating\s+Oil)\b/i },
 
@@ -56,6 +56,15 @@ export const STRICT_ASSET_TAGGERS = [
   { id: 'eurjpy', regex: /\bEUR\/JPY\b/i },
   { id: 'eurinr', regex: /\bEUR\/INR\b/i },
 ];
+
+export const ASSET_TO_SECTOR = {
+  btc: 'crypto', eth: 'crypto', sol: 'crypto', bnb: 'crypto', xrp: 'crypto', ada: 'crypto',
+  nvda: 'equities', tsla: 'equities', aapl: 'equities', meta: 'equities', spx: 'equities', ndx: 'equities', dow: 'equities',
+  wti: 'energy', brent: 'energy', ng: 'energy', hoil: 'energy',
+  gold: 'metals', silver: 'metals', platinum: 'metals',
+  usdinr: 'forex', usdjpy: 'forex', eurusd: 'forex', gbpusd: 'forex', audusd: 'forex', usdcad: 'forex',
+  usdchf: 'forex', nzdusd: 'forex', eurgbp: 'forex', gbpjpy: 'forex', eurjpy: 'forex', eurinr: 'forex',
+};
 
 /**
  * Extracts matching asset IDs from title and summary (max 3 tags, no defaults).
@@ -126,23 +135,26 @@ export function parseRssXml(xml, sourceName, sector) {
     // Normalize link
     link = link.replace(/\?.*$/, ''); // strip tracking query params
 
-    let publishedAt;
-    try {
-      const parsed = Date.parse(rawDate);
-      publishedAt = isNaN(parsed) ? new Date().toISOString() : new Date(parsed).toISOString();
-    } catch {
-      publishedAt = new Date().toISOString();
-    }
+    if (!rawDate) continue;
+    const parsed = Date.parse(rawDate);
+    if (isNaN(parsed) || !Number.isFinite(parsed)) continue; // drop unparseable date
+    const now = Date.now();
+    // Drop items older than 24h (86,400,000 ms) or invalid future dates (> 1h)
+    if (now - parsed > 86400000 || parsed > now + 3600000) continue;
+    const publishedAt = new Date(parsed).toISOString();
 
     const combinedText = `${title} ${desc}`;
     const assetTags = extractStrictAssetTags(combinedText);
+    const resolvedSector = (assetTags.length > 0 && ASSET_TO_SECTOR[assetTags[0]])
+      ? ASSET_TO_SECTOR[assetTags[0]]
+      : sector;
 
     articles.push({
       title,
       link,
       publishedAt,
       source: sourceName,
-      sector,
+      sector: resolvedSector,
       summary: desc.slice(0, 280),
       assetTags,
       isSponsored: false,

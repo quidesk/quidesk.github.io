@@ -3,13 +3,13 @@ import { formatPrice } from '../data/markets'
 
 const TYPE_LABELS = {
   breakout:           { label:'BREAKOUT',   color:'var(--bull)' },
-  breakdown:          { label:'BREAKDOWN',  color:'var(--bear)' },
+  breakdown:          { label:'BREAKDOWN',  color:'var(--accent-scarlet, #EB2F33)' },
   bullish_breakout:   { label:'BREAKOUT',   color:'var(--bull)' },
-  bearish_reversal:   { label:'BREAKDOWN',  color:'var(--bear)' },
-  divergence:         { label:'DIVERGENCE', color:'#a78bfa' },
+  bearish_reversal:   { label:'BREAKDOWN',  color:'var(--accent-scarlet, #EB2F33)' },
+  divergence:         { label:'DIVERGENCE', color:'var(--color-stone, #639CC5)' },
 };
 
-const SEV_COLORS = { high:'var(--bear)', medium:'var(--amber)', low:'var(--text-secondary)' };
+const SEV_COLORS = { high:'var(--accent-scarlet, #EB2F33)', medium:'var(--amber)', low:'var(--color-stone, #639CC5)' };
 
 export default function HotspotPanel({ hotspots = [], allAssets = [], onSelect }) {
   const assetMap = {};
@@ -50,7 +50,7 @@ export default function HotspotPanel({ hotspots = [], allAssets = [], onSelect }
                 )}
               </div>
               <div style={s.itemDesc}>
-                {h.desc || `${h.symbol} ${typeof h.change === 'number' ? `${h.change >= 0 ? '+' : ''}${h.change.toFixed(2)}%` : '—'} 24H move`}
+                {h.desc || `${h.symbol} ${typeof h.change === 'number' ? `${h.change >= 0 ? '+' : ''}${h.change.toFixed(2)}%` : '—'} ${(h.sector === 'crypto' || asset?.sector === 'crypto') ? '24H' : '1D'} move`}
               </div>
             </div>
             {asset && (
@@ -76,7 +76,7 @@ const s = {
   sevBar: { width:'3px', height:'28px', borderRadius:'2px', flexShrink:0 },
   itemBody: { flex:1, minWidth:0 },
   itemTop: { display:'flex', alignItems:'center', gap:'6px' },
-  symbol: { fontFamily:'var(--font-mono)', fontSize:'12px', fontWeight:600, color:'var(--text-primary)' },
+  symbol: { fontFamily:'var(--font-mono)', fontSize:'12px', fontWeight:600, color:'var(--text-primary)', whiteSpace: 'nowrap', flexShrink: 0 },
   typeBadge: {
     fontFamily:'var(--font-mono)', fontSize:'8px', fontWeight:600,
     letterSpacing:'0.06em', padding:'1px 5px', borderRadius:'3px',

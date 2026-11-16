@@ -70,4 +70,20 @@ describe('News Tagging (Worker Single Source) & Sponsored Separation', () => {
     expect(sponsored.isSponsored).toBe(true);
     expect(sponsored.mentionedAssets).toEqual([]);
   });
+
+  it('correctly tags "U.S. crude oil declines to $85" with WTI and resolves authentic publication date', () => {
+    expect(extractStrictAssetTags('U.S. crude oil declines to $85')).toContain('wti');
+    const item = normalizeWorkerNewsItem({
+      id: 'n2',
+      title: 'U.S. crude oil declines to $85',
+      link: 'https://bloomberg.com/energy',
+      source: 'Bloomberg',
+      sector: 'energy',
+      publishedAt: '2026-11-16T18:00:00.000Z',
+      assetTags: ['wti'],
+    });
+    expect(item.mentionedAssets).toEqual(['wti']);
+    expect(item.sector).toBe('energy');
+    expect(item.published.toISOString()).toBe('2026-11-16T18:00:00.000Z');
+  });
 });

@@ -138,7 +138,7 @@ const s = {
     border: '1px solid var(--border-mid)',
     borderRadius: '8px',
     overflow: 'hidden',
-    zIndex: 500,
+    zIndex: 'var(--z-popovers, 200)',
     boxShadow: '0 12px 40px rgba(0,0,0,0.4)',
     minWidth: '300px',
   },

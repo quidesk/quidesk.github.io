@@ -1,6 +1,7 @@
 import { describe, it, expect, vi, afterEach } from 'vitest';
 import worker, { getCorsOrigin, withHeaders } from './index.js';
 import { buildAssetQuote, handleQuotes } from './routes/quotes.js';
+import { handleHistory } from './routes/history.js';
 import { extractStrictAssetTags, parseRssXml } from './providers/news.js';
 import { checkMetalsBasis } from './providers/metals.js';
 import { determineSessionState } from './providers/yahoo.js';
@@ -149,6 +150,28 @@ describe('Cloudflare Worker — Phase 1 Contract & Schema Validation', () => {
       expect(determineSessionState(null, summerRegular, 'equities', 'CLOSED')).toBe('closed');
     });
 
+    it('manages CME energy futures electronic trading schedule and daily 17:00-18:00 ET break', () => {
+      // Mon 17:30 EDT = 21:30 UTC -> inside 17:00-18:00 ET maintenance break -> closed
+      const monBreak = Math.floor(Date.parse('2026-07-13T21:30:00Z') / 1000);
+      expect(determineSessionState(null, monBreak, 'energy', null)).toBe('closed');
+
+      // Mon 18:30 EDT = 22:30 UTC -> active electronic trading -> regular
+      const monElectronic = Math.floor(Date.parse('2026-07-13T22:30:00Z') / 1000);
+      expect(determineSessionState(null, monElectronic, 'energy', null)).toBe('regular');
+
+      // Sun 17:00 EDT = 21:00 UTC -> before 18:00 ET open -> closed
+      const sunBeforeOpen = Math.floor(Date.parse('2026-07-12T21:00:00Z') / 1000);
+      expect(determineSessionState(null, sunBeforeOpen, 'energy', null)).toBe('closed');
+
+      // Sun 18:15 EDT = 22:15 UTC -> electronic session open -> regular
+      const sunOpen = Math.floor(Date.parse('2026-07-12T22:15:00Z') / 1000);
+      expect(determineSessionState(null, sunOpen, 'energy', null)).toBe('regular');
+
+      // Fri 17:15 EDT = 21:15 UTC -> after 17:00 ET close -> closed
+      const friAfterClose = Math.floor(Date.parse('2026-07-17T21:15:00Z') / 1000);
+      expect(determineSessionState(null, friAfterClose, 'energy', null)).toBe('closed');
+    });
+
     it('labels Frankfurter ECB fallback with ECB rate date, status delayed, and vs prior ECB fix', async () => {
       vi.spyOn(globalThis, 'fetch').mockResolvedValueOnce(new Response(JSON.stringify({
         base: 'USD',
@@ -276,18 +299,19 @@ describe('Cloudflare Worker — Phase 1 Contract & Schema Validation', () => {
     });
 
     it('parses RSS XML feed blocks with asset IDs and keeps zero-match items empty (sector tag only)', () => {
+      const recentDate = new Date(Date.now() - 3600000).toUTCString();
       const sampleXml = `
         <rss><channel>
           <item>
             <title><![CDATA[Bitcoin Breaks Higher As Inflation Cools]]></title>
             <link>https://decrypt.co/12345?utm_source=rss</link>
-            <pubDate>Wed, 11 Nov 2026 03:00:00 GMT</pubDate>
+            <pubDate>${recentDate}</pubDate>
             <description><![CDATA[Crypto markets reacted positively to the latest consumer price index.]]></description>
           </item>
           <item>
             <title><![CDATA[Fed Officials Debate Policy Path Amid Sticky Inflation]]></title>
             <link>https://cnbc.com/999?utm_source=rss</link>
-            <pubDate>Wed, 11 Nov 2026 03:05:00 GMT</pubDate>
+            <pubDate>${recentDate}</pubDate>
             <description><![CDATA[Policymakers signaled patience before easing rates further.]]></description>
           </item>
         </channel></rss>
@@ -302,6 +326,52 @@ describe('Cloudflare Worker — Phase 1 Contract & Schema Validation', () => {
       // Zero matches => sector tag remains, assetTags stays empty (no default asset tag)
       expect(articles[1].sector).toBe('crypto');
       expect(articles[1].assetTags).toEqual([]);
+    });
+
+    it('drops items older than 24 hours or with unparseable dates', () => {
+      const oldDate = new Date(Date.now() - 25 * 3600 * 1000).toUTCString();
+      const freshDate = new Date(Date.now() - 2 * 3600 * 1000).toUTCString();
+      const xml = `
+        <rss><channel>
+          <item>
+            <title>Old Story</title>
+            <link>https://example.com/old</link>
+            <pubDate>${oldDate}</pubDate>
+          </item>
+          <item>
+            <title>Corrupted Date Story</title>
+            <link>https://example.com/corrupt</link>
+            <pubDate>not-a-valid-date-string</pubDate>
+          </item>
+          <item>
+            <title>Fresh Story</title>
+            <link>https://example.com/fresh</link>
+            <pubDate>${freshDate}</pubDate>
+          </item>
+        </channel></rss>
+      `;
+      const articles = parseRssXml(xml, 'Reuters', 'equities');
+      expect(articles).toHaveLength(1);
+      expect(articles[0].title).toBe('Fresh Story');
+    });
+
+    it('tags "U.S. crude oil declines to $85" with WTI and shows in energy sector, NOT equities', () => {
+      const freshDate = new Date(Date.now() - 1800000).toUTCString();
+      const xml = `
+        <rss><channel>
+          <item>
+            <title>U.S. crude oil declines to $85</title>
+            <link>https://example.com/crude-oil-85</link>
+            <pubDate>${freshDate}</pubDate>
+            <description>Energy markets reflect easing supply constraints</description>
+          </item>
+        </channel></rss>
+      `;
+      const articles = parseRssXml(xml, 'Bloomberg Markets', 'equities');
+      expect(articles).toHaveLength(1);
+      expect(articles[0].assetTags).toContain('wti');
+      expect(articles[0].sector).toBe('energy');
+      expect(articles[0].sector).not.toBe('equities');
     });
   });
 
@@ -337,6 +407,222 @@ describe('Cloudflare Worker — Phase 1 Contract & Schema Validation', () => {
       const res = await worker.fetch(optReq, mockEnv);
       expect(res.status).toBe(204);
       expect(res.headers.get('Access-Control-Allow-Origin')).toBe('https://quidesk.github.io');
+    });
+  });
+
+  describe('6. Multi-Tier Crypto Provider (Phase 1)', () => {
+    const cryptoIds = ['btc', 'eth', 'sol', 'bnb', 'xrp', 'ada'];
+
+    it('every provider failing => all six crypto assets unavailable, and no 0 in the output', async () => {
+      vi.spyOn(globalThis, 'fetch').mockImplementation(async () => {
+        return new Response('Internal Server Error', { status: 500 });
+      });
+
+      const payload = await handleQuotes(new Request('https://worker.internal/v1/quotes'), {});
+      for (const id of cryptoIds) {
+        const asset = payload.assets[id];
+        expect(asset.price).toBeNull();
+        expect(asset.prevClose).toBeNull();
+        expect(asset.change).toBeNull();
+        expect(asset.changeStatus).toBe('unavailable');
+        expect(asset.status).toBe('unavailable');
+        // Strict guard: NEVER 0
+        expect(asset.price).not.toBe(0);
+        expect(asset.change).not.toBe(0);
+      }
+      expect(payload.health.perSource.binance.ok).toBe(false);
+      expect(payload.health.perSource.kraken.ok).toBe(false);
+      expect(payload.health.perSource.cryptocompare.ok).toBe(false);
+    });
+
+    it('one provider succeeding (Binance only) => only its values and binance source', async () => {
+      vi.spyOn(globalThis, 'fetch').mockImplementation(async (input) => {
+        const url = typeof input === 'string' ? input : input.url;
+        if (url.includes('binance.vision')) {
+          return new Response(JSON.stringify([
+            { symbol: 'BTCUSDT', lastPrice: '85000', openPrice: '82000', closeTime: Date.now() },
+            { symbol: 'ETHUSDT', lastPrice: '3200', openPrice: '3100', closeTime: Date.now() },
+          ]), { status: 200 });
+        }
+        return new Response('Fail', { status: 500 });
+      });
+
+      const payload = await handleQuotes(new Request('https://worker.internal/v1/quotes'), {});
+      expect(payload.assets.btc.price).toBe(85000);
+      expect(payload.assets.btc.source).toBe('binance');
+      expect(payload.assets.btc.status).toBe('live');
+      expect(payload.assets.btc.change).toBe(3.66);
+
+      expect(payload.assets.eth.price).toBe(3200);
+      expect(payload.assets.eth.source).toBe('binance');
+
+      // The remaining 4 symbols should be unavailable and NOT 0
+      for (const id of ['sol', 'bnb', 'xrp', 'ada']) {
+        expect(payload.assets[id].price).toBeNull();
+        expect(payload.assets[id].status).toBe('unavailable');
+        expect(payload.assets[id].price).not.toBe(0);
+      }
+      expect(payload.health.perSource.binance.ok).toBe(true);
+      expect(payload.health.perSource.kraken.ok).toBe(false);
+      expect(payload.health.perSource.cryptocompare.ok).toBe(false);
+    });
+
+    it('BNB-only fallback case: Kraken satisfies non-BNB, CryptoCompare provides BNB', async () => {
+      vi.spyOn(globalThis, 'fetch').mockImplementation(async (input) => {
+        const url = typeof input === 'string' ? input : input.url;
+        // Binance fails completely
+        if (url.includes('binance.vision')) {
+          return new Response('Fail', { status: 500 });
+        }
+        // Kraken succeeds for BTC, ETH, SOL, XRP, ADA (BNB not on Kraken)
+        if (url.includes('api.kraken.com')) {
+          return new Response(JSON.stringify({
+            result: {
+              XXBTZUSD: { c: ['86000'], o: '84000' },
+              XETHZUSD: { c: ['3300'], o: '3200' },
+              SOLUSD: { c: ['180'], o: '175' },
+              XXRPZUSD: { c: ['1.15'], o: '1.10' },
+              ADAUSD: { c: ['0.75'], o: '0.70' },
+            }
+          }), { status: 200 });
+        }
+        // CryptoCompare satisfies BNB
+        if (url.includes('cryptocompare.com')) {
+          return new Response(JSON.stringify({
+            RAW: {
+              BNB: { USD: { PRICE: 650, OPEN24HOUR: 630, LASTUPDATE: Math.floor(Date.now() / 1000) } }
+            }
+          }), { status: 200 });
+        }
+        return new Response('Fail', { status: 500 });
+      });
+
+      const payload = await handleQuotes(new Request('https://worker.internal/v1/quotes'), {});
+      expect(payload.assets.btc.price).toBe(86000);
+      expect(payload.assets.btc.source).toBe('kraken');
+
+      expect(payload.assets.bnb.price).toBe(650);
+      expect(payload.assets.bnb.source).toBe('cryptocompare');
+      expect(payload.assets.bnb.status).toBe('live');
+      expect(payload.assets.bnb.change).toBe(3.17);
+
+      expect(payload.health.perSource.binance.ok).toBe(false);
+      expect(payload.health.perSource.kraken.ok).toBe(true);
+      expect(payload.health.perSource.cryptocompare.ok).toBe(true);
+    });
+  });
+
+  describe('8. Phase 2: Real History Route Contract (/v1/history)', () => {
+    it('crypto history returns real points from CryptoCompare when available', async () => {
+      vi.spyOn(globalThis, 'fetch').mockImplementation(async (input) => {
+        const url = typeof input === 'string' ? input : input.url;
+        if (url.includes('cryptocompare.com/data/v2/histohour')) {
+          const list = Array.from({ length: 24 }, (_, i) => ({
+            time: 1700000000 + i * 3600,
+            close: 80000 + i * 100,
+          }));
+          return new Response(JSON.stringify({
+            Response: 'Success',
+            Data: { Data: list },
+          }), { status: 200 });
+        }
+        return new Response('Fail', { status: 500 });
+      });
+
+      const res = await handleHistory(new Request('https://worker.internal/v1/history?id=btc&range=24H'), {});
+      expect(res.id).toBe('btc');
+      expect(res.source).toBe('cryptocompare');
+      expect(res.granularity).toBe('1h');
+      expect(res.points).toHaveLength(24);
+      expect(res.points[0]).toHaveProperty('t');
+      expect(res.points[0]).toHaveProperty('v');
+      expect(res.points[0].v).toBe(80000);
+      expect(res.points[23].v).toBe(82300);
+    });
+
+    it('crypto history falls back to Binance klines when CryptoCompare fails', async () => {
+      vi.spyOn(globalThis, 'fetch').mockImplementation(async (input) => {
+        const url = typeof input === 'string' ? input : input.url;
+        if (url.includes('cryptocompare.com')) {
+          return new Response('Fail', { status: 500 });
+        }
+        if (url.includes('binance.vision/api/v3/klines')) {
+          const list = Array.from({ length: 24 }, (_, i) => [
+            1700000000000 + i * 3600000,
+            '3000', '3100', '2900', (3000 + i * 10).toString(), '1000'
+          ]);
+          return new Response(JSON.stringify(list), { status: 200 });
+        }
+        return new Response('Fail', { status: 500 });
+      });
+
+      const res = await handleHistory(new Request('https://worker.internal/v1/history?id=eth&range=24H'), {});
+      expect(res.id).toBe('eth');
+      expect(res.source).toBe('binance');
+      expect(res.granularity).toBe('1h');
+      expect(res.points).toHaveLength(24);
+      expect(res.points[0].v).toBe(3000);
+      expect(res.points[23].v).toBe(3230);
+    });
+
+    it('equities/energy/metals returns 15m granularity and yahoo source', async () => {
+      vi.spyOn(globalThis, 'fetch').mockImplementation(async (input) => {
+        const url = typeof input === 'string' ? input : input.url;
+        if (url.includes('query1.finance.yahoo.com')) {
+          const timestamps = Array.from({ length: 30 }, (_, i) => 1700000000 + i * 900);
+          const closes = Array.from({ length: 30 }, (_, i) => 500 + i * 0.5);
+          return new Response(JSON.stringify({
+            chart: {
+              result: [{
+                meta: { chartPreviousClose: 498.5 },
+                timestamp: timestamps,
+                indicators: { quote: [{ close: closes }] },
+              }]
+            }
+          }), { status: 200 });
+        }
+        return new Response('Fail', { status: 500 });
+      });
+
+      const res = await handleHistory(new Request('https://worker.internal/v1/history?id=spx&range=24H'), {});
+      expect(res.id).toBe('spx');
+      expect(res.source).toBe('yahoo');
+      expect(res.granularity).toBe('15m');
+      expect(res.previousClose).toBe(498.5);
+      expect(res.points).toHaveLength(30);
+      expect(res.points[0].v).toBe(500);
+    });
+
+    it('forex falls back to Frankfurter ECB daily when Yahoo fails', async () => {
+      vi.spyOn(globalThis, 'fetch').mockImplementation(async (input) => {
+        const url = typeof input === 'string' ? input : input.url;
+        if (url.includes('query1.finance.yahoo.com')) {
+          return new Response('Fail', { status: 500 });
+        }
+        if (url.includes('frankfurter.')) {
+          const rates = {};
+          for (let i = 1; i <= 20; i++) {
+            const dateStr = `2026-04-${String(i).padStart(2, '0')}`;
+            rates[dateStr] = { USD: 1.08 + i * 0.001 };
+          }
+          return new Response(JSON.stringify({ rates }), { status: 200 });
+        }
+        return new Response('Fail', { status: 500 });
+      });
+
+      const res = await handleHistory(new Request('https://worker.internal/v1/history?id=eurusd&range=24H'), {});
+      expect(res.id).toBe('eurusd');
+      expect(res.source).toBe('ECB daily');
+      expect(res.granularity).toBe('1d');
+      expect(res.points.length).toBeGreaterThanOrEqual(10);
+    });
+
+    it('returns empty points when fewer than 10 points are available', async () => {
+      vi.spyOn(globalThis, 'fetch').mockResolvedValue(new Response('Fail', { status: 500 }));
+
+      const res = await handleHistory(new Request('https://worker.internal/v1/history?id=spx&range=24H'), {});
+      expect(res.points).toEqual([]);
+      expect(res.pointCount).toBe(0);
     });
   });
 });

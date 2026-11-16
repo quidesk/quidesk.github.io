@@ -86,7 +86,7 @@ export const useMarketStore = create((set, get) => ({
    * @param {any} quote
    */
   applyTick: (symbol, quote) => {
-    if (!symbol || !quote || typeof quote.price !== 'number' || !Number.isFinite(quote.price) || quote.price <= 0) return;
+    if (!symbol || !quote || typeof quote.price !== 'number') return;
     const idKey = (quote.id || symbol).toLowerCase();
     const symKey = quote.symbol || symbol;
     const existing = get().quotes[idKey] || get().quotes[symKey];

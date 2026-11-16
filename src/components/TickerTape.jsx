@@ -78,7 +78,7 @@ export default function TickerTape({ allAssets = [], formatLocalPrice, isStale }
   };
 
   return (
-    <div style={s.wrap} className="ticker-wrap ticker-bar-wrapper">
+    <div style={s.wrap} className="ticker-wrap">
       <div style={s.label}>
         <span style={s.dot} />
         <span style={s.labelText}>LIVE</span>
@@ -117,10 +117,11 @@ const s = {
     display: 'flex',
     alignItems: 'center',
     height: '30px',
-    backgroundColor: '#080C14',
-    background: '#080C14',
+    background: 'var(--surface-chrome, #080C14)',
     borderBottom: '1px solid var(--border-subtle)',
     overflow: 'hidden',
+    position: 'sticky',
+    zIndex: 'var(--z-chrome, 100)',
   },
   label: {
     flexShrink: 0,
@@ -130,7 +131,7 @@ const s = {
     padding: '0 14px',
     borderRight: '1px solid var(--border-subtle)',
     height: '100%',
-    background: 'rgba(34,212,122,0.04)',
+    background: 'var(--surface-chrome, #080C14)',
     position: 'relative',
     zIndex: 2,
   },
@@ -153,7 +154,7 @@ const s = {
     flex: 1,
     overflow: 'hidden',
     position: 'relative',
-    paddingLeft: '88px',
+    paddingLeft: '16px',
     maskImage: 'linear-gradient(to right, transparent 0%, black 28px, black calc(100% - 28px), transparent 100%)',
     WebkitMaskImage: 'linear-gradient(to right, transparent 0%, black 28px, black calc(100% - 28px), transparent 100%)',
   },

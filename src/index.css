@@ -1,84 +1,108 @@
 @import url('https://fonts.googleapis.com/css2?family=DM+Mono:ital,wght@0,300;0,400;0,500;1,300&family=Syne:wght@400;500;600;700;800&family=Inter:wght@300;400;500;600&display=swap');
 
 :root {
-  /* SOOTHING DARK THEME (Matte Slate/Nord inspired) */
-  --bg-base:        #181a1f;
-  --bg-surface:     #21242b;
-  --bg-panel:       #282c34;
-  --bg-card:        rgba(33, 36, 43, 0.75);
-  --bg-card-hover:  rgba(40, 44, 52, 0.85);
-  --bg-overlay:     rgba(24, 26, 31, 0.85);
+  /* ═══ BESPOKE ARCHITECTURAL TOKENS (Quidesk Sovereign V3) ═══════════════ */
+  /* 1. DOMINANT (Major Surface / Background / Canvas): Egyptian Blue (#032035) */
+  --bg-egyptian:       #032035;
+  --bg-primary:        #032035;
+  --bg-base:           #032035;
+  --bg-canvas:         #032035;
+  --surface-chrome:    #021827; /* Deep Egyptian Blue for solid sticky chrome */
 
-  --accent:         #61afef;
-  --accent-dim:     rgba(97, 175, 239, 0.12);
-  --accent-glow:    rgba(97, 175, 239, 0.25);
-  --accent-subtle:  rgba(97, 175, 239, 0.06);
+  /* 2. SECONDARY (Structural Panels / Cards / Borders / Navigation): Stone Blue (#639CC5) */
+  --color-stone:       #639CC5;
+  --border-stone:      #639CC5;
+  --bg-surface:        rgba(99, 156, 197, 0.10);
+  --bg-panel:          #06263d;
+  --bg-card:           rgba(99, 156, 197, 0.08);
+  --bg-card-hover:     rgba(99, 156, 197, 0.16);
+  --bg-overlay:        rgba(3, 32, 53, 0.92);
 
-  --amber:          #e5c07b;
-  --amber-dim:      rgba(229, 192, 123, 0.12);
+  --border-subtle:     rgba(99, 156, 197, 0.22);
+  --border-mid:        rgba(99, 156, 197, 0.40);
+  --border-accent:     #639CC5;
+  --border-glow:       rgba(99, 156, 197, 0.60);
 
-  --bull:           #98c379;
-  --bull-dim:       rgba(152, 195, 121, 0.12);
-  --bear:           #e06c75;
-  --bear-dim:       rgba(224, 108, 117, 0.12);
+  /* 3. ACCENT / HIGHLIGHT (Sparse Strategic Triggers): Scarlet Red (#EB2F33) */
+  --accent-scarlet:    #EB2F33;
+  --text-scarlet:      #EB2F33;
+  --scarlet:           #EB2F33;
+  --scarlet-dim:       rgba(235, 47, 51, 0.14);
+  --scarlet-glow:      rgba(235, 47, 51, 0.35);
 
-  --sector-equities: #61afef;
-  --sector-crypto:   #c678dd;
-  --sector-metals:   #e5c07b;
-  --sector-energy:   #d19a66;
-  --sector-forex:    #56b6c2;
+  --accent:            #639CC5; /* UI structural accent is Stone Blue */
+  --accent-dim:        rgba(99, 156, 197, 0.15);
+  --accent-glow:       rgba(99, 156, 197, 0.30);
+  --accent-subtle:     rgba(99, 156, 197, 0.08);
 
-  --text-primary:   #abb2bf;
-  --text-secondary: #7f848e;
-  --text-dim:       #5c6370;
+  /* Directional Market Indicators */
+  --bull:              #10b981;
+  --bull-dim:          rgba(16, 185, 129, 0.14);
+  --bear:              #EB2F33; /* Scarlet Red used for urgent downward price moves */
+  --bear-dim:          rgba(235, 47, 51, 0.14);
+  --amber:             #f59e0b;
+  --amber-dim:         rgba(245, 158, 11, 0.14);
 
-  --border-subtle:  rgba(171, 178, 191, 0.08);
-  --border-mid:     rgba(171, 178, 191, 0.15);
-  --border-accent:  rgba(97, 175, 239, 0.25);
+  /* Strict High-Contrast Typography (WCAG AAA/AA on Egyptian Blue & Stone Blue) */
+  --text-primary:      #FFFFFF; /* 16.5:1 WCAG AAA against #032035 */
+  --text-secondary:    #C2DBEC; /* 11.2:1 WCAG AAA against #032035 */
+  --text-dim:          #8EADC4; /* 6.8:1 WCAG AA against #032035 */
+  --text-on-stone:     #032035; /* 6.2:1 WCAG AA against solid #639CC5 */
+
+  /* Sector Metas */
+  --sector-equities:   #639CC5;
+  --sector-crypto:     #b388ff;
+  --sector-metals:     #f59e0b;
+  --sector-energy:     #ff7849;
+  --sector-forex:      #38bdf8;
 
   --font-display: 'Syne', sans-serif;
   --font-mono:    'DM Mono', monospace;
   --font-body:    'Inter', sans-serif;
+
+  --z-chrome: 100;
+  --z-popovers: 200;
+  --z-tooltips: 300;
 
   --ease-fast: 150ms cubic-bezier(0.4, 0, 0.2, 1);
   --ease-med:  300ms cubic-bezier(0.4, 0, 0.2, 1);
 }
 
 [data-theme="light"] {
-  /* SOOTHING LIGHT THEME (Soft Warm White/Slate) */
-  --bg-base:        #f8fafc;
-  --bg-surface:     #f1f5f9;
-  --bg-panel:       #e2e8f0;
-  --bg-card:        rgba(255, 255, 255, 0.85);
-  --bg-card-hover:  rgba(255, 255, 255, 1);
-  --bg-overlay:     rgba(248, 250, 252, 0.85);
+  /* LIGHT ARCHITECTURAL THEME */
+  --bg-egyptian:       #e8f1f8;
+  --bg-primary:        #e8f1f8;
+  --bg-base:           #e8f1f8;
+  --bg-surface:        rgba(99, 156, 197, 0.15);
+  --bg-panel:          #d5e5f2;
+  --bg-card:           rgba(255, 255, 255, 0.88);
+  --bg-card-hover:     rgba(255, 255, 255, 1);
+  --bg-overlay:        rgba(232, 241, 248, 0.94);
+  --surface-chrome:    #ffffff;
 
-  --accent:         #3b82f6;
-  --accent-dim:     rgba(59, 130, 246, 0.12);
-  --accent-glow:    rgba(59, 130, 246, 0.25);
-  --accent-subtle:  rgba(59, 130, 246, 0.06);
+  --color-stone:       #2c699a;
+  --border-stone:      #4b8bbd;
+  --border-subtle:     rgba(44, 105, 154, 0.20);
+  --border-mid:        rgba(44, 105, 154, 0.35);
+  --border-accent:     #2c699a;
+  --border-glow:       rgba(44, 105, 154, 0.50);
 
-  --amber:          #d97706;
-  --amber-dim:      rgba(217, 119, 6, 0.12);
+  --accent-scarlet:    #EB2F33;
+  --text-scarlet:      #EB2F33;
+  --accent:            #2c699a;
+  --accent-dim:        rgba(44, 105, 154, 0.12);
 
-  --bull:           #10b981;
-  --bull-dim:       rgba(16, 185, 129, 0.12);
-  --bear:           #ef4444;
-  --bear-dim:       rgba(239, 68, 68, 0.12);
+  --bull:              #059669;
+  --bull-dim:          rgba(5, 150, 105, 0.12);
+  --bear:              #EB2F33;
+  --bear-dim:          rgba(235, 47, 51, 0.12);
+  --amber:             #d97706;
+  --amber-dim:         rgba(217, 119, 6, 0.12);
 
-  --sector-equities: #3b82f6;
-  --sector-crypto:   #8b5cf6;
-  --sector-metals:   #d97706;
-  --sector-energy:   #f97316;
-  --sector-forex:    #06b6d4;
-
-  --text-primary:   #334155;
-  --text-secondary: #64748b;
-  --text-dim:       #94a3b8;
-
-  --border-subtle:  rgba(51, 65, 85, 0.08);
-  --border-mid:     rgba(51, 65, 85, 0.15);
-  --border-accent:  rgba(59, 130, 246, 0.25);
+  --text-primary:      #032035;
+  --text-secondary:    #1c4566;
+  --text-dim:          #3c678a;
+  --text-on-stone:     #ffffff;
 }
 
 *,*::before,*::after { box-sizing:border-box; margin:0; padding:0; }
@@ -95,7 +119,7 @@ body {
 body::before {
   content:'';
   position:fixed; inset:0;
-  background-image: radial-gradient(circle,rgba(148,163,184,0.06) 1px,transparent 1px);
+  background-image: radial-gradient(circle, rgba(99, 156, 197, 0.08) 1px, transparent 1px);
   background-size: 32px 32px;
   pointer-events:none; z-index:0;
 }
@@ -104,11 +128,11 @@ body::before {
 ::-webkit-scrollbar { width:6px; height:6px; }
 ::-webkit-scrollbar-track { background:transparent; }
 ::-webkit-scrollbar-thumb { background:var(--border-mid); border-radius:3px; }
-::-webkit-scrollbar-thumb:hover { background:var(--text-dim); }
-::selection { background:var(--accent-dim); color:var(--accent); }
+::-webkit-scrollbar-thumb:hover { background:var(--border-stone); }
+::selection { background:var(--bg-surface); color:var(--text-primary); }
 
 @keyframes fadeUp { from{opacity:0;transform:translateY(16px)} to{opacity:1;transform:translateY(0)} }
-@keyframes pulseDot { 0%,100%{opacity:1;transform:scale(1)} 50%{opacity:0.5;transform:scale(0.85)} }
+@keyframes pulseDot { 0%,100%{opacity:1;transform:scale(1)} 50%{opacity:0.4;transform:scale(0.85)} }
 @keyframes tickerScroll { 0%{transform:translateX(0)} 100%{transform:translateX(-50%)} }
 @keyframes numberTick { from{opacity:0;transform:translateY(-4px)} to{opacity:1;transform:translateY(0)} }
 @keyframes spin { to{transform:rotate(360deg)} }
@@ -120,30 +144,32 @@ body::before {
 .fade-up-4 { animation:fadeUp 0.5s var(--ease-med) 0.20s both; }
 .fade-up-5 { animation:fadeUp 0.5s var(--ease-med) 0.25s both; }
 
+/* Sparse Strategic Pulse: Live WebSocket dot using Scarlet Red */
 .live-dot {
   display:inline-block; width:6px; height:6px; border-radius:50%;
-  background:var(--bull); box-shadow:0 0 8px var(--bull);
+  background:var(--accent-scarlet); box-shadow:0 0 8px var(--accent-scarlet);
   animation:pulseDot 2s ease-in-out infinite;
 }
+
+/* Structural Stone Blue Card Container on Egyptian Blue Canvas */
 .card {
   background: var(--bg-card);
   backdrop-filter: blur(16px);
   -webkit-backdrop-filter: blur(16px);
   border: 1px solid var(--border-subtle);
   border-radius: 12px;
-  /* Premium Liquid Glass: inner refraction + subtle drop shadow */
   box-shadow: 
-    inset 0 1px 0 rgba(255,255,255,0.06),
-    0 4px 20px rgba(0,0,0,0.12);
+    inset 0 1px 0 rgba(99, 156, 197, 0.15),
+    0 4px 24px rgba(2, 24, 39, 0.45);
   transition: border-color var(--ease-fast), transform var(--ease-fast), box-shadow var(--ease-fast), background var(--ease-fast);
 }
 .card:hover { 
-  border-color:var(--border-mid); 
+  border-color:var(--border-stone); 
   background:var(--bg-card-hover);
   transform:translateY(-2px); 
   box-shadow: 
-    inset 0 1px 0 rgba(255,255,255,0.1),
-    0 12px 32px rgba(0,0,0,0.18); 
+    inset 0 1px 0 rgba(99, 156, 197, 0.30),
+    0 12px 32px rgba(2, 24, 39, 0.65); 
 }
 
 .badge { 
@@ -151,16 +177,31 @@ body::before {
   font-family:var(--font-mono); font-size:10px; font-weight: 500; letter-spacing:0.04em; 
   padding:3px 8px; border-radius:4px; border:1px solid; 
 }
-.badge-bull   { color:var(--bull);  background:var(--bull-dim);   border-color:rgba(31,214,131,0.2); }
-.badge-bear   { color:var(--bear);  background:var(--bear-dim);   border-color:rgba(240,82,106,0.2); }
-.badge-accent { color:var(--accent);background:var(--accent-dim); border-color:var(--border-accent); }
+.badge-bull   { color:var(--bull);  background:var(--bull-dim);   border-color:rgba(16,185,129,0.3); }
+.badge-bear   { color:var(--accent-scarlet);  background:var(--scarlet-dim);   border-color:rgba(235,47,51,0.3); }
+.badge-accent { color:var(--color-stone); background:var(--bg-surface); border-color:var(--border-stone); }
 .badge-dim    { color:var(--text-secondary);background:transparent;border-color:var(--border-subtle); }
+.badge-scarlet { color:#FFFFFF; background:var(--accent-scarlet); border-color:var(--accent-scarlet); }
+
+/* Tailwind & Bespoke Token Utility Classes */
+.bg-primary, .bg-egyptian { background-color: var(--bg-egyptian) !important; }
+.bg-surface { background-color: var(--bg-surface) !important; }
+.border-stone { border-color: var(--border-stone) !important; }
+.accent-scarlet { color: var(--accent-scarlet) !important; }
+.text-scarlet { color: var(--text-scarlet) !important; }
+
+.page-wrap {
+  padding: 24px 28px;
+  max-width: 1700px;
+  margin: 0 auto;
+  width: 100%;
+}
 
 /* ── MOBILE ── */
 @media (max-width:768px) {
   .mobile-nav {
     position:fixed; bottom:0; left:0; right:0;
-    background:var(--bg-panel); border-top:1px solid var(--border-subtle);
+    background:var(--bg-panel); border-top:1px solid var(--border-stone);
     display:flex; justify-content:space-around; align-items:center;
     padding:8px 0 max(12px,env(safe-area-inset-bottom)); z-index:200;
   }
@@ -170,7 +211,7 @@ body::before {
     font-family:var(--font-mono); font-size:8px; letter-spacing:0.08em;
     cursor:pointer; padding:4px 8px; border-radius:6px; transition:color 0.15s;
   }
-  .mobile-nav-btn.active { color:var(--accent); }
+  .mobile-nav-btn.active { color:var(--color-stone); }
   main { padding-bottom:70px; }
   .page-wrap         { padding:12px 14px !important; }
   .table-scroll      { overflow-x:auto !important; }
@@ -178,18 +219,17 @@ body::before {
 }
 
 /* ══════════════════════════════════════════════════════════════════════
-   SOVEREIGN V3 & EDITION 2A-II ARCHITECTURAL LAYOUT & BRANDING
+   BESPOKE ARCHITECTURAL LAYOUT & BRANDING
    ══════════════════════════════════════════════════════════════════════ */
 
-/* Header Isolation & Backdrop Blur */
+/* Header Isolation & Solid Surface Chrome */
 header, .hero-nav-header {
-  position: sticky !important;
-  top: 0 !important;
-  z-index: 1000 !important;
-  isolation: isolate !important;
-  background: rgba(8, 12, 20, 0.97) !important;
-  backdrop-filter: blur(16px) !important;
-  -webkit-backdrop-filter: blur(16px) !important;
+  position: sticky;
+  top: 0;
+  z-index: var(--z-chrome, 100);
+  isolation: isolate;
+  background: var(--surface-chrome);
+  border-bottom: 1px solid var(--border-subtle);
 }
 
 /* Unstretched Wordmark */
@@ -210,16 +250,16 @@ header, .hero-nav-header {
   letter-spacing: 0.08em;
   padding: 3px 8px;
   border-radius: 4px;
-  background: rgba(240, 64, 96, 0.08);
-  border: 1px solid rgba(240, 64, 96, 0.25);
-  color: var(--bear);
+  background: var(--scarlet-dim);
+  border: 1px solid rgba(235, 47, 51, 0.35);
+  color: var(--accent-scarlet);
   transition: all 0.2s ease;
 }
 #qd-stream-status.qd-status-pill.is-live {
-  background: rgba(34, 212, 122, 0.08);
-  border: 1px solid rgba(34, 212, 122, 0.25);
+  background: rgba(16, 185, 129, 0.12);
+  border: 1px solid rgba(16, 185, 129, 0.35);
   color: var(--bull);
-  box-shadow: 0 0 8px rgba(34, 212, 122, 0.2);
+  box-shadow: 0 0 8px rgba(16, 185, 129, 0.2);
 }
 
 /* 4-Column Responsive Card Grid */
@@ -235,17 +275,17 @@ header, .hero-nav-header {
   flex-shrink: 0 !important;
 }
 
-/* Strict Positive/Negative Card Tints */
+/* Directional Card Tints */
 .card.card-positive, .card-positive {
   background: linear-gradient(180deg, rgba(16, 185, 129, 0.08) 0%, rgba(16, 185, 129, 0.02) 100%), var(--bg-card) !important;
-  border-color: rgba(16, 185, 129, 0.28) !important;
-  box-shadow: inset 0 1px 0 rgba(16, 185, 129, 0.15), 0 4px 20px rgba(0, 0, 0, 0.16) !important;
+  border-color: rgba(16, 185, 129, 0.35) !important;
+  box-shadow: inset 0 1px 0 rgba(16, 185, 129, 0.18), 0 4px 20px rgba(2, 24, 39, 0.50) !important;
 }
 
 .card.card-negative, .card-negative {
-  background: linear-gradient(180deg, rgba(239, 68, 68, 0.08) 0%, rgba(239, 68, 68, 0.02) 100%), var(--bg-card) !important;
-  border-color: rgba(239, 68, 68, 0.28) !important;
-  box-shadow: inset 0 1px 0 rgba(239, 68, 68, 0.15), 0 4px 20px rgba(0, 0, 0, 0.16) !important;
+  background: linear-gradient(180deg, rgba(235, 47, 51, 0.08) 0%, rgba(235, 47, 51, 0.02) 100%), var(--bg-card) !important;
+  border-color: rgba(235, 47, 51, 0.35) !important;
+  box-shadow: inset 0 1px 0 rgba(235, 47, 51, 0.18), 0 4px 20px rgba(2, 24, 39, 0.50) !important;
 }
 
 /* Shimmer Skeleton Animation */
@@ -255,7 +295,7 @@ header, .hero-nav-header {
 }
 
 .qd-skeleton {
-  background: linear-gradient(90deg, rgba(255,255,255,0.04) 25%, rgba(255,255,255,0.10) 50%, rgba(255,255,255,0.04) 75%);
+  background: linear-gradient(90deg, rgba(99, 156, 197, 0.05) 25%, rgba(99, 156, 197, 0.15) 50%, rgba(99, 156, 197, 0.05) 75%);
   background-size: 200% 100%;
   animation: qdShimmer 1.5s infinite;
 }
@@ -265,16 +305,4 @@ canvas.qd-card-canvas {
   width: 100%;
   height: 52px;
   display: block;
-}
-
-/* Opaque Sticky Header Stacking to Prevent Card Bleed-Through (Fix 3) */
-header, .site-header, .top-navbar, .sub-navbar, .ticker-bar-wrapper {
-  background-color: #080C14 !important;
-  z-index: 1000 !important;
-  position: sticky;
-}
-
-/* Ticker Tape Left Margin to Prevent Badge Clipping (Fix 5) */
-.ticker-track {
-  padding-left: 88px !important;
 }

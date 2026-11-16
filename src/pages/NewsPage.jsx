@@ -1,25 +1,7 @@
 import React, { useState, useEffect } from 'react'
 import { ExternalLink, RefreshCw, Newspaper } from 'lucide-react'
 import { sanitizeUrl } from '../utils/security'
-
-// Free news sources (no key required)
-const NEWS_FEEDS = [
-  {
-    id: 'coingecko',
-    label: 'CRYPTO',
-    color: 'var(--neon-orange)',
-    url: 'https://api.coingecko.com/api/v3/news',
-    parse: (json) => (json.data || []).slice(0, 12).map(n => ({
-      id: n.id || n.title,
-      title: n.title,
-      description: n.description || '',
-      url: sanitizeUrl(n.url),
-      source: n.author?.name || 'CoinGecko',
-      publishedAt: n.updated_at ? new Date(n.updated_at * 1000) : new Date(),
-      category: 'crypto',
-    })),
-  },
-]
+import { fetchWorkerNews } from '../utils/api'
 
 // Fallback mock news when APIs are unavailable
 function getMockNews() {
@@ -141,14 +123,23 @@ export default function NewsPage() {
   const refresh = async () => {
     setLoading(true)
     try {
-      const res = await fetch(NEWS_FEEDS[0].url)
-      if (res.ok) {
-        const json = await res.json()
-        const parsed = NEWS_FEEDS[0].parse(json)
-        if (parsed.length > 0) {
-          setNews(parsed)
-          setFeatured(parsed[0])
-        }
+      const articles = await fetchWorkerNews()
+      if (Array.isArray(articles) && articles.length > 0) {
+        const parsed = articles.map((n, i) => {
+          const sec = (n.sector || '').toLowerCase()
+          const category = sec === 'equities' ? 'stocks' : (sec === 'energy' || sec === 'metals' ? 'commodities' : (sec || 'general'))
+          return {
+            id: n.id || `news-${i}`,
+            title: n.title,
+            description: n.summary || '',
+            url: sanitizeUrl(n.link),
+            source: n.source || 'OSINT Feed',
+            publishedAt: n.publishedAt ? new Date(n.publishedAt) : (n.published ? new Date(n.published) : new Date()),
+            category,
+          }
+        })
+        setNews(parsed)
+        setFeatured(parsed[0])
       }
     } catch {
       // Keep mock data on failure

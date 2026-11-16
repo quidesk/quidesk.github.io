@@ -150,4 +150,20 @@ describe('Phase 6: MarketMap Physics, Ellipse Geometry & TickerTape Suite', () =
     expect(html).toContain('.ticker-track:hover .ticker-scroll');
     expect(html).toContain('prefers-reduced-motion');
   });
+
+  it('Phase 4: golden spiral spread, muted crypto when null, and correlation line removed when asset null', () => {
+    // 1. Crypto % when non-null; null shows "—" and muted node
+    const cryptoAssets = [
+      { id: 'btc', symbol: 'BTC', sector: 'crypto', price: 80000, change: 2.5, status: 'live' },
+      { id: 'eth', symbol: 'ETH', sector: 'crypto', price: null, change: null, status: 'unavailable' },
+    ];
+    const htmlCrypto = renderToStaticMarkup(React.createElement(MarketMap, { allAssets: cryptoAssets }));
+    expect(htmlCrypto).toContain('+2.5%');
+    expect(htmlCrypto).toContain('>—<');
+    expect(htmlCrypto).toContain('opacity:0.35'); // Muted node for ETH
+
+    // 2. NVDA <-> ETH correlation line: removed when either asset is null or uncomputed (Requirement 4f)
+    expect(htmlCrypto).not.toContain('nvda-eth');
+    expect(htmlCrypto).not.toContain('corr-'); // No correlation lines drawn when one endpoint is unavailable
+  });
 });

@@ -17,19 +17,19 @@ import OSINTMap from './components/OSINTMap'
 import Logo from './components/Logo'
 import SocialShareBar from './components/SocialShareBar'
 import { Share2 } from 'lucide-react'
-import { cryptoStreamEngine } from './services/cryptoStream'
-import { fetchFrankfurterForexHistory } from './services/forexHistory'
-import { fetchAllYahooIntradayHistory } from './services/yahooHistory'
-import { mergeAssetState, renderAllCardCanvases } from './utils/marketEngine'
 
 const VALID_TABS = ['map', 'equities', 'crypto', 'metals', 'energy', 'forex', 'compare', 'watchlist', 'portfolio'];
 
-const BUILD_SHA = typeof __BUILD_SHA__ !== 'undefined'
-  ? __BUILD_SHA__
-  : (import.meta.env?.VITE_BUILD_SHA || 'dev');
-const BUILD_TIME = typeof __BUILD_TIME__ !== 'undefined'
-  ? __BUILD_TIME__
-  : (import.meta.env?.VITE_BUILD_TIME || '');
+const BUILD_SHA = typeof BUILD_SHA !== 'undefined'
+  ? BUILD_SHA
+  : (typeof __BUILD_SHA__ !== 'undefined'
+    ? __BUILD_SHA__
+    : (import.meta.env?.VITE_BUILD_SHA || 'dev'));
+const BUILD_TIME = typeof BUILD_TIME !== 'undefined'
+  ? BUILD_TIME
+  : (typeof __BUILD_TIME__ !== 'undefined'
+    ? __BUILD_TIME__
+    : (import.meta.env?.VITE_BUILD_TIME || ''));
 
 function formatBuildIdentity(sha, iso) {
   if (!iso) return `build ${sha}`;
@@ -163,44 +163,6 @@ export default function App() {
     window.addEventListener('hashchange', onHashChange);
     return () => window.removeEventListener('hashchange', onHashChange);
   }, []);
-
-  // Initialize multi-tier crypto streaming, forex history & intraday equities/commodities history
-  useEffect(() => {
-    if (typeof window === 'undefined') return;
-    cryptoStreamEngine.init();
-    fetchFrankfurterForexHistory();
-    fetchAllYahooIntradayHistory();
-
-    const historyInterval = setInterval(() => {
-      fetchFrankfurterForexHistory();
-      fetchAllYahooIntradayHistory();
-    }, 60000);
-
-    return () => {
-      clearInterval(historyInterval);
-      cryptoStreamEngine.destroy();
-    };
-  }, []);
-
-  // Synchronize all assets into window.marketState (strictly guarded for hydrated assets only)
-  useEffect(() => {
-    if (typeof window !== 'undefined' && allAssets?.length) {
-      allAssets.forEach(a => {
-        if (a && a.symbol && typeof a.price === 'number' && Number.isFinite(a.price) && a.price > 0) {
-          mergeAssetState(a.symbol, {
-            ...a,
-            price: a.price,
-            prevClose: a.prevClose,
-            change24h: a.change24h ?? a.change,
-            history: a.history?.['24H'] || a.history || a.chartData?.map(pt => pt.value),
-            status: a.status,
-            timestampUtc: a.timestamp || a.quoteTs,
-          });
-        }
-      });
-      renderAllCardCanvases();
-    }
-  }, [allAssets]);
 
   const watchlistProps = {
     isWatched: watchlist.isWatched,

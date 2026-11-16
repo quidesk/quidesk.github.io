@@ -36,6 +36,8 @@ function versionJsonPlugin(sha, buildTime) {
 export default defineConfig({
   plugins: [react(), versionJsonPlugin(BUILD_SHA, BUILD_TIME)],
   define: {
+    BUILD_SHA: JSON.stringify(BUILD_SHA),
+    BUILD_TIME: JSON.stringify(BUILD_TIME),
     __BUILD_SHA__: JSON.stringify(BUILD_SHA),
     __BUILD_TIME__: JSON.stringify(BUILD_TIME),
     'import.meta.env.VITE_BUILD_SHA': JSON.stringify(BUILD_SHA),

@@ -1,12 +1,15 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Star } from 'lucide-react';
 import { formatChange } from '../data/markets';
 import { FreshnessBadge, FallbackNotice } from './FreshnessBadge';
 import { getFreshnessLevel } from '../lib/freshness';
 import { useMarketStore } from '../store/marketStore';
-import { D, formatAssetPriceDisplay, getSessionStatus, drawCardCanvasChart } from '../utils/marketEngine';
+import PriceDisplay from './PriceDisplay';
+import MiniChart from './MiniChart';
+import { formatForexSecondaryValue, formatCardUnitSuffix, getAssetPrecision } from '../utils/formatters';
 
 export default function MarketCard({ asset: propAsset, onClick, isWatched, onToggleWatch }) {
+  const allQuotes = useMarketStore((s) => s.quotes);
   const storeQuote = useMarketStore((s) => {
     const key = (propAsset?.symbol || propAsset?.id || '').toLowerCase();
     return s.quotes[key] || (propAsset?.symbol ? s.quotes[propAsset.symbol] : null);
@@ -19,9 +22,15 @@ export default function MarketCard({ asset: propAsset, onClick, isWatched, onTog
     chartData: propAsset?.chartData || storeQuote?.chartData || propAsset?.spark1d || storeQuote?.spark1d,
   };
 
+  const hasPrice = asset.status !== 'unavailable' && typeof asset.price === 'number' && Number.isFinite(asset.price);
+  const rawChange = asset.change24h ?? asset.changePercent ?? asset.change;
+  const changeVal = asset.status !== 'unavailable' && typeof rawChange === 'number' && Number.isFinite(rawChange)
+    ? rawChange
+    : null;
+  const isFlat = changeVal !== null && Math.abs(changeVal) < 0.005;
+  const isPositive = changeVal !== null && changeVal >= 0;
   const [flash, setFlash] = useState(null);
   const [prevPrice, setPrevPrice] = useState(asset.price);
-  const canvasRef = useRef(null);
 
   useEffect(() => {
     if (typeof asset.price === 'number' && asset.price !== prevPrice) {
@@ -32,53 +41,9 @@ export default function MarketCard({ asset: propAsset, onClick, isWatched, onTog
     }
   }, [asset.price, prevPrice]);
 
-  useEffect(() => {
-    if (canvasRef.current) {
-      drawCardCanvasChart(canvasRef.current, asset);
-    }
-  }, [asset.price, asset.prevClose, asset.change24h, asset.change, asset.history]);
-
-  const hasPrice = asset.status !== 'unavailable' && typeof asset.price === 'number' && Number.isFinite(asset.price) && asset.price > 0;
-
-  if (!hasPrice) {
-    return (
-      <div
-        className="card market-card qd-skeleton"
-        style={{
-          ...styles.card,
-          minHeight: '130px',
-          display: 'flex',
-          flexDirection: 'column',
-          justifyContent: 'space-between',
-        }}
-      >
-        <div style={styles.header}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-            <span style={{ ...styles.symbol }}>{asset.symbol}</span>
-            <FreshnessBadge level="syncing" status="SYNCING" compact />
-          </div>
-          <span style={styles.change}>—</span>
-        </div>
-        <div style={{ color: 'var(--text-dim)', fontSize: '15px', fontFamily: 'var(--font-mono)', fontWeight: 600, margin: '12px 0' }}>
-          Loading...
-        </div>
-        <div style={{ fontSize: '10px', color: 'var(--text-dim)', fontFamily: 'var(--font-mono)' }}>
-          Syncing market quote
-        </div>
-      </div>
-    );
-  }
-
-  const rawChange = asset.change24h ?? asset.changePercent ?? asset.change;
-  const changeVal = typeof rawChange === 'number' && Number.isFinite(rawChange)
-    ? rawChange
-    : null;
-  const isFlat = changeVal !== null && Math.abs(changeVal) < 0.005;
-  const isPositive = changeVal !== null && changeVal >= 0;
-
-  const sessionStatus = getSessionStatus(asset.sector || asset.category, Date.now());
-  const isClosed = sessionStatus === 'CLOSED' || asset.status === 'closed' || asset.tradingPeriod === 'closed';
-  const freshness = isClosed ? 'closed' : (sessionStatus === 'LIVE' ? 'fresh' : getFreshnessLevel(asset));
+  // Session status and staleness evaluation strictly from Worker
+  const isClosed = asset.session === 'closed' || asset.status === 'closed' || asset.tradingPeriod === 'closed';
+  const freshness = isClosed ? 'closed' : getFreshnessLevel(asset);
 
   const flashColor = flash === 'up'
     ? 'rgba(0,255,157,0.15)'
@@ -86,13 +51,32 @@ export default function MarketCard({ asset: propAsset, onClick, isWatched, onTog
     ? 'rgba(255,45,107,0.15)'
     : 'transparent';
 
-  // Module 2 strict positive/negative card tints
-  const chgDecimal = D(changeVal ?? 0);
   const cardTintClass = changeVal === null
     ? (hasPrice ? 'card-positive' : 'qd-skeleton')
-    : (chgDecimal.gte(0) ? 'card-positive' : 'card-negative');
+    : (isPositive ? 'card-positive' : 'card-negative');
 
-  const priceDisplayData = formatAssetPriceDisplay(asset);
+  const isForex = (asset.sector || '').toLowerCase() === 'forex' || (
+    asset.symbol?.includes('/') && !asset.symbol?.startsWith('XAU') && !asset.symbol?.startsWith('XAG') && !asset.symbol?.startsWith('XPT')
+  );
+  const pricePrefix = isForex
+    ? (asset.symbol?.endsWith('/INR') ? '₹' : '')
+    : '$';
+  const precision = getAssetPrecision(asset.symbol, asset.sector, asset.price);
+  const unitSuffix = formatCardUnitSuffix(asset.sector, asset.unit, asset.symbol);
+
+  let secondaryDisplay = null;
+  if (isForex) {
+    secondaryDisplay = formatForexSecondaryValue(asset.symbol, asset.price, allQuotes, 'INR');
+  } else if (hasPrice && asset.price > 0) {
+    const usdInr = allQuotes?.['usdinr']?.price || allQuotes?.['USD/INR']?.price;
+    if (typeof usdInr === 'number' && usdInr > 0) {
+      const inrRaw = asset.price * usdInr;
+      secondaryDisplay = `(₹${inrRaw >= 100 ? Math.round(inrRaw).toLocaleString('en-IN') : inrRaw.toFixed(2)})`;
+    }
+  }
+
+  const isFuturesDivergence = asset.flags?.includes('spot_futures_basis');
+  const basisLabel = (asset.sector === 'crypto' || asset.changeBasis === 'rolling_24h') ? '24H' : '1D';
 
   return (
     <div
@@ -126,7 +110,7 @@ export default function MarketCard({ asset: propAsset, onClick, isWatched, onTog
             </span>
             <FreshnessBadge
               level={freshness}
-              status={isClosed ? 'closed' : (sessionStatus === 'LIVE' ? 'LIVE' : asset.status)}
+              status={isClosed ? 'closed' : asset.status}
               timestamp={asset.quoteTs ?? asset.timestamp}
               source={asset.source}
               compact
@@ -160,6 +144,9 @@ export default function MarketCard({ asset: propAsset, onClick, isWatched, onTog
               <span aria-hidden="true" style={{ marginRight: '3px' }}>{isPositive ? '▲' : '▼'}</span>
             )}
             <span>{changeVal === null ? '—' : formatChange(changeVal)}</span>
+            {changeVal !== null && (
+              <span style={{ opacity: 0.75, fontSize: '8.5px', marginLeft: '3px' }}>{basisLabel}</span>
+            )}
           </div>
         </div>
       </div>
@@ -181,24 +168,48 @@ export default function MarketCard({ asset: propAsset, onClick, isWatched, onTog
         gap: '6px'
       }}>
         <div>
-          <span>{priceDisplayData.primary}</span>
-          {priceDisplayData.unit && <span style={styles.unit}>{priceDisplayData.unit}</span>}
+          <PriceDisplay
+            value={asset.price}
+            prefix={pricePrefix}
+            precision={precision}
+          />
+          {unitSuffix && <span style={styles.unit}>{unitSuffix}</span>}
+          {isFuturesDivergence && (
+            <span
+              className="badge-fut"
+              title="Spot/futures basis divergence > 0.50%"
+              style={{
+                fontSize: '10px',
+                fontFamily: 'var(--font-mono)',
+                color: 'var(--amber, #f59e0b)',
+                background: 'rgba(245, 158, 11, 0.12)',
+                border: '1px solid rgba(245, 158, 11, 0.3)',
+                borderRadius: '3px',
+                padding: '0 4px',
+                marginLeft: '4px',
+                lineHeight: '14px',
+                verticalAlign: 'middle',
+              }}
+            >
+              (fut.)
+            </span>
+          )}
         </div>
-        {priceDisplayData.secondary && (
+        {secondaryDisplay && (
           <span style={{ fontSize: '12px', color: 'var(--text-secondary)', fontWeight: 400 }}>
-            {priceDisplayData.secondary}
+            {secondaryDisplay}
           </span>
         )}
       </div>
 
-      {/* Mini High-DPI HTML5 Canvas chart */}
+      {/* Mini Worker-Served Real Chart */}
       <div style={styles.chartWrap}>
-        <canvas
-          ref={canvasRef}
-          className="qd-card-canvas"
-          data-symbol={asset.symbol}
-          height="52"
-          style={{ width: '100%', height: '52px', display: 'block' }}
+        <MiniChart
+          data={asset.chartData || asset.spark1d || (asset.history?.['24H'] || asset.history)}
+          prevClose={asset.prevClose}
+          change={changeVal}
+          width={240}
+          height={52}
         />
       </div>
 

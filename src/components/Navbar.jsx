@@ -64,12 +64,27 @@ export default function Navbar({
   })
   const pillActiveColor = feedStatus.color
 
+  const ageSec = generatedAt
+    ? Math.max(0, Math.floor((Date.now() - new Date(generatedAt).getTime()) / 1000))
+    : null;
+
+  let pillStatusText = '● LIVE';
+  if (!isWorkerOnline || connectionStatus === 'offline' || feedStatus.key === 'offline') {
+    pillStatusText = '● OFFLINE';
+  } else if (feedStatus.key === 'delayed' || (ageSec !== null && ageSec > 60)) {
+    pillStatusText = ageSec !== null ? `● DELAYED ${ageSec}s` : '● DELAYED';
+  } else if (feedStatus.key === 'live') {
+    pillStatusText = '● LIVE';
+  } else {
+    pillStatusText = `● ${feedStatus.label.toUpperCase()}`;
+  }
+
   return (
     <>
       {/* ── Desktop Hero Header ── */}
-      <header style={s.heroNav} className="site-header top-navbar d-none d-md-block">
+      <header style={s.heroNav} className="d-none d-md-block">
         {/* Tier 1: Sovereign Brand Crown & Live Telemetry */}
-        <div style={s.heroTopTier} className="brand-tier">
+        <div style={s.heroTopTier}>
           {/* Brand — Hero Emblem + Sovereign Typography */}
           <button style={s.heroBrand} onClick={() => setActive('map')} title="Quidesk — Sovereign Terminal">
             <div style={s.logoGlowWrapper}>
@@ -90,7 +105,7 @@ export default function Navbar({
                   }}
                 >
                   <span style={{ ...s.heroLiveText, color: pillActiveColor }}>
-                    {feedStatus.key === 'live' ? '● LIVE STREAM' : '● DELAYED'}
+                    {pillStatusText}
                   </span>
                 </div>
               </div>
@@ -159,7 +174,7 @@ export default function Navbar({
         </div>
 
         {/* Tier 2: Navigation Tabs & Search Command */}
-        <div style={s.heroNavTier} className="sub-navbar">
+        <div style={s.heroNavTier}>
           <div style={s.tabs}>
             {NAV_TABS.map(t => (
               <button
@@ -214,7 +229,7 @@ export default function Navbar({
       />
 
       {/* ── Mobile top bar ── */}
-      <nav style={s.mobileTop} className="site-header mobile-navbar d-md-none">
+      <nav style={s.mobileTop} className="d-md-none">
         <button style={s.heroBrandMobile} onClick={() => setActive('map')}>
           <div style={{ ...s.logoGlowWrapper, boxShadow: '0 2px 14px rgba(212, 175, 55, 0.22)' }}>
             <Logo size={46} />
@@ -285,12 +300,11 @@ export default function Navbar({
 
 const s = {
   heroNav: {
-    position: 'sticky', top: 0, zIndex: 1000,
+    position: 'sticky', top: 0, zIndex: 100,
     isolation: 'isolate',
-    backgroundColor: '#080C14',
-    background: '#080C14',
+    background: 'var(--surface-chrome, #080C14)',
     borderBottom: '1px solid var(--border-subtle)',
-    boxShadow: '0 8px 32px rgba(0,0,0,0.5)',
+    boxShadow: '0 8px 32px rgba(0,0,0,0.3)',
   },
   heroTopTier: {
     display: 'flex',
@@ -300,7 +314,6 @@ const s = {
     maxWidth: '1700px',
     margin: '0 auto',
     gap: '24px',
-    backgroundColor: '#080C14',
   },
   heroBrand: {
     display: 'flex',
@@ -431,7 +444,6 @@ const s = {
     margin: '0 auto',
     borderTop: '1px solid var(--border-subtle)',
     gap: '20px',
-    backgroundColor: '#080C14',
   },
   heroSearchWrap: {
     display: 'flex',
@@ -505,14 +517,13 @@ const s = {
     color: 'var(--text-dim)', letterSpacing: '0.04em',
   },
   mobileTop: {
-    position: 'sticky', top: 0, zIndex: 1000,
-    backgroundColor: '#080C14',
-    background: '#080C14',
+    position: 'sticky', top: 0, zIndex: 100,
+    background: 'var(--surface-chrome, #080C14)',
     borderBottom: '1px solid var(--border-subtle)',
     display: 'flex', alignItems: 'center',
     justifyContent: 'space-between',
     padding: '12px 16px', gap: '10px', minHeight: '76px',
-    boxShadow: '0 4px 20px rgba(0,0,0,0.5)',
+    boxShadow: '0 4px 20px rgba(0,0,0,0.25)',
   },
   shareNavBtn: {
     display: 'flex',
