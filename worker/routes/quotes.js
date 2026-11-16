@@ -7,7 +7,7 @@
 
 import { ASSET_DEFINITIONS } from '../config.js';
 import { fetchYahooChart, fetchFinnhubQuote, determineSessionState } from '../providers/yahoo.js';
-import { fetchBinanceCrypto, fetchCoinGeckoCrypto } from '../providers/binance.js';
+import { fetchMultiTierCrypto } from '../providers/crypto.js';
 import { fetchSpotMetals, checkMetalsBasis } from '../providers/metals.js';
 import { fetchFrankfurterFallback } from '../providers/forex.js';
 
@@ -100,23 +100,19 @@ export async function handleQuotes(request, env) {
     perSource: {
       yahoo: { ok: false, lastOk: null, latencyMs: 0 },
       binance: { ok: false, lastOk: null, latencyMs: 0 },
+      kraken: { ok: false, lastOk: null, latencyMs: 0 },
+      cryptocompare: { ok: false, lastOk: null, latencyMs: 0 },
       'gold-api': { ok: false, lastOk: null, latencyMs: 0 },
     },
   };
 
-  // 1. Fetch Crypto Batch (1 subrequest)
-  let cryptoQuotes = {};
-  const t0Crypto = Date.now();
-  try {
-    cryptoQuotes = await fetchBinanceCrypto();
-    health.perSource.binance = { ok: true, lastOk: now, latencyMs: Date.now() - t0Crypto };
-  } catch (err) {
-    try {
-      cryptoQuotes = await fetchCoinGeckoCrypto();
-      health.perSource.binance = { ok: true, lastOk: now, latencyMs: Date.now() - t0Crypto, fallback: 'coingecko' };
-    } catch {
-      health.perSource.binance = { ok: false, lastOk: null, latencyMs: Date.now() - t0Crypto };
-    }
+  // 1. Fetch Multi-Tier Crypto (Binance -> Kraken -> CryptoCompare -> CoinGecko)
+  const { quotes: cryptoQuotes, health: cryptoHealth } = await fetchMultiTierCrypto(env, now);
+  health.perSource.binance = cryptoHealth.binance;
+  health.perSource.kraken = cryptoHealth.kraken;
+  health.perSource.cryptocompare = cryptoHealth.cryptocompare;
+  if (cryptoHealth.coingecko) {
+    health.perSource.coingecko = cryptoHealth.coingecko;
   }
 
   // 2. Fetch Spot Metals Cross-Check (3 subrequests)

@@ -339,4 +339,106 @@ describe('Cloudflare Worker — Phase 1 Contract & Schema Validation', () => {
       expect(res.headers.get('Access-Control-Allow-Origin')).toBe('https://quidesk.github.io');
     });
   });
+
+  describe('6. Multi-Tier Crypto Provider (Phase 1)', () => {
+    const cryptoIds = ['btc', 'eth', 'sol', 'bnb', 'xrp', 'ada'];
+
+    it('every provider failing => all six crypto assets unavailable, and no 0 in the output', async () => {
+      vi.spyOn(globalThis, 'fetch').mockImplementation(async () => {
+        return new Response('Internal Server Error', { status: 500 });
+      });
+
+      const payload = await handleQuotes(new Request('https://worker.internal/v1/quotes'), {});
+      for (const id of cryptoIds) {
+        const asset = payload.assets[id];
+        expect(asset.price).toBeNull();
+        expect(asset.prevClose).toBeNull();
+        expect(asset.change).toBeNull();
+        expect(asset.changeStatus).toBe('unavailable');
+        expect(asset.status).toBe('unavailable');
+        // Strict guard: NEVER 0
+        expect(asset.price).not.toBe(0);
+        expect(asset.change).not.toBe(0);
+      }
+      expect(payload.health.perSource.binance.ok).toBe(false);
+      expect(payload.health.perSource.kraken.ok).toBe(false);
+      expect(payload.health.perSource.cryptocompare.ok).toBe(false);
+    });
+
+    it('one provider succeeding (Binance only) => only its values and binance source', async () => {
+      vi.spyOn(globalThis, 'fetch').mockImplementation(async (input) => {
+        const url = typeof input === 'string' ? input : input.url;
+        if (url.includes('binance.vision')) {
+          return new Response(JSON.stringify([
+            { symbol: 'BTCUSDT', lastPrice: '85000', openPrice: '82000', closeTime: Date.now() },
+            { symbol: 'ETHUSDT', lastPrice: '3200', openPrice: '3100', closeTime: Date.now() },
+          ]), { status: 200 });
+        }
+        return new Response('Fail', { status: 500 });
+      });
+
+      const payload = await handleQuotes(new Request('https://worker.internal/v1/quotes'), {});
+      expect(payload.assets.btc.price).toBe(85000);
+      expect(payload.assets.btc.source).toBe('binance');
+      expect(payload.assets.btc.status).toBe('live');
+      expect(payload.assets.btc.change).toBe(3.66);
+
+      expect(payload.assets.eth.price).toBe(3200);
+      expect(payload.assets.eth.source).toBe('binance');
+
+      // The remaining 4 symbols should be unavailable and NOT 0
+      for (const id of ['sol', 'bnb', 'xrp', 'ada']) {
+        expect(payload.assets[id].price).toBeNull();
+        expect(payload.assets[id].status).toBe('unavailable');
+        expect(payload.assets[id].price).not.toBe(0);
+      }
+      expect(payload.health.perSource.binance.ok).toBe(true);
+      expect(payload.health.perSource.kraken.ok).toBe(false);
+      expect(payload.health.perSource.cryptocompare.ok).toBe(false);
+    });
+
+    it('BNB-only fallback case: Kraken satisfies non-BNB, CryptoCompare provides BNB', async () => {
+      vi.spyOn(globalThis, 'fetch').mockImplementation(async (input) => {
+        const url = typeof input === 'string' ? input : input.url;
+        // Binance fails completely
+        if (url.includes('binance.vision')) {
+          return new Response('Fail', { status: 500 });
+        }
+        // Kraken succeeds for BTC, ETH, SOL, XRP, ADA (BNB not on Kraken)
+        if (url.includes('api.kraken.com')) {
+          return new Response(JSON.stringify({
+            result: {
+              XXBTZUSD: { c: ['86000'], o: '84000' },
+              XETHZUSD: { c: ['3300'], o: '3200' },
+              SOLUSD: { c: ['180'], o: '175' },
+              XXRPZUSD: { c: ['1.15'], o: '1.10' },
+              ADAUSD: { c: ['0.75'], o: '0.70' },
+            }
+          }), { status: 200 });
+        }
+        // CryptoCompare satisfies BNB
+        if (url.includes('cryptocompare.com')) {
+          return new Response(JSON.stringify({
+            RAW: {
+              BNB: { USD: { PRICE: 650, OPEN24HOUR: 630, LASTUPDATE: Math.floor(Date.now() / 1000) } }
+            }
+          }), { status: 200 });
+        }
+        return new Response('Fail', { status: 500 });
+      });
+
+      const payload = await handleQuotes(new Request('https://worker.internal/v1/quotes'), {});
+      expect(payload.assets.btc.price).toBe(86000);
+      expect(payload.assets.btc.source).toBe('kraken');
+
+      expect(payload.assets.bnb.price).toBe(650);
+      expect(payload.assets.bnb.source).toBe('cryptocompare');
+      expect(payload.assets.bnb.status).toBe('live');
+      expect(payload.assets.bnb.change).toBe(3.17);
+
+      expect(payload.health.perSource.binance.ok).toBe(false);
+      expect(payload.health.perSource.kraken.ok).toBe(true);
+      expect(payload.health.perSource.cryptocompare.ok).toBe(true);
+    });
+  });
 });
