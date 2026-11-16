@@ -151,22 +151,24 @@ const s = {
   statsBar: {
     display:'grid', gridTemplateColumns:'repeat(5, 1fr)',
     gap:'1px', background:'var(--border-subtle)',
-    border:'1px solid var(--border-subtle)', borderRadius:'8px',
+    border:'1px solid var(--border-stone, #639CC5)', borderRadius:'8px',
     overflow:'hidden', marginTop:'14px',
+    boxShadow: 'inset 0 1px 0 rgba(99, 156, 197, 0.12)',
   },
   statItem: { background:'var(--bg-card)', padding:'12px 16px' },
   statL: { fontFamily:'var(--font-mono)', fontSize:'8px', color:'var(--text-dim)', letterSpacing:'0.12em', marginBottom:'4px' },
   statV: { fontFamily:'var(--font-mono)', fontSize:'14px', color:'var(--text-primary)' },
   sortRow: { display:'flex', alignItems:'center', gap:'6px', flexWrap:'wrap' },
   sortBtn: {
-    background:'none', border:'1px solid var(--border-subtle)',
-    borderRadius:'5px', color:'var(--text-dim)',
+    background:'var(--bg-card)', border:'1px solid var(--border-subtle)',
+    borderRadius:'5px', color:'var(--text-secondary)',
     fontFamily:'var(--font-body)', fontSize:'11px', fontWeight:500,
     padding:'4px 12px', cursor:'pointer', transition:'all 0.12s',
   },
   grid: { display:'grid', gridTemplateColumns:'repeat(auto-fill, minmax(300px, 1fr))', gap:'16px' },
   table: {
-    background:'var(--bg-card)', border:'1px solid var(--border-subtle)', borderRadius:'10px', overflow:'hidden',
+    background:'var(--bg-card)', border:'1px solid var(--border-stone, #639CC5)', borderRadius:'10px', overflow:'hidden',
+    boxShadow: 'inset 0 1px 0 rgba(99, 156, 197, 0.12), 0 4px 20px rgba(2, 24, 39, 0.45)',
   },
   tableTitle: {
     fontFamily:'var(--font-mono)', fontSize:'10px', color:'var(--text-dim)',

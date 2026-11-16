@@ -36,7 +36,7 @@ export default function NewsSignals({ news, loading, lastFetch, onRefresh, layou
       {/* Header */}
       <div style={s.header}>
         <div style={s.headerLeft}>
-          <Radio size={12} color="var(--bull)" style={{ flexShrink:0 }}/>
+          <Radio size={12} color="var(--accent-scarlet)" style={{ flexShrink:0 }}/>
           <span style={s.title}>OSINT SIGNALS</span>
           <span style={s.subtitle}>OSINT · updates every 30s</span>
         </div>
@@ -229,12 +229,12 @@ export default function NewsSignals({ news, loading, lastFetch, onRefresh, layou
 const s = {
   wrap: {
     background: 'var(--bg-card)',
-    border: '1px solid var(--border-subtle)',
+    border: '1px solid var(--border-stone, #639CC5)',
     borderRadius: '12px',
     overflow: 'hidden',
     display: 'flex',
     flexDirection: 'column',
-    boxShadow: 'inset 0 1px 0 rgba(255,255,255,0.06), 0 4px 20px rgba(0,0,0,0.12)',
+    boxShadow: 'inset 0 1px 0 rgba(99, 156, 197, 0.15), 0 4px 24px rgba(2, 24, 39, 0.45)',
     backdropFilter: 'blur(16px)'
   },
   header: {
@@ -243,7 +243,7 @@ const s = {
     alignItems: 'center',
     padding: '16px 20px',
     borderBottom: '1px solid var(--border-subtle)',
-    background: 'var(--bg-overlay)',
+    background: 'var(--bg-overlay, #032035)',
   },
   headerLeft: {
     display: 'flex', alignItems: 'center', gap: '8px',

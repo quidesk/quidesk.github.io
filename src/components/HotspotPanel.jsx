@@ -3,13 +3,13 @@ import { formatPrice } from '../data/markets'
 
 const TYPE_LABELS = {
   breakout:           { label:'BREAKOUT',   color:'var(--bull)' },
-  breakdown:          { label:'BREAKDOWN',  color:'var(--bear)' },
+  breakdown:          { label:'BREAKDOWN',  color:'var(--accent-scarlet, #EB2F33)' },
   bullish_breakout:   { label:'BREAKOUT',   color:'var(--bull)' },
-  bearish_reversal:   { label:'BREAKDOWN',  color:'var(--bear)' },
-  divergence:         { label:'DIVERGENCE', color:'#a78bfa' },
+  bearish_reversal:   { label:'BREAKDOWN',  color:'var(--accent-scarlet, #EB2F33)' },
+  divergence:         { label:'DIVERGENCE', color:'var(--color-stone, #639CC5)' },
 };
 
-const SEV_COLORS = { high:'var(--bear)', medium:'var(--amber)', low:'var(--text-secondary)' };
+const SEV_COLORS = { high:'var(--accent-scarlet, #EB2F33)', medium:'var(--amber)', low:'var(--color-stone, #639CC5)' };
 
 export default function HotspotPanel({ hotspots = [], allAssets = [], onSelect }) {
   const assetMap = {};

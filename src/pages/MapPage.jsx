@@ -39,12 +39,13 @@ function NarrativeStrip({ allAssets, hotspots }) {
 const ns = {
   strip: {
     display:'flex', alignItems:'center', gap:'10px',
-    background:'var(--bg-surface)', border:'1px solid var(--border-subtle)',
+    background:'var(--bg-card)', border:'1px solid var(--border-stone, #639CC5)',
     borderRadius:'8px', padding:'8px 14px', flexWrap:'wrap',
+    boxShadow: 'inset 0 1px 0 rgba(99, 156, 197, 0.12), 0 4px 20px rgba(2, 24, 39, 0.45)',
   },
   tag: {
     fontFamily:'var(--font-mono)', fontSize:'9px', fontWeight:700,
-    color:'var(--accent)', letterSpacing:'0.12em', flexShrink:0,
+    color:'var(--accent-scarlet, #EB2F33)', letterSpacing:'0.12em', flexShrink:0,
   },
   text: {
     fontFamily:'var(--font-body)', fontSize:'12px', color:'var(--text-secondary)',
@@ -301,7 +302,7 @@ const s = {
     display:'inline-flex', alignItems:'center', gap:'8px',
     background:'var(--bg-card)', border:'1px solid var(--border-subtle)',
     borderRadius:'8px', padding:'6px 14px',
-    boxShadow: 'inset 0 1px 0 rgba(255,255,255,0.04)',
+    boxShadow: 'inset 0 1px 0 rgba(99, 156, 197, 0.12)',
   },
   sidebar: {
     display:'flex', flexDirection:'column', gap:'24px',
@@ -311,15 +312,15 @@ const s = {
     scrollbarWidth: 'thin',
   },
   sideCard: {
-    background:'var(--bg-card)', border:'1px solid var(--border-subtle)', borderRadius:'12px',
+    background:'var(--bg-card)', border:'1px solid var(--border-stone, #639CC5)', borderRadius:'12px',
     overflow:'hidden',
-    boxShadow: 'inset 0 1px 0 rgba(255,255,255,0.06), 0 4px 20px rgba(0,0,0,0.12)',
+    boxShadow: 'inset 0 1px 0 rgba(99, 156, 197, 0.15), 0 4px 24px rgba(2, 24, 39, 0.45)',
     backdropFilter: 'blur(16px)'
   },
   sideHeader: {
     display:'flex', justifyContent:'space-between', alignItems:'center',
     padding:'16px 20px', borderBottom:'1px solid var(--border-subtle)',
-    background:'var(--bg-overlay)',
+    background:'var(--bg-overlay, #032035)',
   },
   sideTitle: {
     fontFamily:'var(--font-body)', fontSize:'14px', fontWeight:600,

@@ -692,12 +692,12 @@ export default function MarketMap({ allAssets, hotspots = [], onSelectAsset, con
           const isMuted = !hasPrice;
 
           const baseColor = (!hasChg || isFlat)
-            ? '#64748b'
-            : (isUp ? '#10b981' : '#ef4444');
+            ? 'var(--color-stone, #639CC5)'
+            : (isUp ? '#10b981' : 'var(--accent-scarlet, #EB2F33)');
 
           const waveBright = (!hasChg || isFlat)
-            ? 'rgba(100,116,139,0.35)'
-            : (isUp ? 'rgba(16,185,129,0.38)' : 'rgba(239,68,68,0.38)');
+            ? 'rgba(99,156,197,0.30)'
+            : (isUp ? 'rgba(16,185,129,0.38)' : 'rgba(235,47,51,0.38)');
 
           const waveSoft = (!hasChg || isFlat)
             ? 'rgba(100,116,139,0.18)'
@@ -823,10 +823,11 @@ const s = {
   wrap: {
     position: 'relative',
     width: '100%',
-    background: 'var(--bg-card)',
+    background: 'var(--bg-egyptian, #032035)',
     borderRadius: '12px',
-    border: '1px solid var(--border-subtle)',
+    border: '1px solid var(--border-stone, #639CC5)',
     overflow: 'hidden',
+    boxShadow: '0 8px 32px rgba(2, 24, 39, 0.60)',
   },
   svg: {
     display: 'block',
