@@ -76,7 +76,7 @@ const s = {
   sevBar: { width:'3px', height:'28px', borderRadius:'2px', flexShrink:0 },
   itemBody: { flex:1, minWidth:0 },
   itemTop: { display:'flex', alignItems:'center', gap:'6px' },
-  symbol: { fontFamily:'var(--font-mono)', fontSize:'12px', fontWeight:600, color:'var(--text-primary)' },
+  symbol: { fontFamily:'var(--font-mono)', fontSize:'12px', fontWeight:600, color:'var(--text-primary)', whiteSpace: 'nowrap', flexShrink: 0 },
   typeBadge: {
     fontFamily:'var(--font-mono)', fontSize:'8px', fontWeight:600,
     letterSpacing:'0.06em', padding:'1px 5px', borderRadius:'3px',

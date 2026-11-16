@@ -231,7 +231,7 @@ const s = {
   overlay: {
     position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.85)', backdropFilter: 'blur(8px)',
     display: 'flex', alignItems: 'center', justifyContent: 'center',
-    zIndex: 9999, padding: '20px'
+    zIndex: 'var(--z-popovers, 200)', padding: '20px'
   },
   modal: {
     background: 'var(--bg-card)', border: '1px solid var(--border-subtle)',

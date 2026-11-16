@@ -64,6 +64,21 @@ export default function Navbar({
   })
   const pillActiveColor = feedStatus.color
 
+  const ageSec = generatedAt
+    ? Math.max(0, Math.floor((Date.now() - new Date(generatedAt).getTime()) / 1000))
+    : null;
+
+  let pillStatusText = '● LIVE';
+  if (!isWorkerOnline || connectionStatus === 'offline' || feedStatus.key === 'offline') {
+    pillStatusText = '● OFFLINE';
+  } else if (feedStatus.key === 'delayed' || (ageSec !== null && ageSec > 60)) {
+    pillStatusText = ageSec !== null ? `● DELAYED ${ageSec}s` : '● DELAYED';
+  } else if (feedStatus.key === 'live') {
+    pillStatusText = '● LIVE';
+  } else {
+    pillStatusText = `● ${feedStatus.label.toUpperCase()}`;
+  }
+
   return (
     <>
       {/* ── Desktop Hero Header ── */}
@@ -89,14 +104,8 @@ export default function Navbar({
                     color: feedStatus.key === 'live' ? 'var(--bull)' : 'var(--bear)',
                   }}
                 >
-                  <span style={{
-                    ...s.heroLiveDot,
-                    background: pillActiveColor,
-                    boxShadow: feedStatus.key === 'live' ? '0 0 8px var(--bull)' : 'none',
-                    animation: feedStatus.key === 'live' ? 'pulseDot 1.6s ease-in-out infinite' : 'none',
-                  }} />
                   <span style={{ ...s.heroLiveText, color: pillActiveColor }}>
-                    {feedStatus.key === 'live' ? '● LIVE STREAM' : '● DELAYED'}
+                    {pillStatusText}
                   </span>
                 </div>
               </div>
@@ -291,11 +300,9 @@ export default function Navbar({
 
 const s = {
   heroNav: {
-    position: 'sticky', top: 0, zIndex: 1000,
+    position: 'sticky', top: 0, zIndex: 100,
     isolation: 'isolate',
-    background: 'rgba(8, 12, 20, 0.97)',
-    backdropFilter: 'blur(16px)',
-    WebkitBackdropFilter: 'blur(16px)',
+    background: 'var(--surface-chrome, #080C14)',
     borderBottom: '1px solid var(--border-subtle)',
     boxShadow: '0 8px 32px rgba(0,0,0,0.3)',
   },
@@ -511,7 +518,7 @@ const s = {
   },
   mobileTop: {
     position: 'sticky', top: 0, zIndex: 100,
-    background: 'var(--bg-overlay)', backdropFilter: 'blur(20px)',
+    background: 'var(--surface-chrome, #080C14)',
     borderBottom: '1px solid var(--border-subtle)',
     display: 'flex', alignItems: 'center',
     justifyContent: 'space-between',

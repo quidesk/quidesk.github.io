@@ -40,6 +40,11 @@
   --font-mono:    'DM Mono', monospace;
   --font-body:    'Inter', sans-serif;
 
+  --surface-chrome: #080C14;
+  --z-chrome: 100;
+  --z-popovers: 200;
+  --z-tooltips: 300;
+
   --ease-fast: 150ms cubic-bezier(0.4, 0, 0.2, 1);
   --ease-med:  300ms cubic-bezier(0.4, 0, 0.2, 1);
 }
@@ -52,6 +57,7 @@
   --bg-card:        rgba(255, 255, 255, 0.85);
   --bg-card-hover:  rgba(255, 255, 255, 1);
   --bg-overlay:     rgba(248, 250, 252, 0.85);
+  --surface-chrome: #ffffff;
 
   --accent:         #3b82f6;
   --accent-dim:     rgba(59, 130, 246, 0.12);
@@ -156,6 +162,13 @@ body::before {
 .badge-accent { color:var(--accent);background:var(--accent-dim); border-color:var(--border-accent); }
 .badge-dim    { color:var(--text-secondary);background:transparent;border-color:var(--border-subtle); }
 
+.page-wrap {
+  padding: 24px 28px;
+  max-width: 1700px;
+  margin: 0 auto;
+  width: 100%;
+}
+
 /* ── MOBILE ── */
 @media (max-width:768px) {
   .mobile-nav {
@@ -181,15 +194,14 @@ body::before {
    SOVEREIGN V3 & EDITION 2A-II ARCHITECTURAL LAYOUT & BRANDING
    ══════════════════════════════════════════════════════════════════════ */
 
-/* Header Isolation & Backdrop Blur */
+/* Header Isolation & Solid Surface Chrome */
 header, .hero-nav-header {
-  position: sticky !important;
-  top: 0 !important;
-  z-index: 1000 !important;
-  isolation: isolate !important;
-  background: rgba(8, 12, 20, 0.97) !important;
-  backdrop-filter: blur(16px) !important;
-  -webkit-backdrop-filter: blur(16px) !important;
+  position: sticky;
+  top: 0;
+  z-index: var(--z-chrome, 100);
+  isolation: isolate;
+  background: var(--surface-chrome);
+  border-bottom: 1px solid var(--border-subtle);
 }
 
 /* Unstretched Wordmark */

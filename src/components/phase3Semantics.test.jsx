@@ -266,4 +266,62 @@ describe('Phase 3 — Client Data Semantics & DOM Consistency', () => {
     const shareCount = (regularHtml.match(/title="Share Insight"/g) || []).length;
     expect(shareCount).toBe(1);
   });
+
+  it('Phase 3: global status pill reads "● LIVE" / "● DELAYED <n>s" / "● OFFLINE" with zero stray •', () => {
+    // 1. Live state
+    const liveHtml = renderToStaticMarkup(
+      <Navbar
+        active="map"
+        setActive={() => {}}
+        isLive={true}
+        setIsLive={() => {}}
+        hotspotCount={0}
+        alertCount={0}
+        theme="dark"
+        onToggleTheme={() => {}}
+        allAssets={sampleAssets.map(a => ({ ...a, status: 'live', tradingPeriod: 'open', quoteTs: Date.now() - 5000 }))}
+        generatedAt={new Date(Date.now() - 5000).toISOString()}
+        isWorkerOnline={true}
+      />
+    );
+    expect(liveHtml).toContain('● LIVE');
+    expect(liveHtml).not.toContain('● •');
+
+    // 2. Delayed state with <n>s
+    const delayedHtml = renderToStaticMarkup(
+      <Navbar
+        active="map"
+        setActive={() => {}}
+        isLive={true}
+        setIsLive={() => {}}
+        hotspotCount={0}
+        alertCount={0}
+        theme="dark"
+        onToggleTheme={() => {}}
+        allAssets={sampleAssets}
+        generatedAt={new Date(Date.now() - 95000).toISOString()}
+        isWorkerOnline={true}
+      />
+    );
+    expect(delayedHtml).toMatch(/● DELAYED \d+s/);
+    expect(delayedHtml).not.toContain('● •');
+
+    // 3. Offline state
+    const offlineHtml = renderToStaticMarkup(
+      <Navbar
+        active="map"
+        setActive={() => {}}
+        isLive={true}
+        setIsLive={() => {}}
+        hotspotCount={0}
+        alertCount={0}
+        theme="dark"
+        onToggleTheme={() => {}}
+        allAssets={sampleAssets}
+        isWorkerOnline={false}
+      />
+    );
+    expect(offlineHtml).toContain('● OFFLINE');
+    expect(offlineHtml).not.toContain('● •');
+  });
 });
