@@ -7,7 +7,7 @@ import { detectHotspots } from '../data/markets';
 
 const TEN_UP_POINTS = [100, 101, 102, 103, 104, 105, 106, 107, 108, 109];
 
-describe('Phase 5: Authentic Charts & Hotspots Suite', () => {
+describe('Phase 2: Authentic Charts & Worker History Suite', () => {
   describe('1. MiniChart < 10 Real Points & Dashed Baseline Rules', () => {
     it('renders dashed "no chart data" baseline when fewer than 10 real points exist', () => {
       const htmlEmpty = renderToStaticMarkup(<MiniChart data={[]} />);
@@ -21,9 +21,16 @@ describe('Phase 5: Authentic Charts & Hotspots Suite', () => {
       expect(htmlNine).toContain('no chart data');
     });
 
+    it('2-point input renders "no chart data" (Requirement 2e)', () => {
+      const htmlTwo = renderToStaticMarkup(<MiniChart data={[100, 105]} />);
+      expect(htmlTwo).toContain('no chart data');
+      expect(htmlTwo).toContain('stroke-dasharray="4 4"');
+      expect(htmlTwo).not.toContain('recharts-responsive-container');
+    });
+
     it('renders responsive chart container when 10 or more real points are provided', () => {
       const html = renderToStaticMarkup(
-        <MiniChart data={TEN_UP_POINTS} prevClose={99} currentPrice={110} change={11.11} />
+        <MiniChart data={TEN_UP_POINTS} prevClose={99} change={11.11} />
       );
       expect(html).not.toContain('no chart data');
       expect(html).toContain('recharts-responsive-container');
@@ -34,49 +41,53 @@ describe('Phase 5: Authentic Charts & Hotspots Suite', () => {
       expect(htmlInvalid).toContain('no chart data');
     });
 
-    it('builds [prevClose, ...realPoints, livePrice] with unrounded floats and distinct series per asset', () => {
+    it('builds points ONLY without prepending synthetic prevClose or appending fake live price (Requirement 2c)', () => {
       const ngSeries = buildChartSeries({
         data: [2.8511, 2.8524, 2.8531, 2.8538, 2.8542, 2.8547, 2.8551, 2.8556, 2.8562, 2.8569],
         prevClose: 2.8495,
-        currentPrice: 2.8574,
       });
       const wtiSeries = buildChartSeries({
         data: [70.11, 70.25, 70.32, 70.44, 70.51, 70.63, 70.72, 70.85, 70.91, 71.02],
         prevClose: 70.05,
-        currentPrice: 71.15,
       });
 
       expect(ngSeries.valid).toBe(true);
-      expect(ngSeries.points).toHaveLength(12);
-      expect(ngSeries.points[0].value).toBe(2.8495);
-      expect(ngSeries.points[1].value).toBe(2.8511); // Unrounded float preserved
-      expect(ngSeries.points[ngSeries.points.length - 1].value).toBe(2.8574);
+      // Exactly 10 points: no synthetic prevClose or live price prepended/appended to points array
+      expect(ngSeries.points).toHaveLength(10);
+      expect(ngSeries.points[0].value).toBe(2.8511); // First real point preserved unrounded
+      expect(ngSeries.points[ngSeries.points.length - 1].value).toBe(2.8569);
+      // prevClose kept as reference property for dashed horizontal reference line
       expect(ngSeries.prevClose).toBe(2.8495);
 
-      // No two assets share a series reference or identical values
+      // Requirement 2e: No two assets share identical series
       expect(ngSeries.points).not.toBe(wtiSeries.points);
       expect(ngSeries.values).not.toEqual(wtiSeries.values);
     });
 
     it('uses neutral grey stroke when change is flat or null, and draws dashed prevClose ReferenceLine', () => {
       const htmlFlat = renderToStaticMarkup(
-        <MiniChart data={TEN_UP_POINTS} prevClose={100} currentPrice={100} change={0.002} width={220} height={60} />
+        <MiniChart data={TEN_UP_POINTS} prevClose={100} change={0.002} width={220} height={60} />
       );
       expect(htmlFlat).toContain('#8b949e');
       expect(htmlFlat).toContain('recharts-reference-line');
 
       const htmlNull = renderToStaticMarkup(
-        <MiniChart data={TEN_UP_POINTS} prevClose={100} currentPrice={100} change={null} width={220} height={60} />
+        <MiniChart data={TEN_UP_POINTS} prevClose={100} change={null} width={220} height={60} />
       );
       expect(htmlNull).toContain('#8b949e');
     });
 
-    it('strictly increasing input renders its last point above its first (smaller SVG y)', () => {
+    it('strictly rising series ends above it starts (Requirement 2e)', () => {
+      const series = buildChartSeries({
+        data: TEN_UP_POINTS,
+      });
+      expect(series.valid).toBe(true);
+      expect(series.points[series.points.length - 1].value).toBeGreaterThan(series.points[0].value);
+
       const html = renderToStaticMarkup(
         <MiniChart
           data={TEN_UP_POINTS}
           prevClose={99}
-          currentPrice={110}
           change={11.11}
           width={220}
           height={60}
@@ -92,7 +103,7 @@ describe('Phase 5: Authentic Charts & Hotspots Suite', () => {
       const first = coords[0];
       const last = coords[coords.length - 1];
       expect(last.x).toBeGreaterThan(first.x);
-      expect(last.y).toBeLessThan(first.y); // Above initial point in SVG coordinate space
+      expect(last.y).toBeLessThan(first.y); // Above initial point in SVG coordinate space (smaller y)
     });
   });
 
@@ -136,10 +147,9 @@ describe('Phase 5: Authentic Charts & Hotspots Suite', () => {
         close: 100 + i * 0.25,
       }));
       const res1H = normalizeWorkerHistoryPoints({ points: workerPoints, previousClose: 99.5 }, '1H');
-      // Last 60m includes 13 points (t=35m..95m inclusive)
       expect(res1H.points.length).toBeGreaterThanOrEqual(12);
-      expect(res1H.points[0].ts).toBeGreaterThanOrEqual(baseMs);
-      expect(new Date(res1H.points[0].ts).getUTCFullYear()).toBe(2026);
+      expect(res1H.points[0].t).toBeGreaterThanOrEqual(baseMs);
+      expect(new Date(res1H.points[0].t).getUTCFullYear()).toBe(2026);
     });
   });
 

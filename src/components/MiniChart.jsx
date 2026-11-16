@@ -5,8 +5,8 @@ import { fetchWorkerHistory } from '../utils/api';
 export const MIN_REAL_CHART_POINTS = 10;
 
 export const RANGE_TO_WORKER = {
-  '1H': '1D',
-  '24H': '1D',
+  '1H': '1H',
+  '24H': '24H',
   '1M': '1M',
   '1Y': '1Y',
 };
@@ -16,49 +16,56 @@ const inFlightHistory = new Map();
 
 /**
  * Normalizes Worker /v1/history points for UI range pills ('1H', '24H', '1M', '1Y').
- * Fixes ms-vs-sec timestamps and slices '1H' cleanly to the trailing 60 minutes.
+ * Fixes ms-vs-sec timestamps and maps to clean { time, value, t, v } records.
  */
 export function normalizeWorkerHistoryPoints(res, range = '24H') {
   if (!res || !Array.isArray(res.points) || res.points.length === 0) {
-    return { points: [], previousClose: res?.previousClose ?? null };
+    return { points: [], previousClose: res?.previousClose ?? null, granularity: res?.granularity ?? null, source: res?.source ?? null };
   }
 
-  let rawPoints = res.points.filter((p) => {
-    const val = typeof p?.close === 'number' ? p.close : p?.value;
-    return typeof val === 'number' && Number.isFinite(val) && val > 0;
-  });
+  let rawPoints = res.points
+    .map((p) => {
+      const val = typeof p?.close === 'number' ? p.close : (typeof p?.value === 'number' ? p.value : (p?.v ?? (typeof p === 'number' ? p : null)));
+      const rawT = p?.time ?? p?.t;
+      const t = typeof rawT === 'number' && Number.isFinite(rawT) ? (rawT > 1e12 ? rawT : rawT * 1000) : null;
+      return { val, t };
+    })
+    .filter((p) => typeof p.val === 'number' && Number.isFinite(p.val) && p.val > 0);
 
   const toMs = (t) => (typeof t === 'number' && Number.isFinite(t) ? (t > 1e12 ? t : t * 1000) : NaN);
 
   if (range === '1H' && rawPoints.length > 0) {
     let latestMs = -Infinity;
     for (const p of rawPoints) {
-      const ms = toMs(p.time);
+      const ms = toMs(p.t);
       if (Number.isFinite(ms) && ms > latestMs) latestMs = ms;
     }
     if (Number.isFinite(latestMs)) {
       const cutoff = latestMs - 3600000;
       rawPoints = rawPoints.filter((p) => {
-        const ms = toMs(p.time);
+        const ms = toMs(p.t);
         return Number.isFinite(ms) && ms >= cutoff;
       });
     }
   }
 
   const isMultiDay = range === '1M' || range === '1Y';
-  const points = rawPoints.map((p) => {
-    const ms = toMs(p.time);
+  const points = rawPoints.map((p, idx) => {
+    const ms = toMs(p.t);
     let label = '';
     if (Number.isFinite(ms)) {
       const d = new Date(ms);
       label = isMultiDay
         ? d.toLocaleDateString('en-US', { month: 'short', day: 'numeric', ...(range === '1Y' ? { year: '2-digit' } : {}) })
         : d.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+    } else {
+      label = `${idx}`;
     }
     return {
       time: label,
-      value: typeof p.close === 'number' ? p.close : p.value,
-      ts: Number.isFinite(ms) ? ms : null,
+      value: p.val,
+      t: Number.isFinite(ms) ? ms : null,
+      v: p.val,
     };
   });
 
@@ -66,7 +73,7 @@ export function normalizeWorkerHistoryPoints(res, range = '24H') {
     ? res.previousClose
     : null;
 
-  return { points, previousClose: prev };
+  return { points, previousClose: prev, granularity: res?.granularity ?? null, source: res?.source ?? null };
 }
 
 /**
@@ -82,7 +89,7 @@ export async function fetchCachedRangeHistory(assetId, range = '24H') {
     return inFlightHistory.get(key);
   }
 
-  const workerRange = RANGE_TO_WORKER[range] || '1D';
+  const workerRange = RANGE_TO_WORKER[range] || '24H';
   const promise = fetchWorkerHistory(assetId, workerRange)
     .then((res) => {
       const normalized = normalizeWorkerHistoryPoints(res, range);
@@ -101,14 +108,13 @@ export async function fetchCachedRangeHistory(assetId, range = '24H') {
 /**
  * Pure series builder:
  * - Requires at least `minRealPoints` (default 10) real positive data points.
- * - Constructs [prevClose (if included & valid), ...realPoints, livePrice (if valid)]
- *   without overwriting real points or rounding floats.
+ * - Constructs points ONLY from real points: no synthetic prevClose or live price prepended/appended.
+ * - If prevClose is provided, exposes it as `prevClose` for rendering as a dashed horizontal reference line.
+ * - Unrounded floats are preserved.
  */
 export function buildChartSeries({
   data,
   prevClose,
-  currentPrice,
-  includePrevClose = true,
   minRealPoints = MIN_REAL_CHART_POINTS,
 }) {
   const realPoints = [];
@@ -116,10 +122,10 @@ export function buildChartSeries({
     for (let i = 0; i < data.length; i++) {
       const pt = data[i];
       const rawVal = typeof pt === 'object' && pt !== null
-        ? (pt.value ?? pt.close ?? pt.price)
+        ? (pt.v ?? pt.value ?? pt.close ?? pt.price)
         : pt;
       if (typeof rawVal === 'number' && Number.isFinite(rawVal) && rawVal > 0) {
-        const label = typeof pt === 'object' && pt !== null && pt.time ? pt.time : `${i}`;
+        const label = typeof pt === 'object' && pt !== null && (pt.time || pt.t) ? (pt.time || pt.t) : `${i}`;
         realPoints.push({ time: label, value: rawVal });
       }
     }
@@ -136,21 +142,19 @@ export function buildChartSeries({
     };
   }
 
-  const points = [];
-  const hasPrev = includePrevClose && typeof prevClose === 'number' && Number.isFinite(prevClose) && prevClose > 0;
-  if (hasPrev) {
-    points.push({ idx: 0, time: 'Prev Close', value: prevClose });
-  }
-  for (let i = 0; i < realPoints.length; i++) {
-    points.push({ idx: points.length, time: realPoints[i].time, value: realPoints[i].value });
-  }
-  if (typeof currentPrice === 'number' && Number.isFinite(currentPrice) && currentPrice > 0) {
-    points.push({ idx: points.length, time: 'Live', value: currentPrice });
-  }
+  const points = realPoints.map((p, idx) => ({
+    idx,
+    time: p.time,
+    value: p.value,
+  }));
 
   const values = points.map((p) => p.value);
-  const min = hasPrev ? Math.min(...values, prevClose) : Math.min(...values);
-  const max = hasPrev ? Math.max(...values, prevClose) : Math.max(...values);
+  const validPrevClose = typeof prevClose === 'number' && Number.isFinite(prevClose) && prevClose > 0
+    ? prevClose
+    : null;
+
+  const min = validPrevClose !== null ? Math.min(...values, validPrevClose) : Math.min(...values);
+  const max = validPrevClose !== null ? Math.max(...values, validPrevClose) : Math.max(...values);
 
   return {
     valid: true,
@@ -158,7 +162,7 @@ export function buildChartSeries({
     values,
     min,
     max,
-    prevClose: hasPrev ? prevClose : null,
+    prevClose: validPrevClose,
   };
 }
 
@@ -169,16 +173,14 @@ export function buildChartSeries({
  * - If fewer than 10 real points exist: Renders a dashed "no chart data" baseline.
  * - Zero synthetic random/sin/cos curve generators.
  * - Unrounded floats are preserved to eliminate staircase plateaus on energy assets (NG, HOIL).
- * - Series = [prevClose point, ...real points, live price] with dashed prevClose reference line.
+ * - Series = real points only. prevClose is drawn as a dashed horizontal reference line.
  * - Stroke color matches displayed change sign (grey if flat/null).
  */
 export default function MiniChart({
   data,
   change,
   height = 48,
-  currentPrice,
   prevClose,
-  includePrevClose = true,
   width,
 }) {
   const baseId = useId().replace(/:/g, '');
@@ -187,8 +189,6 @@ export default function MiniChart({
   const series = buildChartSeries({
     data,
     prevClose,
-    currentPrice,
-    includePrevClose,
     minRealPoints: MIN_REAL_CHART_POINTS,
   });
 

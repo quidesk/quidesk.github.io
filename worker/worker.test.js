@@ -1,6 +1,7 @@
 import { describe, it, expect, vi, afterEach } from 'vitest';
 import worker, { getCorsOrigin, withHeaders } from './index.js';
 import { buildAssetQuote, handleQuotes } from './routes/quotes.js';
+import { handleHistory } from './routes/history.js';
 import { extractStrictAssetTags, parseRssXml } from './providers/news.js';
 import { checkMetalsBasis } from './providers/metals.js';
 import { determineSessionState } from './providers/yahoo.js';
@@ -439,6 +440,120 @@ describe('Cloudflare Worker — Phase 1 Contract & Schema Validation', () => {
       expect(payload.health.perSource.binance.ok).toBe(false);
       expect(payload.health.perSource.kraken.ok).toBe(true);
       expect(payload.health.perSource.cryptocompare.ok).toBe(true);
+    });
+  });
+
+  describe('8. Phase 2: Real History Route Contract (/v1/history)', () => {
+    it('crypto history returns real points from CryptoCompare when available', async () => {
+      vi.spyOn(globalThis, 'fetch').mockImplementation(async (input) => {
+        const url = typeof input === 'string' ? input : input.url;
+        if (url.includes('cryptocompare.com/data/v2/histohour')) {
+          const list = Array.from({ length: 24 }, (_, i) => ({
+            time: 1700000000 + i * 3600,
+            close: 80000 + i * 100,
+          }));
+          return new Response(JSON.stringify({
+            Response: 'Success',
+            Data: { Data: list },
+          }), { status: 200 });
+        }
+        return new Response('Fail', { status: 500 });
+      });
+
+      const res = await handleHistory(new Request('https://worker.internal/v1/history?id=btc&range=24H'), {});
+      expect(res.id).toBe('btc');
+      expect(res.source).toBe('cryptocompare');
+      expect(res.granularity).toBe('1h');
+      expect(res.points).toHaveLength(24);
+      expect(res.points[0]).toHaveProperty('t');
+      expect(res.points[0]).toHaveProperty('v');
+      expect(res.points[0].v).toBe(80000);
+      expect(res.points[23].v).toBe(82300);
+    });
+
+    it('crypto history falls back to Binance klines when CryptoCompare fails', async () => {
+      vi.spyOn(globalThis, 'fetch').mockImplementation(async (input) => {
+        const url = typeof input === 'string' ? input : input.url;
+        if (url.includes('cryptocompare.com')) {
+          return new Response('Fail', { status: 500 });
+        }
+        if (url.includes('binance.vision/api/v3/klines')) {
+          const list = Array.from({ length: 24 }, (_, i) => [
+            1700000000000 + i * 3600000,
+            '3000', '3100', '2900', (3000 + i * 10).toString(), '1000'
+          ]);
+          return new Response(JSON.stringify(list), { status: 200 });
+        }
+        return new Response('Fail', { status: 500 });
+      });
+
+      const res = await handleHistory(new Request('https://worker.internal/v1/history?id=eth&range=24H'), {});
+      expect(res.id).toBe('eth');
+      expect(res.source).toBe('binance');
+      expect(res.granularity).toBe('1h');
+      expect(res.points).toHaveLength(24);
+      expect(res.points[0].v).toBe(3000);
+      expect(res.points[23].v).toBe(3230);
+    });
+
+    it('equities/energy/metals returns 15m granularity and yahoo source', async () => {
+      vi.spyOn(globalThis, 'fetch').mockImplementation(async (input) => {
+        const url = typeof input === 'string' ? input : input.url;
+        if (url.includes('query1.finance.yahoo.com')) {
+          const timestamps = Array.from({ length: 30 }, (_, i) => 1700000000 + i * 900);
+          const closes = Array.from({ length: 30 }, (_, i) => 500 + i * 0.5);
+          return new Response(JSON.stringify({
+            chart: {
+              result: [{
+                meta: { chartPreviousClose: 498.5 },
+                timestamp: timestamps,
+                indicators: { quote: [{ close: closes }] },
+              }]
+            }
+          }), { status: 200 });
+        }
+        return new Response('Fail', { status: 500 });
+      });
+
+      const res = await handleHistory(new Request('https://worker.internal/v1/history?id=spx&range=24H'), {});
+      expect(res.id).toBe('spx');
+      expect(res.source).toBe('yahoo');
+      expect(res.granularity).toBe('15m');
+      expect(res.previousClose).toBe(498.5);
+      expect(res.points).toHaveLength(30);
+      expect(res.points[0].v).toBe(500);
+    });
+
+    it('forex falls back to Frankfurter ECB daily when Yahoo fails', async () => {
+      vi.spyOn(globalThis, 'fetch').mockImplementation(async (input) => {
+        const url = typeof input === 'string' ? input : input.url;
+        if (url.includes('query1.finance.yahoo.com')) {
+          return new Response('Fail', { status: 500 });
+        }
+        if (url.includes('frankfurter.')) {
+          const rates = {};
+          for (let i = 1; i <= 20; i++) {
+            const dateStr = `2026-04-${String(i).padStart(2, '0')}`;
+            rates[dateStr] = { USD: 1.08 + i * 0.001 };
+          }
+          return new Response(JSON.stringify({ rates }), { status: 200 });
+        }
+        return new Response('Fail', { status: 500 });
+      });
+
+      const res = await handleHistory(new Request('https://worker.internal/v1/history?id=eurusd&range=24H'), {});
+      expect(res.id).toBe('eurusd');
+      expect(res.source).toBe('ECB daily');
+      expect(res.granularity).toBe('1d');
+      expect(res.points.length).toBeGreaterThanOrEqual(10);
+    });
+
+    it('returns empty points when fewer than 10 points are available', async () => {
+      vi.spyOn(globalThis, 'fetch').mockResolvedValue(new Response('Fail', { status: 500 }));
+
+      const res = await handleHistory(new Request('https://worker.internal/v1/history?id=spx&range=24H'), {});
+      expect(res.points).toEqual([]);
+      expect(res.pointCount).toBe(0);
     });
   });
 });
