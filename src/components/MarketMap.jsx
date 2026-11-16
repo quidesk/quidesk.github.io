@@ -6,7 +6,61 @@ import CurrencyTooltip from './CurrencyTooltip';
 export const INTERNAL_W = 1000;
 export const INTERNAL_H = 500;
 
-// Initial positions as fractions of canvas
+// Golden angle constant for sunflower / deterministic spiral distribution
+export const GOLDEN_ANGLE = 2.399963229728653; // pi * (3 - sqrt(5))
+
+export const ZONES = [
+  { id:'equities', label:'EQUITIES', cx:0.19, cy:0.31, r:135, rx:0.22, ry:0.27, color:'#4d9eff' },
+  { id:'crypto',   label:'CRYPTO',   cx:0.81, cy:0.31, r:135, rx:0.22, ry:0.27, color:'#a78bfa' },
+  { id:'metals',   label:'METALS',   cx:0.19, cy:0.79, r:105, rx:0.21, ry:0.20, color:'#f0a500' },
+  { id:'energy',   label:'ENERGY',   cx:0.81, cy:0.79, r:110, rx:0.23, ry:0.21, color:'#f97316' },
+  { id:'forex',    label:'FOREX',    cx:0.50, cy:0.50, r:165, rx:0.24, ry:0.22, color:'#22d3ee' },
+];
+
+export const ZONE_HOME = {
+  equities: { x:0.19, y:0.31 },
+  crypto:   { x:0.81, y:0.31 },
+  metals:   { x:0.19, y:0.79 },
+  energy:   { x:0.81, y:0.79 },
+  forex:    { x:0.50, y:0.50 },
+};
+
+/**
+ * Computes deterministic golden-angle spiral initial positions from zone centers
+ * scaled to ~0.6x radius so nodes start spread, not stacked. (Requirement 4b)
+ */
+export function computeGoldenSpiralPositions(assets, zones = ZONES) {
+  const zoneMap = new Map(zones.map(z => [z.id, z]));
+  const sectorGroups = {};
+  assets.forEach(a => {
+    if (!sectorGroups[a.sector]) sectorGroups[a.sector] = [];
+    sectorGroups[a.sector].push(a);
+  });
+
+  const positions = {};
+  for (const [sector, items] of Object.entries(sectorGroups)) {
+    const z = zoneMap.get(sector);
+    if (!z) continue;
+    const n = items.length;
+    items.forEach((item, i) => {
+      if (n === 1) {
+        positions[item.id] = { x: z.cx, y: z.cy };
+        return;
+      }
+      const angle = i * GOLDEN_ANGLE;
+      const rFrac = 0.6 * Math.sqrt((i + 0.5) / n);
+      const effRx = z.rx * 0.85;
+      const effRy = z.ry * 0.85;
+      const px = z.cx + rFrac * effRx * Math.cos(angle);
+      const py = z.cy + rFrac * effRy * Math.sin(angle);
+      positions[item.id] = { x: px, y: py };
+    });
+  }
+
+  return positions;
+}
+
+// Fallback initial positions map
 export const INITIAL_POSITIONS = {
   spx:      { x:0.13, y:0.23 },
   ndx:      { x:0.23, y:0.21 },
@@ -28,7 +82,6 @@ export const INITIAL_POSITIONS = {
   brent:    { x:0.85, y:0.81 },
   ng:       { x:0.86, y:0.73 },
   hoil:     { x:0.76, y:0.83 },
-  // Forex — 12 pairs distributed evenly across the FOREX circle (center: 0.50, 0.50, r: 155)
   eurusd:   { x:0.45, y:0.43 },
   gbpusd:   { x:0.55, y:0.43 },
   usdjpy:   { x:0.50, y:0.37 },
@@ -41,22 +94,6 @@ export const INITIAL_POSITIONS = {
   eurjpy:   { x:0.56, y:0.35 },
   usdinr:   { x:0.44, y:0.61 },
   eurinr:   { x:0.56, y:0.61 },
-};
-
-export const ZONES = [
-  { id:'equities', label:'EQUITIES', cx:0.19, cy:0.31, r:135, rx:0.22, ry:0.27, color:'#4d9eff' },
-  { id:'crypto',   label:'CRYPTO',   cx:0.81, cy:0.31, r:135, rx:0.22, ry:0.27, color:'#a78bfa' },
-  { id:'metals',   label:'METALS',   cx:0.19, cy:0.79, r:90,  rx:0.20, ry:0.18, color:'#f0a500' },
-  { id:'energy',   label:'ENERGY',   cx:0.81, cy:0.79, r:95,  rx:0.22, ry:0.19, color:'#f97316' },
-  { id:'forex',    label:'FOREX',    cx:0.50, cy:0.50, r:155, rx:0.22, ry:0.20, color:'#22d3ee' },
-];
-
-export const ZONE_HOME = {
-  equities: { x:0.19, y:0.31 },
-  crypto:   { x:0.81, y:0.31 },
-  metals:   { x:0.19, y:0.79 },
-  energy:   { x:0.81, y:0.79 },
-  forex:    { x:0.50, y:0.50 },
 };
 
 const METAL_BASE_LABELS = {
@@ -77,7 +114,7 @@ export function getMapNodeLabel(asset) {
   const sec = (asset?.sector || '').toLowerCase();
   let dSym = asset?.symbol || '';
   if (sec === 'forex') {
-    return dSym;
+    return dSym; // Full pair e.g. "EUR/USD" at 8-9px (Requirement 4d)
   }
   if (sec === 'metals') {
     if (asset?.id && METAL_BASE_LABELS[asset.id]) return METAL_BASE_LABELS[asset.id];
@@ -93,16 +130,34 @@ export function getMapNodeLabel(asset) {
   return dSym.length > 5 ? dSym.substring(0, 5) : dSym;
 }
 
+export function formatAssetTooltipMeta(asset) {
+  const priceDisplay = typeof asset?.price === 'number' && Number.isFinite(asset.price)
+    ? formatPrice(asset.price, asset.symbol, asset.sector)
+    : '—';
+  const changeDisplay = typeof asset?.change === 'number' && Number.isFinite(asset.change)
+    ? formatChange(asset.change)
+    : '—';
+  const source = asset?.source || 'Yahoo Finance';
+  const ts = asset?.quoteTs || asset?.timestamp;
+  const asOf = ts ? new Date(ts).toLocaleTimeString('en-US', { timeZone: 'UTC', timeZoneName: 'short' }) : 'live';
+  return {
+    symbol: asset?.symbol || '',
+    priceDisplay,
+    changeDisplay,
+    source,
+    asOf,
+  };
+}
+
 /**
- * Projects a node inside its assigned zone circle/ellipse with 30px header clearance
- * and halves velocity components when clamped at the boundary.
+ * Projects a node inside its assigned zone ellipse with 30px header clearance
+ * and halves velocity components when clamped at the boundary. (Requirement 4c)
  */
 export function clampNodeToEllipse(xPx, yPx, vx, vy, zone, nr, internalW = INTERNAL_W, internalH = INTERNAL_H) {
   if (!zone) {
-    const padX = (nr + 6);
-    const padY = (nr + 6);
-    const clampedX = Math.max(padX, Math.min(internalW - padX, xPx));
-    const clampedY = Math.max(padY, Math.min(internalH - padY, yPx));
+    const pad = nr + 6;
+    const clampedX = Math.max(pad, Math.min(internalW - pad, xPx));
+    const clampedY = Math.max(pad, Math.min(internalH - pad, yPx));
     return {
       x: clampedX / internalW,
       y: clampedY / internalH,
@@ -113,8 +168,8 @@ export function clampNodeToEllipse(xPx, yPx, vx, vy, zone, nr, internalW = INTER
 
   const cxPx = zone.cx * internalW;
   const cyPx = zone.cy * internalH;
-  const rxp = Math.max(1, zone.rx * internalW - nr - 6);
-  const ryp = Math.max(1, zone.ry * internalH - nr - 6);
+  const rxp = Math.max(10, zone.rx * internalW - nr - 6);
+  const ryp = Math.max(10, zone.ry * internalH - nr - 6);
   const minYPx = (zone.cy - zone.ry) * internalH + 30 + nr;
 
   let nx = xPx;
@@ -122,17 +177,13 @@ export function clampNodeToEllipse(xPx, yPx, vx, vy, zone, nr, internalW = INTER
   let nvx = vx;
   let nvy = vy;
 
-  if (zone.r) {
-    const maxR = Math.max(10, zone.r - nr - 8);
-    const cdist = Math.hypot(nx - cxPx, ny - cyPx);
-    if (cdist > maxR) {
-      nx = cxPx + ((nx - cxPx) / cdist) * maxR;
-      ny = cyPx + ((ny - cyPx) / cdist) * maxR;
-      nvx *= 0.5;
-      nvy *= 0.5;
-    }
+  // 1. Header clearance (30px clear at top for the zone header title)
+  if (ny < minYPx) {
+    ny = minYPx;
+    nvy *= 0.5;
   }
 
+  // 2. Exact ellipse boundary clamping
   const dx = nx - cxPx;
   const dy = ny - cyPx;
   const d = Math.hypot(dx / rxp, dy / ryp);
@@ -141,15 +192,16 @@ export function clampNodeToEllipse(xPx, yPx, vx, vy, zone, nr, internalW = INTER
     ny = cyPx + dy / d;
     nvx *= 0.5;
     nvy *= 0.5;
-  }
 
-  if (ny < minYPx) {
-    ny = minYPx;
-    const dySlice = ny - cyPx;
-    const yFrac = Math.min(1, Math.abs(dySlice) / ryp);
-    const maxDx = rxp * Math.sqrt(Math.max(0, 1 - yFrac * yFrac));
-    nx = Math.max(cxPx - maxDx, Math.min(cxPx + maxDx, nx));
-    nvy *= 0.5;
+    // If normalized point violates header clearance, clamp y and find ellipse max dx
+    if (ny < minYPx) {
+      ny = minYPx;
+      const dySlice = ny - cyPx;
+      const yFrac = Math.min(1, Math.abs(dySlice) / ryp);
+      const maxDx = rxp * Math.sqrt(Math.max(0, 1 - yFrac * yFrac));
+      nx = Math.max(cxPx - maxDx, Math.min(cxPx + maxDx, nx));
+      nvy *= 0.5;
+    }
   }
 
   return {
@@ -161,8 +213,7 @@ export function clampNodeToEllipse(xPx, yPx, vx, vy, zone, nr, internalW = INTER
 }
 
 /**
- * 50-iteration circle-packing repulsion + radial clamping loop
- * (dist <= zone.r - node.r - 8) so nodes distribute evenly inside category circles.
+ * Circle-packing repulsion + radial clamping loop inside category circles.
  */
 export function packCategoryNodes(pos, assets, zones = ZONES, internalW = INTERNAL_W, internalH = INTERNAL_H) {
   const result = {};
@@ -196,7 +247,9 @@ export function packCategoryNodes(pos, assets, zones = ZONES, internalW = INTERN
         const dx = p2.x - p1.x;
         const dy = p2.y - p1.y;
         const dist = Math.hypot(dx, dy) || 0.1;
-        const targetDist = r1 + r2 + 4;
+        // Metals XAG and XPT: minimum center distance = r1 + r2 + 4 (Requirement 4d)
+        const isMetals = a1.sector === 'metals';
+        const targetDist = isMetals ? r1 + r2 + 4 : r1 + r2 + 3;
 
         if (dist < targetDist) {
           const overlap = (targetDist - dist) * 0.5;
@@ -210,23 +263,15 @@ export function packCategoryNodes(pos, assets, zones = ZONES, internalW = INTERN
       }
     }
 
-    // 2. Radial clamping: dist <= zone.r - node.r - 8
+    // 2. Ellipse containment clamping
     assets.forEach(asset => {
       const p = result[asset.id];
       const z = zoneMap.get(asset.sector);
       if (!p || !z) return;
       const nr = getAssetRadius(asset);
-      const cxPx = z.cx * internalW;
-      const cyPx = z.cy * internalH;
-      const maxR = Math.max(10, (z.r || 100) - nr - 8);
-
-      const dx = p.x - cxPx;
-      const dy = p.y - cyPx;
-      const dist = Math.hypot(dx, dy);
-      if (dist > maxR) {
-        p.x = cxPx + (dx / dist) * maxR;
-        p.y = cyPx + (dy / dist) * maxR;
-      }
+      const clamped = clampNodeToEllipse(p.x, p.y, p.vx, p.vy, z, nr, internalW, internalH);
+      p.x = clamped.x * internalW;
+      p.y = clamped.y * internalH;
     });
   }
 
@@ -245,29 +290,23 @@ export function packCategoryNodes(pos, assets, zones = ZONES, internalW = INTERN
 }
 
 export function initNodeState(allAssets) {
-  const state = {};
-  allAssets.forEach(asset => {
-    const p = INITIAL_POSITIONS[asset.id] || { x: 0.5, y: 0.5 };
-    state[asset.id] = {
-      x: p.x,
-      y: p.y,
-      vx: 0,
-      vy: 0,
-    };
-  });
-  return packCategoryNodes(state, allAssets, ZONES, INTERNAL_W, INTERNAL_H);
+  const spiralPositions = computeGoldenSpiralPositions(allAssets, ZONES);
+  return packCategoryNodes(spiralPositions, allAssets, ZONES, INTERNAL_W, INTERNAL_H);
 }
 
 /**
  * Pure physics simulation step function.
- * Implements exact ellipse containment projection, weakened cross-zone sentiment,
- * 30px header clearance, halved boundary velocity, and collision resolution.
+ * Implements:
+ * - 4c Ellipse clamping after physics step
+ * - 4d Collision separation pass runs AFTER clamp (Metals XAG/XPT: r1 + r2 + 4)
+ * - Boundary containment verification
  */
 export function stepMarketMapSimulation(pos, assets, zones = ZONES, internalW = INTERNAL_W, internalH = INTERNAL_H, options = {}) {
   const next = {};
   const getRadius = options.getAssetRadius || getAssetRadius;
   const zoneById = new Map(zones.map((z) => [z.id, z]));
 
+  // Step 1: Physics velocity integration & initial clamp to ellipse (Requirement 4c)
   assets.forEach(asset => {
     const p = pos[asset.id];
     if (!p) return;
@@ -275,36 +314,12 @@ export function stepMarketMapSimulation(pos, assets, zones = ZONES, internalW = 
     let fx = 0;
     let fy = 0;
 
-    // 1. Home anchor attraction (weakened cross-zone sentiment attraction keeps zones clean)
+    // Home anchor attraction
     const home = INITIAL_POSITIONS[asset.id] || ZONE_HOME[asset.sector] || { x: 0.5, y: 0.5 };
     fx += (home.x - p.x) * 0.0009;
     fy += (home.y - p.y) * 0.0009;
 
-    // Very weak same-sign sentiment cohesion within sector only
-    const hasChg = typeof asset.change === 'number' && Number.isFinite(asset.change);
-    assets.forEach(other => {
-      if (other.id === asset.id) return;
-      const op = pos[other.id];
-      if (!op) return;
-
-      if (other.sector === asset.sector) {
-        const dx = (op.x - p.x) * internalW;
-        const dy = (op.y - p.y) * internalH;
-        const dist = Math.sqrt(dx * dx + dy * dy) || 1;
-        const minDist = getRadius(asset) + getRadius(other) + 6;
-        if (dist < minDist) {
-          const overlap = (minDist - dist) / minDist;
-          fx -= (dx / dist) * overlap * 0.003;
-          fy -= (dy / dist) * overlap * 0.003;
-        }
-      } else if (hasChg && typeof other.change === 'number' && Math.sign(other.change) === Math.sign(asset.change)) {
-        // Negligible cross-zone sentiment pull so nodes stay cleanly inside own ellipse
-        fx += (op.x - p.x) * 0.000015;
-        fy += (op.y - p.y) * 0.000015;
-      }
-    });
-
-    // 2. Damping and velocity
+    // Damping and velocity
     const damping = 0.80;
     const nvx = (p.vx + fx) * damping;
     const nvy = (p.vy + fy) * damping;
@@ -312,13 +327,12 @@ export function stepMarketMapSimulation(pos, assets, zones = ZONES, internalW = 
     const nxPx = (p.x + nvx) * internalW;
     const nyPx = (p.y + nvy) * internalH;
 
-    // 3. Project inside zone ellipse with 30px header clearance (halves velocity on clamp)
     const z = zoneById.get(asset.sector);
     const nr = getRadius(asset);
     next[asset.id] = clampNodeToEllipse(nxPx, nyPx, nvx, nvy, z, nr, internalW, internalH);
   });
 
-  // 4. Collision separation pass + ellipse re-projection
+  // Step 2: Collision separation pass runs AFTER clamp (Requirement 4d)
   for (let iter = 0; iter < 3; iter++) {
     for (let i = 0; i < assets.length; i++) {
       const a1 = assets[i];
@@ -333,7 +347,9 @@ export function stepMarketMapSimulation(pos, assets, zones = ZONES, internalW = 
         const dx = (p2.x - p1.x) * internalW;
         const dy = (p2.y - p1.y) * internalH;
         const dist = Math.sqrt(dx * dx + dy * dy) || 1;
-        const minDist = getRadius(a1) + getRadius(a2) + 2;
+        // Metals XAG and XPT: minimum center distance = r1 + r2 + 4
+        const isMetals = a1.sector === 'metals';
+        const minDist = isMetals ? getRadius(a1) + getRadius(a2) + 4 : getRadius(a1) + getRadius(a2) + 2.5;
 
         if (dist < minDist) {
           const overlap = minDist - dist;
@@ -378,40 +394,20 @@ export default function MarketMap({ allAssets, hotspots = [], onSelectAsset, con
   const [showCurrency, setShowCurrency] = useState(false);
 
   const containerRef = useRef(null);
-  const animFrameRef = useRef(null);
-  const positionsRef = useRef({});
-  const nodeGroupRefs = useRef({});
+  const positionsRef = useRef(initNodeState(allAssets || []));
+  const nodeGRefs = useRef({});
   const corrLineRefs = useRef({});
   const newsLineRefs = useRef({});
-  const assetsRef = useRef(allAssets);
-  const currTimerRef = useRef(null);
+  const animFrameRef = useRef(null);
+  const assetsRef = useRef(allAssets || []);
+  assetsRef.current = allAssets || [];
 
-  useEffect(() => { assetsRef.current = allAssets; }, [allAssets]);
-
-  // Ensure every asset has an initial node position without per-frame React state
-  if (allAssets.length && Object.keys(positionsRef.current).length === 0) {
-    positionsRef.current = initNodeState(allAssets);
-  }
   useEffect(() => {
-    if (!allAssets.length) return;
-    const cur = { ...positionsRef.current };
-    let changed = false;
-    allAssets.forEach((asset) => {
-      if (!cur[asset.id]) {
-        const init = INITIAL_POSITIONS[asset.id] || { x: 0.5, y: 0.5 };
-        cur[asset.id] = { x: init.x, y: init.y, vx: 0, vy: 0 };
-        changed = true;
-      }
-    });
-    if (changed) positionsRef.current = cur;
-  }, [allAssets]);
-
-  // Resize observer
-  useEffect(() => {
-    const ro = new ResizeObserver(entries => {
-      const e = entries[0];
-      if (e) {
-        setContainerW(e.contentRect.width);
+    const ro = new ResizeObserver((entries) => {
+      for (const entry of entries) {
+        if (entry.contentRect.width > 0) {
+          setContainerW(entry.contentRect.width);
+        }
       }
     });
     if (containerRef.current) ro.observe(containerRef.current);
@@ -421,7 +417,16 @@ export default function MarketMap({ allAssets, hotspots = [], onSelectAsset, con
   const activeId = hovered || selected;
   const hotspotIds = new Set(hotspots.map(h => h.assetId));
 
+  // Requirement 4f: Remove static correlation line if either asset is missing or has null/non-positive price
+  const assetMap = new Map((allAssets || []).map(a => [a.id, a]));
   const visibleCorrs = CORRELATIONS.filter(c => {
+    const assetA = assetMap.get(c.a);
+    const assetB = assetMap.get(c.b);
+    if (!assetA || !assetB || assetA.status === 'unavailable' || assetB.status === 'unavailable' ||
+        typeof assetA.price !== 'number' || assetA.price <= 0 ||
+        typeof assetB.price !== 'number' || assetB.price <= 0) {
+      return false;
+    }
     if (activeId) return c.a === activeId || c.b === activeId;
     return Math.abs(c.r) > 0.85;
   });
@@ -431,7 +436,7 @@ export default function MarketMap({ allAssets, hotspots = [], onSelectAsset, con
   const newsCorrsRef = useRef(newsCorrelations || []);
   newsCorrsRef.current = newsCorrelations || [];
 
-  // Physics animation loop throttled to <= 30fps using direct SVG DOM attribute mutations (no setState per frame)
+  // Physics animation loop throttled to <= 30fps using direct SVG DOM attribute mutations
   useEffect(() => {
     if (!allAssets.length) return;
 
@@ -443,166 +448,170 @@ export default function MarketMap({ allAssets, hotspots = [], onSelectAsset, con
         lastTime = now;
         const assets = assetsRef.current;
         const pos = positionsRef.current;
-        if (assets.length && Object.keys(pos).length) {
-          const next = stepMarketMapSimulation(pos, assets, ZONES, INTERNAL_W, INTERNAL_H, { getAssetRadius });
-          positionsRef.current = next;
+        const nextPos = stepMarketMapSimulation(pos, assets, ZONES, INTERNAL_W, INTERNAL_H);
+        positionsRef.current = nextPos;
 
-          for (const asset of assets) {
-            const p = next[asset.id];
-            const el = nodeGroupRefs.current[asset.id];
-            if (p && el) {
-              el.setAttribute(
-                'transform',
-                `translate(${(p.x * INTERNAL_W).toFixed(2)},${(p.y * INTERNAL_H).toFixed(2)})`
-              );
-            }
+        for (let i = 0; i < assets.length; i++) {
+          const a = assets[i];
+          const el = nodeGRefs.current[a.id];
+          const np = nextPos[a.id];
+          if (el && np) {
+            el.setAttribute('transform', `translate(${(np.x * INTERNAL_W).toFixed(1)}, ${(np.y * INTERNAL_H).toFixed(1)})`);
           }
+        }
 
-          for (const c of visibleCorrsRef.current) {
-            const pa = next[c.a];
-            const pb = next[c.b];
-            const lineEl = corrLineRefs.current[`${c.a}-${c.b}`];
-            if (pa && pb && lineEl) {
-              lineEl.setAttribute('x1', (pa.x * INTERNAL_W).toFixed(2));
-              lineEl.setAttribute('y1', (pa.y * INTERNAL_H).toFixed(2));
-              lineEl.setAttribute('x2', (pb.x * INTERNAL_W).toFixed(2));
-              lineEl.setAttribute('y2', (pb.y * INTERNAL_H).toFixed(2));
-            }
+        const corrs = visibleCorrsRef.current;
+        for (let i = 0; i < corrs.length; i++) {
+          const c = corrs[i];
+          const k = `${c.a}-${c.b}`;
+          const lineEl = corrLineRefs.current[k];
+          const pa = nextPos[c.a];
+          const pb = nextPos[c.b];
+          if (lineEl && pa && pb) {
+            lineEl.setAttribute('x1', (pa.x * INTERNAL_W).toFixed(1));
+            lineEl.setAttribute('y1', (pa.y * INTERNAL_H).toFixed(1));
+            lineEl.setAttribute('x2', (pb.x * INTERNAL_W).toFixed(1));
+            lineEl.setAttribute('y2', (pb.y * INTERNAL_H).toFixed(1));
           }
+        }
 
-          newsCorrsRef.current.forEach((c, idx) => {
-            const pa = next[c.a];
-            const pb = next[c.b];
-            const lineEl = newsLineRefs.current[`news-${idx}`];
-            if (pa && pb && lineEl) {
-              lineEl.setAttribute('x1', (pa.x * INTERNAL_W).toFixed(2));
-              lineEl.setAttribute('y1', (pa.y * INTERNAL_H).toFixed(2));
-              lineEl.setAttribute('x2', (pb.x * INTERNAL_W).toFixed(2));
-              lineEl.setAttribute('y2', (pb.y * INTERNAL_H).toFixed(2));
-            }
-          });
+        const newsCorrs = newsCorrsRef.current;
+        for (let i = 0; i < newsCorrs.length; i++) {
+          const c = newsCorrs[i];
+          const k = `news-${i}`;
+          const lineEl = newsLineRefs.current[k];
+          const pa = nextPos[c.a];
+          const pb = nextPos[c.b];
+          if (lineEl && pa && pb) {
+            lineEl.setAttribute('x1', (pa.x * INTERNAL_W).toFixed(1));
+            lineEl.setAttribute('y1', (pa.y * INTERNAL_H).toFixed(1));
+            lineEl.setAttribute('x2', (pb.x * INTERNAL_W).toFixed(1));
+            lineEl.setAttribute('y2', (pb.y * INTERNAL_H).toFixed(1));
+          }
         }
       }
+
       animFrameRef.current = requestAnimationFrame(animate);
     }
 
     animFrameRef.current = requestAnimationFrame(animate);
-    return () => cancelAnimationFrame(animFrameRef.current);
+    return () => {
+      if (animFrameRef.current) cancelAnimationFrame(animFrameRef.current);
+    };
   }, [allAssets.length]);
 
-  function getPos(id) {
+  const getPos = (id) => {
     const p = positionsRef.current[id] || INITIAL_POSITIONS[id];
-    if (!p) return null;
-    return { x: p.x * INTERNAL_W, y: p.y * INTERNAL_H };
-  }
+    return p ? { x: p.x * INTERNAL_W, y: p.y * INTERNAL_H } : null;
+  };
 
-  function formatAssetTooltipMeta(asset) {
-    const hasPrice = asset.status !== 'unavailable' && typeof asset.price === 'number' && Number.isFinite(asset.price);
-    const rawChg = asset.changePercent ?? asset.change;
-    const chg = asset.status !== 'unavailable' && typeof rawChg === 'number' && Number.isFinite(rawChg) ? rawChg : null;
-    const ts = typeof asset.quoteTs === 'number' && Number.isFinite(asset.quoteTs)
-      ? asset.quoteTs
-      : (typeof asset.timestamp === 'number' && Number.isFinite(asset.timestamp) ? asset.timestamp : null);
-    const asOf = ts
-      ? new Date(ts).toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', second: '2-digit', timeZoneName: 'short' })
-      : '—';
-    const isFxInr = (asset.sector || '').toLowerCase() === 'forex' && (
-      asset.symbol?.endsWith('/INR') || asset.symbol?.endsWith('INR')
-    );
-    const formattedPrice = formatPrice(asset.price, asset.symbol, asset.sector);
-    return {
-      symbol: asset.symbol,
-      priceDisplay: hasPrice ? (isFxInr ? `₹${formattedPrice}` : formattedPrice) : '—',
-      changeDisplay: chg === null ? '—' : formatChange(chg),
-      source: asset.source || 'Worker',
-      asOf,
-    };
-  }
-
-  function handleNodeEnter(asset) {
+  const handleNodeMouseEnter = (e, asset) => {
     setHovered(asset.id);
-    clearTimeout(currTimerRef.current);
-    const hasPrice = asset.status !== 'unavailable' && typeof asset.price === 'number' && Number.isFinite(asset.price) && asset.price > 0;
-    if (convertPrice && hasPrice) setConversions(convertPrice(asset));
-    else setConversions([]);
-    setAssetTooltipInfo(formatAssetTooltipMeta(asset));
-
-    currTimerRef.current = setTimeout(() => {
-      const pos = positionsRef.current[asset.id] || INITIAL_POSITIONS[asset.id];
-      if (!pos || !containerRef.current || !hasPrice) return;
+    if (containerRef.current) {
       const rect = containerRef.current.getBoundingClientRect();
-      const scale = INTERNAL_W > 0 ? rect.width / INTERNAL_W : 1;
-      const absX = rect.left + pos.x * INTERNAL_W * scale;
-      const absY = rect.top + pos.y * INTERNAL_H * scale;
-      
-      const nr = getAssetRadius(asset);
-      const tipX = absX + nr * scale + 8 > window.innerWidth - 300
-        ? absX - 296
-        : absX + nr * scale + 8;
-      const tipY = Math.min(absY - 10, window.innerHeight - 340);
-      setCurrencyPos({ x: tipX, y: tipY });
+      setCurrencyPos({
+        x: e.clientX - rect.left,
+        y: e.clientY - rect.top,
+      });
+      const convs = convertPrice ? convertPrice(asset.price, asset.symbol, asset.sector) : [];
+      setConversions(convs);
+      setAssetTooltipInfo({
+        symbol: asset.symbol,
+        name: asset.name,
+        price: asset.price,
+        change: asset.change,
+        sector: asset.sector,
+        source: asset.source || 'Yahoo Finance',
+        quoteTs: asset.quoteTs || asset.timestamp,
+        status: asset.status,
+      });
       setShowCurrency(true);
-    }, 250);
-  }
+    }
+  };
 
-  function handleNodeLeave() {
+  const handleNodeMouseMove = (e) => {
+    if (containerRef.current && showCurrency) {
+      const rect = containerRef.current.getBoundingClientRect();
+      setCurrencyPos({
+        x: e.clientX - rect.left,
+        y: e.clientY - rect.top,
+      });
+    }
+  };
+
+  const handleNodeMouseLeave = () => {
     setHovered(null);
-    clearTimeout(currTimerRef.current);
     setShowCurrency(false);
-    setAssetTooltipInfo(null);
-  }
+  };
+
+  const handleNodeClick = (asset) => {
+    setSelected(prev => prev === asset.id ? null : asset.id);
+    if (onSelectAsset) onSelectAsset(asset);
+  };
 
   return (
-    <div ref={containerRef} style={s.wrap}>
+    <div style={s.wrap} ref={containerRef}>
       <svg
         viewBox={`0 0 ${INTERNAL_W} ${INTERNAL_H}`}
         style={s.svg}
+        preserveAspectRatio="xMidYMid meet"
       >
         <defs>
-          <radialGradient id="orbHighlight" cx="35%" cy="30%" r="60%">
-            <stop offset="0%" stopColor="rgba(255,255,255,0.35)" />
-            <stop offset="50%" stopColor="rgba(255,255,255,0.08)" />
-            <stop offset="100%" stopColor="rgba(255,255,255,0)" />
+          {/* Liquid Glass Wave Filter & Geometry */}
+          <path id="liquidWave" d="M 0 0 Q 22.5 -8 45 0 T 90 0 T 135 0 T 180 0 V 45 H 0 Z" />
+
+          {/* Spherical specular highlight */}
+          <radialGradient id="orbHighlight" cx="32%" cy="28%" r="65%">
+            <stop offset="0%" stopColor="#ffffff" stopOpacity="0.45" />
+            <stop offset="30%" stopColor="#ffffff" stopOpacity="0.15" />
+            <stop offset="60%" stopColor="#ffffff" stopOpacity="0.0" />
           </radialGradient>
 
+          {/* Rim depth shadow */}
           <radialGradient id="orbDepth" cx="50%" cy="50%" r="50%">
-            <stop offset="0%" stopColor="rgba(0,0,0,0)" />
-            <stop offset="75%" stopColor="rgba(0,0,0,0)" />
-            <stop offset="100%" stopColor="rgba(0,0,0,0.25)" />
+            <stop offset="75%" stopColor="#000000" stopOpacity="0" />
+            <stop offset="100%" stopColor="#000000" stopOpacity="0.55" />
           </radialGradient>
 
-          <filter id="ringGlow" x="-50%" y="-50%" width="200%" height="200%">
-            <feGaussianBlur stdDeviation="3" result="blur"/>
-            <feMerge>
-              <feMergeNode in="blur"/>
-              <feMergeNode in="SourceGraphic"/>
-            </feMerge>
-          </filter>
-
-          <path id="liquidWave" d="M -90 0 C -75 -6, -60 -6, -45 0 C -30 6, -15 6, 0 0 C 15 -6, 30 -6, 45 0 C 60 6, 75 6, 90 0 V 60 H -90 Z" />
+          {/* Node clip paths */}
+          {allAssets.map(asset => {
+            const nr = getAssetRadius(asset);
+            return (
+              <clipPath key={`clip-${asset.id}`} id={`clip-${asset.id}`}>
+                <circle r={nr} cx="0" cy="0" />
+              </clipPath>
+            );
+          })}
         </defs>
 
-        {/* Zone boundaries — 5-zone category circles inside viewBox="0 0 1000 500" */}
+        {/* Category Zones (<ellipse>) */}
         {ZONES.map(z => {
+          const sec = SECTOR_META[z.id] || {};
           const cx = z.cx * INTERNAL_W;
           const cy = z.cy * INTERNAL_H;
-          const r = z.r;
+          const rx = z.rx * INTERNAL_W;
+          const ry = z.ry * INTERNAL_H;
+
           return (
             <g key={z.id}>
               <ellipse
-                cx={cx} cy={cy} rx={r} ry={r}
-                fill="none"
-                stroke={z.color}
-                strokeWidth="0.8"
-                opacity="0.25"
-                strokeDasharray="4 3"
+                cx={cx} cy={cy} rx={rx} ry={ry}
+                fill="rgba(255,255,255,0.015)"
+                stroke={sec.color || z.color}
+                strokeWidth="1"
+                strokeDasharray="4 4"
+                opacity="0.35"
               />
               <text
-                x={cx} y={cy - r + 18}
+                x={cx}
+                y={cy - ry + 18}
                 textAnchor="middle"
-                fontSize="10" fontFamily="var(--font-mono)" fontWeight="700"
-                fill={z.color} opacity="0.75"
-                letterSpacing="0.1em"
+                fontFamily="var(--font-mono)"
+                fontSize="9"
+                fontWeight="700"
+                fill={sec.color || z.color}
+                letterSpacing="0.12em"
+                opacity="0.75"
               >
                 {z.label}
               </text>
@@ -610,7 +619,7 @@ export default function MarketMap({ allAssets, hotspots = [], onSelectAsset, con
           );
         })}
 
-        {/* Correlation lines — labeled illustrative */}
+        {/* Correlation lines — labeled illustrative (Requirement 4f) */}
         {visibleCorrs.map((c, i) => {
           const pa = getPos(c.a);
           const pb = getPos(c.b);
@@ -661,92 +670,84 @@ export default function MarketMap({ allAssets, hotspots = [], onSelectAsset, con
           );
         })}
 
-        {/* Asset nodes — Frosted Glass Orbs */}
+        {/* Asset Nodes */}
         {allAssets.map(asset => {
-          const pos = getPos(asset.id);
-          if (!pos) return null;
-          
           const nr = getAssetRadius(asset);
-          const meta = SECTOR_META[asset.sector] || {};
-          const rawChg = asset.changePercent ?? asset.change;
-          const hasChg = asset.status !== 'unavailable' && typeof rawChg === 'number' && Number.isFinite(rawChg);
-          const isFlat = hasChg && Math.abs(rawChg) < 0.005;
-          const isUp = hasChg && rawChg >= 0;
+          const initP = positionsRef.current[asset.id] || INITIAL_POSITIONS[asset.id] || { x: 0.5, y: 0.5 };
+          const isHov = hovered === asset.id;
+          const isSel = selected === asset.id;
+          const isAct = isHov || isSel;
           const isHot = hotspotIds.has(asset.id);
-          const isAct = activeId === asset.id;
-          const absChg = hasChg ? Math.abs(rawChg) : 0;
-          const intensity = Math.min(1, absChg / 8);
+          const stale = (typeof isStale === 'function' ? isStale(asset.id, asset.sector) : Boolean(isStale))
+            || asset.status === 'stale'
+            || asset.status === 'unavailable';
 
-          // Sentiment ring color
-          const ringColor = (!hasChg || isFlat)
-            ? 'rgba(139,148,158,0.45)'
-            : isUp
-            ? `rgba(52,211,153,${0.5 + intensity * 0.5})`
-            : `rgba(248,113,113,${0.5 + intensity * 0.5})`;
+          const hasPrice = asset.status !== 'unavailable' && typeof asset.price === 'number' && Number.isFinite(asset.price) && asset.price > 0;
+          const rawChg = asset.changePercent ?? asset.change;
+          const hasChg = hasPrice && typeof rawChg === 'number' && Number.isFinite(rawChg);
+          const isFlat = hasChg && Math.abs(rawChg) < 0.005;
+          const isUp = hasChg && rawChg > 0;
+
+          // Requirement 4e: Muted node when price or change is null/unavailable
+          const isMuted = !hasPrice;
+
+          const baseColor = (!hasChg || isFlat)
+            ? '#64748b'
+            : (isUp ? '#10b981' : '#ef4444');
+
           const waveBright = (!hasChg || isFlat)
-            ? 'rgba(139,148,158,0.35)'
-            : (isUp ? 'rgba(52,211,153,0.55)' : 'rgba(248,113,113,0.55)');
-          const waveSoft = (!hasChg || isFlat)
-            ? 'rgba(139,148,158,0.18)'
-            : (isUp ? 'rgba(52,211,153,0.3)' : 'rgba(248,113,113,0.3)');
-          const ringWidth = (!hasChg || isFlat) ? 1.2 : (1.5 + intensity * 2.5);
-          const sectorColor = meta.color || '#6b7280';
+            ? 'rgba(100,116,139,0.35)'
+            : (isUp ? 'rgba(16,185,129,0.38)' : 'rgba(239,68,68,0.38)');
 
-          const isForexNode = (asset.sector || '').toLowerCase() === 'forex';
+          const waveSoft = (!hasChg || isFlat)
+            ? 'rgba(100,116,139,0.18)'
+            : (isUp ? 'rgba(16,185,129,0.20)' : 'rgba(239,68,68,0.20)');
+
+          const sectorColor = SECTOR_META[asset.sector]?.color || '#4d9eff';
           const dSym = getMapNodeLabel(asset);
+          const isForexNode = (asset.sector || '').toLowerCase() === 'forex';
           const tipMeta = formatAssetTooltipMeta(asset);
 
-          const stale = (isStale && isStale(asset.id, asset.sector)) || asset.status === 'stale' || asset.status === 'unavailable';
-          const staleOpacity = stale ? 0.35 : 1;
-
           return (
-            <g key={asset.id}
+            <g
+              key={asset.id}
               ref={el => {
-                if (el) nodeGroupRefs.current[asset.id] = el;
-                else delete nodeGroupRefs.current[asset.id];
+                if (el) nodeGRefs.current[asset.id] = el;
+                else delete nodeGRefs.current[asset.id];
               }}
-              transform={`translate(${pos.x},${pos.y})`}
-              style={{ cursor:'pointer', opacity: staleOpacity, transition: 'opacity 0.4s' }}
-              onMouseEnter={() => handleNodeEnter(asset)}
-              onMouseLeave={handleNodeLeave}
-              onClick={() => {
-                setSelected(p => p === asset.id ? null : asset.id);
-                if (onSelectAsset) onSelectAsset(asset);
+              transform={`translate(${(initP.x * INTERNAL_W).toFixed(1)}, ${(initP.y * INTERNAL_H).toFixed(1)})`}
+              style={{
+                cursor: 'pointer',
+                opacity: isMuted ? 0.35 : (stale ? 0.55 : 1),
+                transition: 'opacity 0.2s',
               }}
+              onMouseEnter={(e) => handleNodeMouseEnter(e, asset)}
+              onMouseMove={handleNodeMouseMove}
+              onMouseLeave={handleNodeMouseLeave}
+              onClick={() => handleNodeClick(asset)}
             >
               <title>{`${tipMeta.symbol} · ${tipMeta.priceDisplay} (${tipMeta.changeDisplay}) · ${tipMeta.source} · As of ${tipMeta.asOf}`}</title>
-              {/* Hotspot pulse ring */}
+              {/* Hotspot radar pulse */}
               {isHot && (
-                <circle r={nr + 3} fill="none"
-                  stroke={ringColor}
-                  strokeWidth="1" opacity="0.6">
-                  <animate attributeName="r"
-                    from={nr + 2} to={nr + 7} dur="2s" repeatCount="indefinite"/>
-                  <animate attributeName="opacity"
-                    from="0.6" to="0" dur="2s" repeatCount="indefinite"/>
+                <circle r={nr + 8} fill="none"
+                  stroke="var(--accent)" strokeWidth="1.2"
+                  strokeDasharray="4 2" opacity="0.7">
+                  <animate attributeName="r" values={`${nr + 4};${nr + 14};${nr + 4}`} dur="2s" repeatCount="indefinite" />
+                  <animate attributeName="opacity" values="0.7;0;0.7" dur="2s" repeatCount="indefinite" />
                 </circle>
               )}
 
-              {/* Sentiment glow ring */}
-              <circle r={nr + 2} fill="none"
-                stroke={ringColor}
-                strokeWidth={ringWidth}
-                opacity={isAct ? 1 : 0.7}
-                filter={isAct || isHot ? 'url(#ringGlow)' : 'none'}
-              >
-                <animate attributeName="opacity"
-                  values={isAct ? '1;0.8;1' : '0.7;0.4;0.7'}
-                  dur="3s" repeatCount="indefinite"/>
-              </circle>
-
-              <clipPath id={`clip-${asset.id}`}>
-                <circle r={nr} />
-              </clipPath>
-
-              {/* Orb body */}
+              {/* Outer boundary ring */}
               <circle r={nr}
-                fill={`color-mix(in srgb, ${sectorColor} 20%, #1a1d23 80%)`}
-                stroke="rgba(255,255,255,0.08)"
+                fill="var(--bg-card, #0f172a)"
+                stroke={isAct ? '#ffffff' : (stale ? 'var(--text-dim)' : baseColor)}
+                strokeWidth={isAct ? '2' : '1'}
+                style={{ filter: isAct ? `drop-shadow(0 0 8px ${baseColor})` : 'none' }}
+              />
+
+              {/* Glass base reflection */}
+              <circle r={nr - 1} fill="rgba(255,255,255,0.04)"
+                stroke="rgba(255,255,255,0.12)"
                 strokeWidth="0.5"
               />
 
@@ -794,7 +795,7 @@ export default function MarketMap({ allAssets, hotspots = [], onSelectAsset, con
                 {dSym}
               </text>
 
-              {/* Text: Change % */}
+              {/* Text: Change % — Requirement 4e: shows % when non-null; null shows "—" */}
               <text textAnchor="middle" dominantBaseline="central" y={nr * 0.35}
                 fontSize={Math.max(8, nr / 2.8)}
                 fontFamily="var(--font-mono)" fontWeight="600"
