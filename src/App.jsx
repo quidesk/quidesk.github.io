@@ -20,16 +20,13 @@ import { Share2 } from 'lucide-react'
 
 const VALID_TABS = ['map', 'equities', 'crypto', 'metals', 'energy', 'forex', 'compare', 'watchlist', 'portfolio'];
 
-const BUILD_SHA = typeof BUILD_SHA !== 'undefined'
-  ? BUILD_SHA
-  : (typeof __BUILD_SHA__ !== 'undefined'
-    ? __BUILD_SHA__
-    : (import.meta.env?.VITE_BUILD_SHA || 'dev'));
-const BUILD_TIME = typeof BUILD_TIME !== 'undefined'
-  ? BUILD_TIME
-  : (typeof __BUILD_TIME__ !== 'undefined'
-    ? __BUILD_TIME__
-    : (import.meta.env?.VITE_BUILD_TIME || ''));
+const APP_BUILD_SHA = typeof __BUILD_SHA__ !== 'undefined'
+  ? __BUILD_SHA__
+  : (import.meta.env?.VITE_BUILD_SHA || 'dev');
+
+const APP_BUILD_TIME = typeof __BUILD_TIME__ !== 'undefined'
+  ? __BUILD_TIME__
+  : (import.meta.env?.VITE_BUILD_TIME || '');
 
 function formatBuildIdentity(sha, iso) {
   if (!iso) return `build ${sha}`;
@@ -353,8 +350,8 @@ export default function App() {
                 </div>
               );
             })()}
-            <span style={fS.text} title={BUILD_TIME ? `Built ${BUILD_TIME}` : undefined}>
-              {formatBuildIdentity(BUILD_SHA, BUILD_TIME)}
+            <span style={fS.text} title={APP_BUILD_TIME ? `Built ${APP_BUILD_TIME}` : undefined}>
+              {formatBuildIdentity(APP_BUILD_SHA, APP_BUILD_TIME)}
             </span>
             <span style={fS.text}>
               Last tick: {lastUpdate ? formatHealthTimestamp(lastUpdate) : '—'}
