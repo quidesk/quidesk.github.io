@@ -86,14 +86,13 @@ export default function Navbar({
         {/* Tier 1: Sovereign Brand Crown & Live Telemetry */}
         <div style={s.heroTopTier}>
           {/* Brand — Hero Emblem + Sovereign Typography */}
-          <button style={s.heroBrand} onClick={() => setActive('map')} title="Quidesk — Sovereign Terminal">
+          <button style={s.heroBrand} onClick={() => setActive('map')} title="Quidesk — Live Market Intelligence Terminal">
             <div style={s.logoGlowWrapper}>
               <Logo size={42} />
             </div>
             <div style={s.heroBrandText}>
               <div style={s.heroTitleRow}>
-                <span style={s.heroTitle} className="qd-brand-wordmark">QUIDESK</span>
-                <span style={s.heroBadge}>SOVEREIGN EDITION</span>
+                <span style={s.heroTitle} className="qd-brand-wordmark">Quidesk</span>
                 <div
                   id="qd-stream-status"
                   className={`qd-status-pill ${feedStatus.key === 'live' ? 'is-live' : ''}`}
@@ -236,11 +235,8 @@ export default function Navbar({
           </div>
           <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-start', gap: '2px' }}>
             <div style={{ display: 'flex', alignItems: 'baseline', gap: '6px' }}>
-              <span style={{ fontFamily: 'var(--font-display)', fontSize: '18px', fontWeight: 900, color: '#fff', letterSpacing: '0.06em', lineHeight: 1 }}>
-                QUIDESK
-              </span>
-              <span style={{ fontFamily: 'var(--font-mono)', fontSize: '8px', color: '#D4AF37', fontWeight: 700, letterSpacing: '0.12em', background: 'rgba(212,175,55,0.1)', border: '1px solid rgba(212,175,55,0.3)', borderRadius: '3px', padding: '1px 5px' }}>
-                SOVEREIGN
+              <span style={{ fontFamily: 'var(--font-brand)', fontSize: '19px', fontWeight: 800, color: '#fff', letterSpacing: '-0.02em', lineHeight: 1 }}>
+                Quidesk
               </span>
             </div>
             <div style={{ display: 'flex', alignItems: 'center', gap: '8px', paddingTop: '2px' }}>
@@ -357,11 +353,11 @@ const s = {
     flexWrap: 'wrap',
   },
   heroTitle: {
-    fontFamily: 'var(--font-display)',
+    fontFamily: 'var(--font-brand)',
     fontSize: '26px',
     fontWeight: 800,
     color: '#ffffff',
-    letterSpacing: '0.16em',
+    letterSpacing: '-0.025em',
     lineHeight: 1,
     whiteSpace: 'nowrap',
     textShadow: '0 2px 10px rgba(0,0,0,0.5)',

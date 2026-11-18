@@ -1,4 +1,4 @@
-@import url('https://fonts.googleapis.com/css2?family=DM+Mono:ital,wght@0,300;0,400;0,500;1,300&family=Syne:wght@400;500;600;700;800&family=Inter:wght@300;400;500;600&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=DM+Mono:ital,wght@0,300;0,400;0,500;1,300&family=Plus+Jakarta+Sans:wght@500;600;700;800&family=Syne:wght@400;500;600;700;800&family=Inter:wght@300;400;500;600&display=swap');
 
 :root {
   /* ═══ BESPOKE ARCHITECTURAL TOKENS (Quidesk Sovereign V3) ═══════════════ */
@@ -56,6 +56,7 @@
   --sector-energy:     #ff7849;
   --sector-forex:      #38bdf8;
 
+  --font-brand:   'Plus Jakarta Sans', var(--font-display), sans-serif;
   --font-display: 'Syne', sans-serif;
   --font-mono:    'DM Mono', monospace;
   --font-body:    'Inter', sans-serif;
@@ -232,9 +233,10 @@ header, .hero-nav-header {
   border-bottom: 1px solid var(--border-subtle);
 }
 
-/* Unstretched Wordmark */
+/* Premium Wordmark */
 .qd-brand-wordmark {
-  letter-spacing: 0.16em !important;
+  font-family: var(--font-brand) !important;
+  letter-spacing: -0.025em !important;
   font-weight: 800 !important;
   transform: none !important;
 }
