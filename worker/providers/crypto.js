@@ -22,6 +22,30 @@ export const CRYPTO_DEFINITIONS = {
   ada: { id: 'ada', symbol: 'ADA', binance: 'ADAUSDT', kraken: 'ADAUSD', krakenAlt: 'ADA', cc: 'ADA', cg: 'cardano' },
 };
 
+async function fetchBinanceSparkline(binanceSymbol, timeoutMs = 4500) {
+  try {
+    const url = `https://data-api.binance.vision/api/v3/klines?symbol=${encodeURIComponent(binanceSymbol)}&interval=30m&limit=48`;
+    const res = await fetch(url, {
+      headers: { 'Accept': 'application/json' },
+      signal: AbortSignal.timeout(timeoutMs),
+    });
+    if (!res.ok) return [];
+    const klines = await res.json();
+    if (!Array.isArray(klines)) return [];
+    const points = [];
+    for (const k of klines) {
+      const ts = Number(k?.[0]);
+      const close = parseFloat(k?.[4]);
+      if (Number.isFinite(ts) && ts > 0 && Number.isFinite(close) && close > 0) {
+        points.push([ts, close]);
+      }
+    }
+    return points;
+  } catch {
+    return [];
+  }
+}
+
 /**
  * Fetch from Binance Vision (Tier 1)
  */
@@ -38,6 +62,11 @@ export async function fetchBinanceTier(neededSymbols, timeoutMs = 4000) {
   if (!res.ok) throw new Error(`Binance HTTP ${res.status}`);
   const json = await res.json();
   if (!Array.isArray(json)) throw new Error('Invalid Binance payload');
+
+  const sparkEntries = await Promise.all(
+    binanceSymbols.map(async (sym) => [sym, await fetchBinanceSparkline(sym)])
+  );
+  const sparkMap = Object.fromEntries(sparkEntries);
 
   const results = {};
   for (const item of json) {
@@ -61,6 +90,7 @@ export async function fetchBinanceTier(neededSymbols, timeoutMs = 4000) {
         source: 'binance',
         changeBasis: 'rolling_24h',
         session: '24x7',
+        spark1d: sparkMap[item.symbol] || [],
       };
     }
   }

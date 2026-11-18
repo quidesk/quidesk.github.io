@@ -8,7 +8,7 @@ const BASE_POLL_INTERVAL_MS = 20000; // 20s
 const MAX_BACKOFF_MS = 60000;        // 60s
 
 /**
- * Creates initial skeleton asset map with zero numbers and status 'unavailable'.
+ * Creates initial skeleton asset map with null numbers and status 'unavailable'.
  */
 function buildSkeletonMap() {
   const map = {};
@@ -36,7 +36,7 @@ function buildSkeletonMap() {
 
 /**
  * useMarketData Hook
- * 
+ *
  * Exclusively queries the Cloudflare Worker feed (/v1/quotes).
  * Pauses when the tab is hidden or when isLive is toggled off.
  * Implements exponential backoff on errors and AbortController request cancellation.
@@ -75,7 +75,7 @@ export function useMarketData() {
       const payload = await fetchWorkerQuotes({ signal: controller.signal });
       if (payload && payload.assets) {
         applySnapshot(payload);
-        setBackoffDelay(BASE_POLL_INTERVAL_MS); // Reset backoff on success
+        setBackoffDelay(BASE_POLL_INTERVAL_MS);
       }
       if (typeof fetchWorkerHealth === 'function') {
         fetchWorkerHealth()
@@ -95,7 +95,6 @@ export function useMarketData() {
           })
           .catch(() => null);
       }
-      // Exponential backoff
       setBackoffDelay((prev) => Math.min(prev * 2, MAX_BACKOFF_MS));
     }
   }, [applySnapshot, setWorkerError, setHealth]);
@@ -115,12 +114,10 @@ export function useMarketData() {
 
     document.addEventListener('visibilitychange', handleVisibilityChange);
 
-    // Initial fetch
     if (isTabVisible) {
       executeFetch();
     }
 
-    // Schedule next poll
     const scheduleNext = () => {
       if (pollTimerRef.current) clearTimeout(pollTimerRef.current);
       pollTimerRef.current = setTimeout(() => {
@@ -141,22 +138,48 @@ export function useMarketData() {
     };
   }, [isLive, backoffDelay, executeFetch]);
 
-  // Derive consolidated asset list
+  // Derive consolidated asset list with hydrated chartData and 24H history
   const allAssets = useMemo(() => {
     const baseMap = buildSkeletonMap();
     Object.values(storeQuotes).forEach((q) => {
       if (q && q.id && baseMap[q.id.toLowerCase()]) {
+        const key = q.id.toLowerCase();
         const ts = typeof q.quoteTs === 'number' && Number.isFinite(q.quoteTs)
           ? q.quoteTs
           : (typeof q.timestamp === 'number' && Number.isFinite(q.timestamp) ? q.timestamp : null);
-        baseMap[q.id.toLowerCase()] = {
-          ...baseMap[q.id.toLowerCase()],
+
+        const spark = Array.isArray(q.spark1d) ? q.spark1d : [];
+        const chartData = spark
+          .map((pt, idx) => {
+            if (Array.isArray(pt)) {
+              const rawTime = pt[0];
+              const label = typeof rawTime === 'number' && rawTime > 1e9
+                ? new Date(rawTime > 1e12 ? rawTime : rawTime * 1000).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
+                : String(rawTime ?? idx);
+              return { time: label, value: pt[1], ts: typeof rawTime === 'number' ? rawTime : null };
+            }
+            if (pt && typeof pt === 'object') {
+              return { time: pt.time ?? String(idx), value: pt.value ?? pt.close ?? pt.price };
+            }
+            return { time: String(idx), value: Number(pt) };
+          })
+          .filter((pt) => typeof pt.value === 'number' && Number.isFinite(pt.value) && pt.value > 0);
+
+        const existingHist = q.history && typeof q.history === 'object' && !Array.isArray(q.history)
+          ? q.history
+          : baseMap[key].history;
+
+        baseMap[key] = {
+          ...baseMap[key],
           ...q,
           timestamp: ts,
-          chartData: (q.spark1d || []).map((pt) => ({
-            time: pt[0],
-            value: pt[1],
-          })),
+          chartData,
+          history: {
+            ...existingHist,
+            '24H': Array.isArray(existingHist?.['24H']) && existingHist['24H'].length > 0
+              ? existingHist['24H']
+              : chartData,
+          },
         };
       }
     });

@@ -7,6 +7,7 @@
     <link rel="icon" type="image/png" href="/logo.png" />
     <link rel="apple-touch-icon" href="/logo.png" />
     <link rel="manifest" href="/site.webmanifest" />
+    <script src="https://cdn.jsdelivr.net/npm/decimal.js@10.4.3/decimal.min.js"></script>
     <meta name="mobile-web-app-capable" content="yes" />
     <meta name="apple-mobile-web-app-capable" content="yes" />
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
@@ -108,7 +109,7 @@
             "Energy commodity market pricing (WTI, Brent, Natural Gas)",
             "Global foreign exchange triangulation",
             "Cross-asset correlation analysis",
-            "Localized IP-based multi-currency conversion",
+            "Localized multi-currency conversion",
             "No signup, zero tracking privacy"
           ],
           "screenshot": "https://quidesk.github.io/og-image.png",
@@ -130,52 +131,6 @@
             "commodity spot prices",
             "forex rates"
           ]
-        },
-        {
-          "@type": "FAQPage",
-          "@id": "https://quidesk.github.io/#faq",
-          "mainEntity": [
-            {
-              "@type": "Question",
-              "name": "What is Quidesk?",
-              "acceptedAnswer": {
-                "@type": "Answer",
-                "text": "Quidesk is an open, high-performance financial intelligence terminal providing real-time pricing, 3D market correlation maps, OSINT news signal tracking, and portfolio analysis across Equities, Cryptocurrencies, Precious Metals, Energy, and Forex."
-              }
-            },
-            {
-              "@type": "Question",
-              "name": "Is Quidesk free to use?",
-              "acceptedAnswer": {
-                "@type": "Answer",
-                "text": "Yes, Quidesk is 100% free with no subscription, no mandatory account registration, and zero trackers. All live data and terminal features are accessible instantly."
-              }
-            },
-            {
-              "@type": "Question",
-              "name": "How often are prices updated on Quidesk?",
-              "acceptedAnswer": {
-                "@type": "Answer",
-                "text": "Prices are streamed in real time via Cloudflare Edge workers and WebSocket connections to major global exchanges including Binance Spot, Yahoo Finance, and continuous Forex feeds with sub-second to sub-minute latency."
-              }
-            },
-            {
-              "@type": "Question",
-              "name": "What markets does Quidesk cover?",
-              "acceptedAnswer": {
-                "@type": "Answer",
-                "text": "Quidesk tracks Equities (SPY, QQQ, AAPL, NVDA, TSLA), Cryptocurrencies (Bitcoin, Ethereum, Solana, BNB, XRP, ADA), Precious Metals (Gold, Silver, Platinum), Energy Commodities (WTI Crude, Brent, Natural Gas), and major Forex pairs."
-              }
-            },
-            {
-              "@type": "Question",
-              "name": "Does Quidesk offer localized currency conversion?",
-              "acceptedAnswer": {
-                "@type": "Answer",
-                "text": "Yes, Quidesk automatically detects the visitor's geographic region to display synchronized localized prices alongside standard USD benchmarks across 30+ sovereign fiat currencies."
-              }
-            }
-          ]
         }
       ]
     }
@@ -191,7 +146,7 @@
     <meta http-equiv="Permissions-Policy" content="accelerometer=(), camera=(), geolocation=(), gyroscope=(), magnetometer=(), microphone=(), payment=(), usb=()" />
     <meta http-equiv="Content-Security-Policy" content="
       default-src 'self';
-      script-src 'self' 'unsafe-inline' https://www.googletagmanager.com https://www.google-analytics.com;
+      script-src 'self' 'unsafe-inline' https://cdn.jsdelivr.net https://www.googletagmanager.com https://www.google-analytics.com;
       style-src 'self' 'unsafe-inline' https://cdn.jsdelivr.net https://fonts.googleapis.com;
       font-src 'self' https://fonts.gstatic.com;
       img-src 'self' data: blob: https:;

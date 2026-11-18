@@ -105,7 +105,12 @@ export default {
       if (path === '/v1/quotes' || path === '/api/market') {
         if (cache) {
           const cached = await cache.match(cacheKey);
-          if (cached) return withHeaders(cached, allowedOrigin);
+          if (cached) {
+            if (!_lastQuotesCache) {
+              try { _lastQuotesCache = await cached.clone().json(); } catch {}
+            }
+            return withHeaders(cached, allowedOrigin);
+          }
         }
 
         const data = await handleQuotes(request, env);
@@ -141,13 +146,15 @@ export default {
         }
 
         const historyData = await handleHistory(request, env);
+        const status = historyData?.statusCode || 200;
+        const isSuccess = status === 200 && Array.isArray(historyData?.points) && historyData.points.length > 0;
         const res = withHeaders(
-          new Response(JSON.stringify(historyData)),
+          new Response(JSON.stringify(historyData), { status }),
           allowedOrigin,
-          'public, max-age=300, s-maxage=300, stale-while-revalidate=600'
+          isSuccess ? 'public, max-age=300, s-maxage=300, stale-while-revalidate=600' : 'no-store'
         );
 
-        if (cache && ctx?.waitUntil) {
+        if (cache && isSuccess && ctx?.waitUntil) {
           ctx.waitUntil(cache.put(cacheKey, res.clone()));
         }
         return res;
@@ -175,6 +182,14 @@ export default {
 
       // 5. GET /v1/health
       if (path === '/v1/health') {
+        if (!_lastQuotesCache && cache) {
+          try {
+            const cachedQuotes = await cache.match(new Request(new URL('/v1/quotes', url).toString()));
+            if (cachedQuotes) {
+              _lastQuotesCache = await cachedQuotes.clone().json();
+            }
+          } catch {}
+        }
         const healthData = handleHealth(_lastQuotesCache?.health || {});
         return withHeaders(
           new Response(JSON.stringify(healthData)),

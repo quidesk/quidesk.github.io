@@ -4,38 +4,55 @@ import AssetCard from '../components/AssetCard'
 import DetailChart from '../components/DetailChart'
 import { formatPrice } from '../data/markets'
 
-export default function WatchlistPage({ data, watchlist, allAssets, onToggleWatch, alerts, onAddAlert, onRemoveAlert, convertPrice, formatLocalPrice }) {
+export default function WatchlistPage({
+  watchlist = [],
+  allAssets = [],
+  onToggleWatch,
+  alerts,
+  onAddAlert,
+  onRemoveAlert,
+  convertPrice,
+  formatLocalPrice,
+  isStale,
+}) {
   const [selected, setSelected] = useState(null);
   const [alertModal, setAlertModal] = useState(null);
   const [alertForm, setAlertForm] = useState({ type:'above', price:'' });
 
-  const watched = allAssets.filter(a => watchlist.includes(a.id));
+  const safeWatchlist = Array.isArray(watchlist) ? watchlist : [];
+  const watched = (allAssets || []).filter(a => a && safeWatchlist.includes(a.id));
 
   const handleAddAlert = () => {
-    if (!alertForm.price || isNaN(alertForm.price)) return;
-    onAddAlert({ assetId:alertModal.id, symbol:alertModal.symbol, type:alertForm.type, price:parseFloat(alertForm.price) });
+    if (!alertForm.price || isNaN(alertForm.price) || !alertModal) return;
+    onAddAlert({
+      assetId: alertModal.id,
+      symbol: alertModal.symbol,
+      sector: alertModal.sector,
+      type: alertForm.type,
+      price: parseFloat(alertForm.price),
+    });
     setAlertModal(null);
     setAlertForm({ type:'above', price:'' });
   };
 
   return (
-    <div style={s.page}>
+    <div style={s.page} className="page-wrap">
       <div className="fade-up" style={s.header}>
         <h1 style={s.title}>Watchlist</h1>
         <p style={s.sub}>{watched.length} instruments tracked</p>
       </div>
 
-      {alerts.triggered.length > 0 && (
+      {alerts?.triggered?.length > 0 && (
         <div className="fade-up-1" style={s.alertBanner}>
           <Bell size={14} color="var(--accent)" />
           <span style={s.alertText}>
-            {alerts.triggered.slice(0,2).map(a => `${a.symbol} hit ${formatPrice(a.price, a.symbol, a.sector)}`).join(' · ')}
+            {alerts.triggered.slice(0,2).map(a => `${a.symbol} hit ${formatPrice(a.triggeredPrice ?? a.price, a.symbol, a.sector)}`).join(' · ')}
           </span>
           <button style={s.dismissBtn} onClick={alerts.clearTriggered}>Dismiss</button>
         </div>
       )}
 
-      {alerts.activeAlerts.length > 0 && (
+      {alerts?.activeAlerts?.length > 0 && (
         <div className="fade-up-1" style={s.activePills}>
           <span style={s.activeLabel}>ACTIVE ALERTS</span>
           {alerts.activeAlerts.map(a => (
@@ -90,12 +107,29 @@ export default function WatchlistPage({ data, watchlist, allAssets, onToggleWatc
           <div className="fade-up-2" style={s.grid}>
             {watched.map(asset => (
               <div key={asset.id}>
-                <AssetCard asset={asset} onClick={setSelected} isWatched onToggleWatch={onToggleWatch} convertPrice={convertPrice} formatLocalPrice={formatLocalPrice} />
+                <AssetCard
+                  asset={asset}
+                  onClick={setSelected}
+                  isWatched
+                  onToggleWatch={onToggleWatch}
+                  convertPrice={convertPrice}
+                  formatLocalPrice={formatLocalPrice}
+                  isStale={isStale}
+                />
                 <div style={s.cardActions}>
-                  <button style={s.actionBtn} onClick={() => { setAlertModal(asset); setAlertForm({ type:'above', price: typeof asset.price === 'number' && Number.isFinite(asset.price) ? (asset.price * 1.02).toFixed(2) : '' }); }}>
+                  <button
+                    style={s.actionBtn}
+                    onClick={() => {
+                      setAlertModal(asset);
+                      setAlertForm({
+                        type: 'above',
+                        price: typeof asset.price === 'number' && Number.isFinite(asset.price) ? (asset.price * 1.02).toFixed(2) : '',
+                      });
+                    }}
+                  >
                     <Bell size={10}/> Set Alert
                   </button>
-                  <button style={{ ...s.actionBtn, color:'var(--bear)' }} onClick={() => onToggleWatch(asset.id)}>
+                  <button style={{ ...s.actionBtn, color:'var(--bear)' }} onClick={() => onToggleWatch && onToggleWatch(asset.id)}>
                     <StarOff size={10}/> Remove
                   </button>
                 </div>
@@ -105,7 +139,6 @@ export default function WatchlistPage({ data, watchlist, allAssets, onToggleWatc
         </>
       )}
 
-      {/* Alert modal */}
       {alertModal && (
         <div style={s.overlay} onClick={e => e.target===e.currentTarget && setAlertModal(null)}>
           <div style={s.modal}>

@@ -237,11 +237,28 @@ export async function handleQuotes(request, env) {
     }
   }
 
-  // 5. Assemble All 32 Canonical Quotes + FX Extras (SGD=X + AED 3.6725 peg)
+  // 5. Assemble All 32 Canonical Quotes + FX Extras (SGD=X + AED 3.6725 peg) + Enforce EUR/INR Triangular Parity
   const assets = {};
   for (const [id, def] of Object.entries(ASSET_DEFINITIONS)) {
     const raw = def.sector === 'crypto' ? cryptoQuotes[id] : yahooResults[id];
     assets[id] = buildAssetQuote(def, raw, now);
+  }
+
+  if (
+    assets.eurusd?.price > 0 &&
+    assets.usdinr?.price > 0 &&
+    assets.eurinr
+  ) {
+    const exactEurInr = parseFloat((assets.eurusd.price * assets.usdinr.price).toFixed(2));
+    const prevEurInr = (assets.eurusd.prevClose > 0 && assets.usdinr.prevClose > 0)
+      ? parseFloat((assets.eurusd.prevClose * assets.usdinr.prevClose).toFixed(2))
+      : assets.eurinr.prevClose;
+    assets.eurinr.price = exactEurInr;
+    if (prevEurInr && prevEurInr > 0) {
+      assets.eurinr.prevClose = prevEurInr;
+      assets.eurinr.change = parseFloat((((exactEurInr - prevEurInr) / prevEurInr) * 100).toFixed(2));
+      assets.eurinr.changeStatus = 'available';
+    }
   }
 
   const payload = {

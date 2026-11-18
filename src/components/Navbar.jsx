@@ -27,13 +27,13 @@ export default function Navbar({
   theme,
   onToggleTheme,
   allAssets,
+  onSelectSearchAsset,
   formatLocalPrice,
   lastUpdate,
   generatedAt,
   oldestQuoteTs,
   sourcesHealth,
   isWorkerOnline,
-  connectionStatus,
 }) {
   const [clock, setClock] = useState(new Date())
   const [showGlobalShare, setShowGlobalShare] = useState(false)
@@ -50,9 +50,17 @@ export default function Navbar({
     if (navigator.share) {
       try {
         await navigator.share({ title: 'Quidesk', text: shareText, url: shareUrl })
-      } catch (e) {}
+      } catch {}
     } else {
       setShowGlobalShare(true)
+    }
+  }
+
+  const handleSearchPick = (asset) => {
+    if (onSelectSearchAsset) {
+      onSelectSearchAsset(asset)
+    } else {
+      setActive('map')
     }
   }
 
@@ -64,55 +72,65 @@ export default function Navbar({
   })
   const pillActiveColor = feedStatus.color
 
-  const ageSec = generatedAt
-    ? Math.max(0, Math.floor((Date.now() - new Date(generatedAt).getTime()) / 1000))
-    : null;
-
-  let pillStatusText = '● LIVE';
-  if (!isWorkerOnline || connectionStatus === 'offline' || feedStatus.key === 'offline') {
-    pillStatusText = '● OFFLINE';
-  } else if (feedStatus.key === 'delayed' || (ageSec !== null && ageSec > 60)) {
-    pillStatusText = ageSec !== null ? `● DELAYED ${ageSec}s` : '● DELAYED';
-  } else if (feedStatus.key === 'live') {
-    pillStatusText = '● LIVE';
+  let badgeLabel = '● LIVE';
+  if (!isWorkerOnline || feedStatus.key === 'offline') {
+    badgeLabel = '● OFFLINE';
+  } else if (!isLive || feedStatus.key === 'paused') {
+    badgeLabel = '● PAUSED';
+  } else if (feedStatus.key === 'closed') {
+    badgeLabel = '● CLOSED';
+  } else if (feedStatus.key === 'delayed') {
+    const delaySec = generatedAt ? Math.max(1, Math.floor((Date.now() - new Date(generatedAt).getTime()) / 1000)) : null;
+    badgeLabel = delaySec !== null ? `● DELAYED ${delaySec}s` : '● DELAYED';
   } else {
-    pillStatusText = `● ${feedStatus.label.toUpperCase()}`;
+    badgeLabel = '● LIVE';
   }
 
   return (
     <>
       {/* ── Desktop Hero Header ── */}
       <header style={s.heroNav} className="d-none d-md-block">
-        {/* Tier 1: Sovereign Brand Crown & Live Telemetry */}
         <div style={s.heroTopTier}>
-          {/* Brand — Hero Emblem + Sovereign Typography */}
-          <button style={s.heroBrand} onClick={() => setActive('map')} title="Quidesk — Live Market Intelligence Terminal">
-            <div style={s.logoGlowWrapper}>
-              <Logo size={42} />
-            </div>
-            <div style={s.heroBrandText}>
-              <div style={s.heroTitleRow}>
-                <span style={s.heroTitle} className="qd-brand-wordmark">Quidesk</span>
-                <div
-                  id="qd-stream-status"
-                  className={`qd-status-pill ${feedStatus.key === 'live' ? 'is-live' : ''}`}
-                  style={{
-                    ...s.heroLiveBadge,
-                    background: feedStatus.key === 'live' ? 'rgba(34, 212, 122, 0.08)' : 'rgba(240, 64, 96, 0.08)',
-                    borderColor: feedStatus.key === 'live' ? 'rgba(34, 212, 122, 0.25)' : 'rgba(240, 64, 96, 0.25)',
-                    color: feedStatus.key === 'live' ? 'var(--bull)' : 'var(--bear)',
-                  }}
-                >
-                  <span style={{ ...s.heroLiveText, color: pillActiveColor }}>
-                    {pillStatusText}
-                  </span>
-                </div>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '16px' }}>
+            <button style={s.heroBrand} onClick={() => setActive('map')} title="Quidesk — Live Market Intelligence Terminal">
+              <div style={s.logoGlowWrapper}>
+                <Logo size={42} />
               </div>
-              <span style={s.heroTagline}>
-                Live Market Intelligence, served neat and easy
+              <div style={s.heroBrandText}>
+                <div style={s.heroTitleRow}>
+                  <span style={s.heroTitle} className="qd-brand-wordmark">Quidesk</span>
+                </div>
+                <span style={s.heroTagline}>
+                  Live Market Intelligence, served neat and easy
+                </span>
+              </div>
+            </button>
+
+            <button
+              type="button"
+              id="qd-stream-status"
+              onClick={() => setIsLive && setIsLive(v => !v)}
+              title={`Feed status: ${feedStatus.label} (click to ${isLive ? 'pause' : 'resume'})`}
+              className={`qd-status-pill ${feedStatus.key === 'live' ? 'is-live' : ''}`}
+              style={{
+                ...s.heroLiveBadge,
+                cursor: 'pointer',
+                background: feedStatus.key === 'live' ? 'rgba(34, 212, 122, 0.08)' : 'rgba(240, 64, 96, 0.08)',
+                borderColor: feedStatus.key === 'live' ? 'rgba(34, 212, 122, 0.25)' : 'rgba(240, 64, 96, 0.25)',
+                color: pillActiveColor,
+              }}
+            >
+              <span style={{
+                ...s.heroLiveDot,
+                background: pillActiveColor,
+                boxShadow: feedStatus.key === 'live' ? '0 0 8px var(--bull)' : 'none',
+                animation: feedStatus.key === 'live' ? 'pulseDot 1.6s ease-in-out infinite' : 'none',
+              }} />
+              <span style={{ ...s.heroLiveText, color: pillActiveColor }}>
+                {badgeLabel}
               </span>
-            </div>
-          </button>
+            </button>
+          </div>
 
           {/* Right Telemetry & Controls */}
           <div style={s.heroTelemetry}>
@@ -191,7 +209,7 @@ export default function Navbar({
           </div>
 
           <div style={s.heroSearchWrap}>
-            <SearchBar allAssets={allAssets || []} onSelect={() => setActive('map')} />
+            <SearchBar allAssets={allAssets || []} onSelect={handleSearchPick} />
             {alertCount > 0 && (
               <button style={s.alertPill} onClick={() => setActive('watchlist')}>
                 {alertCount} alert{alertCount > 1 ? 's' : ''}
@@ -201,12 +219,12 @@ export default function Navbar({
         </div>
       </header>
 
-      <ShareModal 
-        isOpen={showGlobalShare} 
+      <ShareModal
+        isOpen={showGlobalShare}
         onClose={() => setShowGlobalShare(false)}
         formatLocalPrice={formatLocalPrice}
-        data={{ 
-          type: 'global', 
+        data={{
+          type: 'global',
           assets: (() => {
             const targets = ['BTC', 'EUR/INR', 'WTI', 'XAU/USD', 'USD/INR', 'QQQ'];
             const popular = (allAssets || []).filter(a => targets.includes(a.symbol)).slice(0, 6);
@@ -214,7 +232,6 @@ export default function Navbar({
               const missing = 6 - popular.length;
               popular.push(...(allAssets || []).filter(a => !targets.includes(a.symbol)).slice(0, missing));
             }
-            // Sort to preserve requested order
             return popular.sort((a, b) => {
               const idxA = targets.indexOf(a.symbol);
               const idxB = targets.indexOf(b.symbol);
@@ -224,7 +241,7 @@ export default function Navbar({
               return idxA - idxB;
             });
           })()
-        }} 
+        }}
       />
 
       {/* ── Mobile top bar ── */}
@@ -235,7 +252,7 @@ export default function Navbar({
           </div>
           <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-start', gap: '2px' }}>
             <div style={{ display: 'flex', alignItems: 'baseline', gap: '6px' }}>
-              <span style={{ fontFamily: 'var(--font-brand)', fontSize: '19px', fontWeight: 800, color: '#fff', letterSpacing: '-0.02em', lineHeight: 1 }}>
+              <span style={{ fontFamily: 'var(--font-brand, var(--font-display))', fontSize: '19px', fontWeight: 800, color: '#fff', letterSpacing: '-0.02em', lineHeight: 1 }}>
                 Quidesk
               </span>
             </div>
@@ -251,7 +268,7 @@ export default function Navbar({
           </div>
         </button>
         <div style={{ display:'flex', alignItems:'center', gap:'8px' }}>
-          <SearchBar allAssets={allAssets || []} onSelect={() => setActive('map')}/>
+          <SearchBar allAssets={allAssets || []} onSelect={handleSearchPick}/>
           <button style={s.iconBtn} onClick={() => window.location.reload()} title="Refresh">
             <RefreshCw size={13} color="var(--text-secondary)"/>
           </button>
@@ -263,7 +280,7 @@ export default function Navbar({
           </button>
           <button
             style={{ ...s.liveBtn, ...(isLive && feedStatus.key !== 'offline' ? s.liveBtnOn : s.liveBtnOff), padding:'4px 8px', borderColor: pillActiveColor, color: pillActiveColor }}
-            onClick={() => setIsLive(v => !v)}
+            onClick={() => setIsLive && setIsLive(v => !v)}
             title={`Feed status: ${feedStatus.label}`}
           >
             <span style={{
@@ -296,9 +313,11 @@ export default function Navbar({
 
 const s = {
   heroNav: {
-    position: 'sticky', top: 0, zIndex: 100,
+    position: 'sticky', top: 0, zIndex: 1000,
     isolation: 'isolate',
-    background: 'var(--surface-chrome, #080C14)',
+    background: 'rgba(8, 12, 20, 0.97)',
+    backdropFilter: 'blur(16px)',
+    WebkitBackdropFilter: 'blur(16px)',
     borderBottom: '1px solid var(--border-subtle)',
     boxShadow: '0 8px 32px rgba(0,0,0,0.3)',
   },
@@ -353,7 +372,7 @@ const s = {
     flexWrap: 'wrap',
   },
   heroTitle: {
-    fontFamily: 'var(--font-brand)',
+    fontFamily: 'var(--font-brand, var(--font-display))',
     fontSize: '26px',
     fontWeight: 800,
     color: '#ffffff',
@@ -514,8 +533,7 @@ const s = {
   },
   mobileTop: {
     position: 'sticky', top: 0, zIndex: 100,
-    isolation: 'isolate',
-    background: 'var(--surface-chrome, #080C14)',
+    background: 'var(--bg-overlay)', backdropFilter: 'blur(20px)',
     borderBottom: '1px solid var(--border-subtle)',
     display: 'flex', alignItems: 'center',
     justifyContent: 'space-between',

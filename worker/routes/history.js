@@ -182,11 +182,13 @@ export async function handleHistory(request, env) {
   const def = ASSET_DEFINITIONS[id];
   if (!def) {
     return {
+      statusCode: 404,
       error: `Unknown asset id: ${id}`,
       points: [],
       granularity: null,
       source: null,
       previousClose: null,
+      pointCount: 0,
     };
   }
 
@@ -275,13 +277,17 @@ export async function handleHistory(request, env) {
         if (rangeParam === '1H' && points.length > 0) {
           const latestT = points[points.length - 1].t;
           const cutoff = latestT - 3600000;
-          points = points.filter(p => p.t >= cutoff);
+          const sliced = points.filter(p => p.t >= cutoff);
+          if (sliced.length >= 2) {
+            points = sliced;
+          }
         }
 
         const rawPrev = result.meta?.chartPreviousClose ?? result.meta?.previousClose ?? null;
         const prevClose = (typeof rawPrev === 'number' && Number.isFinite(rawPrev) && rawPrev > 0) ? rawPrev : null;
 
-        if (points.length >= 10) {
+        const minRequired = rangeParam === '1H' ? 2 : 10;
+        if (points.length >= minRequired) {
           return {
             id: def.id,
             symbol: def.symbol,
@@ -317,6 +323,7 @@ export async function handleHistory(request, env) {
   }
 
   return {
+    statusCode: 502,
     id: def.id,
     symbol: def.symbol,
     range: rangeParam,

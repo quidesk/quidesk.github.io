@@ -1,56 +1,52 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { Star } from 'lucide-react';
 import { formatChange } from '../data/markets';
 import { FreshnessBadge, FallbackNotice } from './FreshnessBadge';
 import { getFreshnessLevel } from '../lib/freshness';
 import { useMarketStore } from '../store/marketStore';
-import PriceDisplay from './PriceDisplay';
-import MiniChart, { fetchCachedRangeHistory, MIN_REAL_CHART_POINTS } from './MiniChart';
-import { formatForexSecondaryValue, formatCardUnitSuffix, getAssetPrecision } from '../utils/formatters';
+import { D, formatAssetPriceDisplay, drawCardCanvasChart } from '../utils/marketEngine';
+
+function getNonEmptyArray(...candidates) {
+  for (const c of candidates) {
+    if (Array.isArray(c) && c.length > 0) return c;
+  }
+  return [];
+}
 
 export default function MarketCard({ asset: propAsset, onClick, isWatched, onToggleWatch }) {
-  const allQuotes = useMarketStore((s) => s.quotes);
   const storeQuote = useMarketStore((s) => {
     const key = (propAsset?.symbol || propAsset?.id || '').toLowerCase();
     return s.quotes[key] || (propAsset?.symbol ? s.quotes[propAsset.symbol] : null);
   });
 
+  const activeSeries = getNonEmptyArray(
+    propAsset?.history?.['24H'],
+    Array.isArray(propAsset?.history) ? propAsset.history : null,
+    storeQuote?.history?.['24H'],
+    Array.isArray(storeQuote?.history) ? storeQuote.history : null,
+    propAsset?.chartData,
+    storeQuote?.chartData,
+    propAsset?.spark1d,
+    storeQuote?.spark1d
+  );
+
   const asset = {
     ...(propAsset || {}),
     ...(storeQuote || {}),
-    history: propAsset?.history || storeQuote?.history,
-    chartData: propAsset?.chartData || storeQuote?.chartData || propAsset?.spark1d || storeQuote?.spark1d,
+    history: activeSeries,
+    chartData: activeSeries,
   };
 
-  const hasPrice = asset.status !== 'unavailable' && typeof asset.price === 'number' && Number.isFinite(asset.price) && asset.price > 0;
-  const rawChange = asset.change ?? asset.changePercent ?? asset.change24h;
+  const hasPrice = asset.status !== 'unavailable' && typeof asset.price === 'number' && Number.isFinite(asset.price);
+  const rawChange = asset.change24h ?? asset.changePercent ?? asset.change;
   const changeVal = asset.status !== 'unavailable' && typeof rawChange === 'number' && Number.isFinite(rawChange)
     ? rawChange
     : null;
   const isFlat = changeVal !== null && Math.abs(changeVal) < 0.005;
-  const isPositive = changeVal !== null && changeVal > 0;
+  const isPositive = changeVal !== null && changeVal >= 0;
   const [flash, setFlash] = useState(null);
   const [prevPrice, setPrevPrice] = useState(asset.price);
-  const [historyPoints, setHistoryPoints] = useState(null);
-  const [historyPrevClose, setHistoryPrevClose] = useState(null);
-
-  useEffect(() => {
-    const existing = asset.chartData || asset.spark1d || asset.history?.['24H'];
-    if (Array.isArray(existing) && existing.length >= MIN_REAL_CHART_POINTS) return;
-    if (!asset.id) return;
-
-    let active = true;
-    fetchCachedRangeHistory(asset.id, '24H').then((res) => {
-      if (!active) return;
-      if (res && Array.isArray(res.points) && res.points.length >= MIN_REAL_CHART_POINTS) {
-        setHistoryPoints(res.points);
-        if (typeof res.previousClose === 'number') {
-          setHistoryPrevClose(res.previousClose);
-        }
-      }
-    });
-    return () => { active = false; };
-  }, [asset.id, asset.chartData, asset.spark1d, asset.history]);
+  const canvasRef = useRef(null);
 
   useEffect(() => {
     if (typeof asset.price === 'number' && asset.price !== prevPrice) {
@@ -61,9 +57,13 @@ export default function MarketCard({ asset: propAsset, onClick, isWatched, onTog
     }
   }, [asset.price, prevPrice]);
 
-  // Session status and staleness evaluation strictly from Worker
-  const isClosed = asset.session === 'closed' || asset.status === 'closed' || asset.tradingPeriod === 'closed';
-  const freshness = isClosed ? 'closed' : getFreshnessLevel(asset);
+  useEffect(() => {
+    if (canvasRef.current) {
+      drawCardCanvasChart(canvasRef.current, asset);
+    }
+  }, [asset.price, asset.prevClose, asset.change24h, asset.change, activeSeries]);
+
+  const freshness = getFreshnessLevel(asset);
 
   const flashColor = flash === 'up'
     ? 'rgba(0,255,157,0.15)'
@@ -71,32 +71,12 @@ export default function MarketCard({ asset: propAsset, onClick, isWatched, onTog
     ? 'rgba(255,45,107,0.15)'
     : 'transparent';
 
-  const cardTintClass = (changeVal === null || isFlat)
-    ? (hasPrice ? '' : 'qd-skeleton')
-    : (isPositive ? 'card-positive' : 'card-negative');
+  const chgDecimal = D(changeVal ?? 0);
+  const cardTintClass = changeVal === null
+    ? (hasPrice ? 'card-positive' : 'qd-skeleton')
+    : (chgDecimal.gte(0) ? 'card-positive' : 'card-negative');
 
-  const isForex = (asset.sector || '').toLowerCase() === 'forex' || (
-    asset.symbol?.includes('/') && !asset.symbol?.startsWith('XAU') && !asset.symbol?.startsWith('XAG') && !asset.symbol?.startsWith('XPT')
-  );
-  const pricePrefix = isForex
-    ? (asset.symbol?.endsWith('/INR') ? '₹' : '')
-    : '$';
-  const precision = getAssetPrecision(asset.symbol, asset.sector, asset.price);
-  const unitSuffix = formatCardUnitSuffix(asset.sector, asset.unit, asset.symbol);
-
-  let secondaryDisplay = null;
-  if (isForex) {
-    secondaryDisplay = formatForexSecondaryValue(asset.symbol, asset.price, allQuotes, 'INR');
-  } else if (hasPrice && asset.price > 0) {
-    const usdInr = allQuotes?.['usdinr']?.price || allQuotes?.['USD/INR']?.price;
-    if (typeof usdInr === 'number' && usdInr > 0) {
-      const inrRaw = asset.price * usdInr;
-      secondaryDisplay = `(₹${inrRaw >= 100 ? Math.round(inrRaw).toLocaleString('en-IN') : inrRaw.toFixed(2)})`;
-    }
-  }
-
-  const isFuturesDivergence = asset.flags?.includes('spot_futures_basis');
-  const basisLabel = (asset.sector === 'crypto' || asset.changeBasis === 'rolling_24h') ? '24H' : '1D';
+  const priceDisplayData = formatAssetPriceDisplay(asset);
 
   return (
     <div
@@ -108,9 +88,9 @@ export default function MarketCard({ asset: propAsset, onClick, isWatched, onTog
       }}
       onClick={() => onClick && onClick(asset)}
       onMouseEnter={e => {
-        e.currentTarget.style.borderColor = 'var(--border-glow)';
+        e.currentTarget.style.borderColor = 'var(--border-accent)';
         e.currentTarget.style.transform = 'translateY(-2px)';
-        e.currentTarget.style.boxShadow = '0 8px 30px rgba(0,245,255,0.1)';
+        e.currentTarget.style.boxShadow = '0 8px 30px rgba(97,175,239,0.12)';
       }}
       onMouseLeave={e => {
         e.currentTarget.style.borderColor = 'var(--border-subtle)';
@@ -130,7 +110,7 @@ export default function MarketCard({ asset: propAsset, onClick, isWatched, onTog
             </span>
             <FreshnessBadge
               level={freshness}
-              status={isClosed ? 'closed' : asset.status}
+              status={asset.status}
               timestamp={asset.quoteTs ?? asset.timestamp}
               source={asset.source}
               compact
@@ -147,15 +127,15 @@ export default function MarketCard({ asset: propAsset, onClick, isWatched, onTog
             >
               <Star
                 size={13}
-                color={isWatched ? 'var(--neon-yellow)' : 'var(--text-dim)'}
-                fill={isWatched ? 'var(--neon-yellow)' : 'none'}
+                color={isWatched ? 'var(--amber)' : 'var(--text-dim)'}
+                fill={isWatched ? 'var(--amber)' : 'none'}
               />
             </button>
           )}
           <div style={{
             ...styles.badge,
             color: changeVal === null || isFlat ? 'var(--text-dim)' : (isPositive ? 'var(--bull)' : 'var(--bear)'),
-            background: changeVal === null || isFlat ? 'rgba(139, 148, 158, 0.12)' : (isPositive ? 'var(--neon-green-dim)' : 'var(--neon-pink-dim)'),
+            background: changeVal === null || isFlat ? 'rgba(139, 148, 158, 0.12)' : (isPositive ? 'var(--bull-dim)' : 'var(--bear-dim)'),
             borderColor: changeVal === null || isFlat ? 'rgba(139, 148, 158, 0.25)' : (isPositive ? 'var(--bull)' : 'var(--bear)'),
             whiteSpace: 'nowrap',
             flexShrink: 0
@@ -164,14 +144,10 @@ export default function MarketCard({ asset: propAsset, onClick, isWatched, onTog
               <span aria-hidden="true" style={{ marginRight: '3px' }}>{isPositive ? '▲' : '▼'}</span>
             )}
             <span>{changeVal === null ? '—' : formatChange(changeVal)}</span>
-            {changeVal !== null && (
-              <span style={{ opacity: 0.75, fontSize: '8.5px', marginLeft: '3px' }}>{basisLabel}</span>
-            )}
           </div>
         </div>
       </div>
 
-      {/* Fallback Notice */}
       {asset.source === 'fallback' && (
         <div style={{ marginBottom: '6px' }}>
           <FallbackNotice source={asset.source} />
@@ -188,52 +164,25 @@ export default function MarketCard({ asset: propAsset, onClick, isWatched, onTog
         gap: '6px'
       }}>
         <div>
-          <PriceDisplay
-            value={asset.price}
-            prefix={pricePrefix}
-            precision={precision}
-          />
-          {unitSuffix && <span style={styles.unit}>{unitSuffix}</span>}
-          {isFuturesDivergence && (
-            <span
-              className="badge-fut"
-              title="Spot/futures basis divergence > 0.50%"
-              style={{
-                fontSize: '10px',
-                fontFamily: 'var(--font-mono)',
-                color: 'var(--amber, #f59e0b)',
-                background: 'rgba(245, 158, 11, 0.12)',
-                border: '1px solid rgba(245, 158, 11, 0.3)',
-                borderRadius: '3px',
-                padding: '0 4px',
-                marginLeft: '4px',
-                lineHeight: '14px',
-                verticalAlign: 'middle',
-              }}
-            >
-              (fut.)
-            </span>
-          )}
+          <span>{priceDisplayData.primary}</span>
+          {priceDisplayData.unit && <span style={styles.unit}>{priceDisplayData.unit}</span>}
         </div>
-        {secondaryDisplay && (
+        {priceDisplayData.secondary && (
           <span style={{ fontSize: '12px', color: 'var(--text-secondary)', fontWeight: 400 }}>
-            {secondaryDisplay}
+            {priceDisplayData.secondary}
           </span>
         )}
       </div>
 
-      {/* Mini Worker-Served Real Chart */}
+      {/* Mini High-DPI HTML5 Canvas chart */}
       <div style={styles.chartWrap}>
-        <MiniChart
-          data={(Array.isArray(asset.chartData) && asset.chartData.length >= MIN_REAL_CHART_POINTS && asset.chartData)
-            || (Array.isArray(asset.spark1d) && asset.spark1d.length >= MIN_REAL_CHART_POINTS && asset.spark1d)
-            || (Array.isArray(asset.history?.['24H']) && asset.history['24H'].length >= MIN_REAL_CHART_POINTS && asset.history['24H'])
-            || historyPoints
-            || []}
-          prevClose={asset.prevClose ?? historyPrevClose}
-          change={changeVal}
-          width={240}
-          height={52}
+        <canvas
+          ref={canvasRef}
+          className="qd-card-canvas"
+          data-symbol={asset.symbol}
+          data-tf="24H"
+          height="52"
+          style={{ width: '100%', height: '52px', display: 'block' }}
         />
       </div>
 

@@ -1,27 +1,69 @@
-import React, { useState, useMemo } from 'react'
+import React, { useState, useMemo, useEffect } from 'react'
 import {
   ResponsiveContainer, LineChart, Line, XAxis, YAxis,
-  CartesianGrid, Tooltip, ReferenceLine, Legend
+  CartesianGrid, Tooltip, ReferenceLine
 } from 'recharts'
 import { SECTOR_META, formatPrice, formatChange } from '../data/markets'
+import { fetchCachedRangeHistory } from '../components/MiniChart'
 
 const COMPARE_COLORS = ['#f0a500','#4d9eff','#22d47a','#a78bfa'];
 
-function normalize(data) {
-  if (!data.length) return data;
-  const base = data[0].value;
-  return data.map(d => ({ ...d, value: parseFloat(((d.value - base) / base * 100).toFixed(3)) }));
+function extractSeriesPoints(asset, fetchedMap) {
+  if (!asset) return [];
+  const candidates = [
+    asset.chartData,
+    asset.history?.['24H'],
+    Array.isArray(asset.history) ? asset.history : null,
+    fetchedMap?.[asset.id]?.points,
+    asset.spark1d,
+  ];
+  for (const c of candidates) {
+    if (Array.isArray(c) && c.length >= 2) {
+      const pts = c
+        .map((pt, idx) => {
+          if (Array.isArray(pt)) {
+            const rawT = pt[0];
+            const label = typeof rawT === 'number' && rawT > 1e9
+              ? new Date(rawT > 1e12 ? rawT : rawT * 1000).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
+              : String(rawT ?? idx);
+            return { time: label, value: Number(pt[1]) };
+          }
+          if (pt && typeof pt === 'object') {
+            return { time: pt.time || String(idx), value: Number(pt.value ?? pt.close ?? pt.price) };
+          }
+          return { time: String(idx), value: Number(pt) };
+        })
+        .filter(p => Number.isFinite(p.value) && p.value > 0);
+      if (pts.length >= 2) return pts;
+    }
+  }
+  if (typeof asset.prevClose === 'number' && asset.prevClose > 0 && typeof asset.price === 'number' && asset.price > 0) {
+    return [
+      { time: 'Open', value: asset.prevClose },
+      { time: 'Live', value: asset.price },
+    ];
+  }
+  return [];
 }
 
-function buildOverlay(assets) {
+function buildOverlay(assets, fetchedMap) {
   if (!assets.length) return [];
-  const maxLen = Math.max(...assets.map(a => a.chartData.length));
+  const assetSeries = assets.map(a => ({ id: a.id, pts: extractSeriesPoints(a, fetchedMap) }));
+  const maxLen = Math.max(0, ...assetSeries.map(s => s.pts.length));
+  if (maxLen === 0) return [];
+
+  const longest = assetSeries.reduce((best, cur) => (cur.pts.length > best.pts.length ? cur : best), assetSeries[0]);
+
   return Array.from({ length: maxLen }, (_, i) => {
-    const point = { time: assets[0].chartData[i]?.time || '' };
-    assets.forEach(a => {
-      const base = a.chartData[0]?.value || 1;
-      const val  = a.chartData[i]?.value ?? base;
-      point[a.id] = parseFloat(((val - base) / base * 100).toFixed(3));
+    const progress = maxLen > 1 ? i / (maxLen - 1) : 0;
+    const point = { time: longest.pts[i]?.time || `${Math.round(progress * 100)}%` };
+
+    assetSeries.forEach(({ id, pts }) => {
+      if (pts.length === 0) return;
+      const base = pts[0].value;
+      const mappedIdx = Math.min(pts.length - 1, Math.round(progress * (pts.length - 1)));
+      const val = pts[mappedIdx]?.value ?? base;
+      point[id] = base > 0 ? parseFloat((((val - base) / base) * 100).toFixed(3)) : 0;
     });
     return point;
   });
@@ -50,6 +92,28 @@ export default function ComparePage({ data }) {
   const allAssets = useMemo(() => Object.values(data).flat(), [data]);
   const [selected, setSelected] = useState(['btc','gold']);
   const [search, setSearch] = useState('');
+  const [fetchedHistory, setFetchedHistory] = useState({});
+
+  const selectedAssets = useMemo(
+    () => selected.map(id => allAssets.find(a => a.id === id)).filter(Boolean),
+    [selected, allAssets]
+  );
+
+  useEffect(() => {
+    let active = true;
+    selectedAssets.forEach(a => {
+      const hasSeries = (Array.isArray(a.chartData) && a.chartData.length >= 2) ||
+                        (Array.isArray(a.spark1d) && a.spark1d.length >= 2);
+      if (!hasSeries && !fetchedHistory[a.id]) {
+        fetchCachedRangeHistory(a.id, '24H').then(res => {
+          if (active && res?.points?.length) {
+            setFetchedHistory(prev => ({ ...prev, [a.id]: res }));
+          }
+        });
+      }
+    });
+    return () => { active = false; };
+  }, [selectedAssets, fetchedHistory]);
 
   const filteredAssets = useMemo(() =>
     allAssets.filter(a =>
@@ -58,8 +122,10 @@ export default function ComparePage({ data }) {
        a.name.toLowerCase().includes(search.toLowerCase()))
     ), [allAssets, search, selected]);
 
-  const selectedAssets = selected.map(id => allAssets.find(a => a.id === id)).filter(Boolean);
-  const overlayData = useMemo(() => buildOverlay(selectedAssets), [selectedAssets]);
+  const overlayData = useMemo(
+    () => buildOverlay(selectedAssets, fetchedHistory),
+    [selectedAssets, fetchedHistory]
+  );
 
   const addAsset = (id) => {
     if (selected.length < 4 && !selected.includes(id)) setSelected(p => [...p, id]);
@@ -76,7 +142,6 @@ export default function ComparePage({ data }) {
       </div>
 
       <div className="row g-4">
-        {/* Left: selector */}
         <div className="col-12 col-xl-3 fade-up-1" style={s.selector}>
           <div style={s.selectorHeader}>
             <span style={s.selectorTitle}>Select Assets</span>
@@ -85,18 +150,14 @@ export default function ComparePage({ data }) {
             </span>
           </div>
 
-          {/* Chips */}
           <div style={s.chips}>
-            {selectedAssets.map((a, i) => {
-              const meta = SECTOR_META[a.sector];
-              return (
-                <div key={a.id} style={{ ...s.chip, borderColor: COMPARE_COLORS[i] + '60', background: COMPARE_COLORS[i] + '12' }}>
-                  <span style={{ width:'8px', height:'8px', borderRadius:'50%', background: COMPARE_COLORS[i], display:'inline-block', flexShrink:0 }} />
-                  <span style={{ fontFamily:'var(--font-mono)', fontSize:'11px', color:'var(--text-primary)' }}>{a.symbol}</span>
-                  <button style={s.chipRemove} onClick={() => removeAsset(a.id)}>×</button>
-                </div>
-              );
-            })}
+            {selectedAssets.map((a, i) => (
+              <div key={a.id} style={{ ...s.chip, borderColor: COMPARE_COLORS[i] + '60', background: COMPARE_COLORS[i] + '12' }}>
+                <span style={{ width:'8px', height:'8px', borderRadius:'50%', background: COMPARE_COLORS[i], display:'inline-block', flexShrink:0 }} />
+                <span style={{ fontFamily:'var(--font-mono)', fontSize:'11px', color:'var(--text-primary)' }}>{a.symbol}</span>
+                <button style={s.chipRemove} onClick={() => removeAsset(a.id)}>×</button>
+              </div>
+            ))}
           </div>
 
           {selected.length < 4 && (
@@ -132,7 +193,6 @@ export default function ComparePage({ data }) {
           )}
         </div>
 
-        {/* Right: chart area */}
         <div className="col-12 col-xl-9" style={s.chartArea}>
           {selectedAssets.length < 2 ? (
             <div style={s.empty}>
@@ -141,7 +201,6 @@ export default function ComparePage({ data }) {
             </div>
           ) : (
             <>
-              {/* Relative performance chart */}
               <div className="fade-up-2" style={s.chartCard}>
                 <div style={s.chartCardHeader}>
                   <div style={s.chartCardTitle}>Relative Performance</div>
@@ -154,7 +213,7 @@ export default function ComparePage({ data }) {
                       <XAxis dataKey="time"
                         tick={{ fill:'var(--text-dim)', fontSize:9, fontFamily:'var(--font-mono)' }}
                         axisLine={{ stroke:'var(--border-subtle)' }} tickLine={false}
-                        interval={Math.floor(overlayData.length/5)}
+                        interval={Math.max(1, Math.floor(overlayData.length/5))}
                       />
                       <YAxis
                         domain={['auto', 'auto']}
@@ -177,14 +236,14 @@ export default function ComparePage({ data }) {
                 </div>
               </div>
 
-              {/* Side-by-side stat cards */}
               <div className="fade-up-3" style={s.statGrid}>
                 {selectedAssets.map((a, i) => {
                   const meta = SECTOR_META[a.sector];
                   const chg = a.status === 'unavailable' ? null : (typeof a.change === 'number' && Number.isFinite(a.change) ? a.change : null);
                   const isFlat = chg !== null && Math.abs(chg) < 0.005;
                   const chgColor = chg === null || isFlat ? 'var(--text-dim)' : (chg >= 0 ? 'var(--bull)' : 'var(--bear)');
-                  const firstVal = a.chartData?.[0]?.value;
+                  const pts = extractSeriesPoints(a, fetchedHistory);
+                  const firstVal = pts[0]?.value;
                   const sessionNum = (typeof a.price === 'number' && typeof firstVal === 'number' && firstVal > 0)
                     ? ((a.price - firstVal) / firstVal) * 100
                     : null;
@@ -216,7 +275,6 @@ export default function ComparePage({ data }) {
                 })}
               </div>
 
-              {/* Divergence insight */}
               {selectedAssets.length === 2 && (() => {
                 const [a, b] = selectedAssets;
                 const ca = typeof a.change === 'number' && Number.isFinite(a.change) ? a.change : null;
@@ -252,9 +310,6 @@ const s = {
   },
   sub: {
     fontFamily:'var(--font-body)', fontSize:'12px', color:'var(--text-secondary)', marginTop:'4px',
-  },
-  layout: {
-    display:'grid', gridTemplateColumns:'260px 1fr', gap:'16px', alignItems:'start',
   },
   selector: {
     background:'var(--bg-card)', border:'1px solid var(--border-subtle)',

@@ -32,8 +32,7 @@ export default function DetailChart({ asset, onClose }) {
     if (!asset || !asset.id) return;
     const cacheKey = `${asset.id}-${range}`;
 
-    // If local asset already has history for this exact range with >= 10 points
-    if (asset.history?.[range]?.length >= MIN_REAL_CHART_POINTS) {
+    if (Array.isArray(asset.history?.[range]) && asset.history[range].length >= MIN_REAL_CHART_POINTS) {
       return;
     }
     if (historyCache[cacheKey]) {
@@ -73,16 +72,30 @@ export default function DetailChart({ asset, onClose }) {
   const cacheKey = `${asset.id}-${range}`;
   const cachedEntry = historyCache[cacheKey];
 
-  // Rule 2f: Strict range mapping. Do NOT fall back to 24H data under a 1M or 1Y label!
-  const rawData = asset.history?.[range]
-    || cachedEntry?.points
-    || (range === '24H' ? (asset.chartData || asset.spark1d || []) : []);
+  const propRangeHistory = Array.isArray(asset.history?.[range]) && asset.history[range].length > 0
+    ? asset.history[range]
+    : null;
+  const fetchedRangePoints = Array.isArray(cachedEntry?.points) && cachedEntry.points.length > 0
+    ? cachedEntry.points
+    : null;
+  const fallback24h = range === '24H'
+    ? ((Array.isArray(asset.chartData) && asset.chartData.length > 0) ? asset.chartData : (asset.spark1d || []))
+    : [];
 
-  const refPrevClose = range === '24H' ? (asset.prevClose ?? cachedEntry?.previousClose ?? null) : (cachedEntry?.previousClose ?? null);
+  const rawData = propRangeHistory || fetchedRangePoints || fallback24h;
+
+  const includePrevClose = range === '24H';
+  const refPrevClose = includePrevClose ? asset.prevClose : (cachedEntry?.previousClose ?? null);
+  const minPts = (range === '1H' && fetchedRangePoints && fetchedRangePoints.length >= 2)
+    ? Math.min(MIN_REAL_CHART_POINTS, fetchedRangePoints.length)
+    : MIN_REAL_CHART_POINTS;
+
   const series = buildChartSeries({
     data: rawData,
     prevClose: refPrevClose,
-    minRealPoints: MIN_REAL_CHART_POINTS,
+    currentPrice: asset.price,
+    includePrevClose,
+    minRealPoints: minPts,
   });
 
   const delta = series.valid ? (series.max - series.min) : 0;
@@ -133,7 +146,7 @@ export default function DetailChart({ asset, onClose }) {
           onChange={(newR) => setRange(newR)}
           accentColor={meta.color}
         />
-        
+
         {asset.sector === 'crypto' && (
           <a
             href="https://www.binance.com/register?ref=1067434967"
@@ -207,7 +220,7 @@ export default function DetailChart({ asset, onClose }) {
                 strokeWidth={1.8}
                 fill={`url(#${gid})`}
                 dot={false}
-                activeDot={{ r:4, fill:color, stroke:'var(--bg-void)', strokeWidth:2 }}
+                activeDot={{ r:4, fill:color, stroke:'var(--bg-base)', strokeWidth:2 }}
               />
             </AreaChart>
           </ResponsiveContainer>

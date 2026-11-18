@@ -1,11 +1,12 @@
 import { useState, useEffect, useCallback } from 'react';
 import { fetchWorkerNews } from '../utils/api';
 import { sanitizeUrl } from '../utils/security';
+import { SECTOR_META } from '../data/markets';
 
 /**
  * Normalizes a Worker /v1/news item for UI rendering.
- * Asset tagging lives strictly in the Worker (worker/providers/news.js);
- * the client never runs keyword/regex matching. Sponsored items never carry asset tags.
+ * Reads item.publishedAt || item.published so real RSS publication timestamps are preserved,
+ * and maps sector to SECTOR_META color when item.color is omitted.
  *
  * @param {object} item
  * @param {number} [index=0]
@@ -18,24 +19,24 @@ export function normalizeWorkerNewsItem(item = {}, index = 0) {
   const assetTags = !isSponsored && Array.isArray(item.assetTags)
     ? item.assetTags.map((t) => String(t).toLowerCase()).slice(0, 3)
     : [];
-
-  const rawDate = item.publishedAt || item.published;
+  const sector = item.sector || 'equities';
+  const rawPub = item.publishedAt || item.published;
   let published = null;
-  if (rawDate) {
-    const parsed = new Date(rawDate);
-    if (!isNaN(parsed.getTime())) {
-      published = parsed;
+  if (rawPub) {
+    const parsedPub = new Date(rawPub);
+    if (!Number.isNaN(parsedPub.getTime())) {
+      published = parsedPub;
     }
   }
 
   return {
-    id: item.id || `news-${index}-${Date.now()}`,
+    id: item.id || `news-${index}-${published ? published.getTime() : 'raw'}`,
     title,
     link: sanitizeUrl(item.link || '#'),
     desc,
     source: item.source || 'OSINT Feed',
-    sector: item.sector || 'equities',
-    color: item.color || '#4d9eff',
+    sector,
+    color: item.color || SECTOR_META[sector]?.color || '#4d9eff',
     published,
     mentionedAssets: assetTags,
     isSponsored,
@@ -57,7 +58,6 @@ export function useNewsSignals(isLive = true) {
       setNews(normalized);
       setLastFetch(new Date());
 
-      // Derive cross-asset correlations strictly from non-sponsored Worker-tagged items
       const pairs = [];
       normalized.forEach(item => {
         if (item.isSponsored) return;

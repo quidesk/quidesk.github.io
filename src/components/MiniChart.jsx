@@ -6,7 +6,7 @@ export const MIN_REAL_CHART_POINTS = 10;
 
 export const RANGE_TO_WORKER = {
   '1H': '1H',
-  '24H': '24H',
+  '24H': '1D',
   '1M': '1M',
   '1Y': '1Y',
 };
@@ -16,56 +16,59 @@ const inFlightHistory = new Map();
 
 /**
  * Normalizes Worker /v1/history points for UI range pills ('1H', '24H', '1M', '1Y').
- * Fixes ms-vs-sec timestamps and maps to clean { time, value, t, v } records.
+ * Fixes ms-vs-sec timestamps and slices '1H' cleanly to the trailing 60 minutes.
  */
 export function normalizeWorkerHistoryPoints(res, range = '24H') {
   if (!res || !Array.isArray(res.points) || res.points.length === 0) {
-    return { points: [], previousClose: res?.previousClose ?? null, granularity: res?.granularity ?? null, source: res?.source ?? null };
+    return { points: [], previousClose: res?.previousClose ?? null };
   }
 
-  let rawPoints = res.points
-    .map((p) => {
-      const val = typeof p?.close === 'number' ? p.close : (typeof p?.value === 'number' ? p.value : (p?.v ?? (typeof p === 'number' ? p : null)));
-      const rawT = p?.time ?? p?.t;
-      const t = typeof rawT === 'number' && Number.isFinite(rawT) ? (rawT > 1e12 ? rawT : rawT * 1000) : null;
-      return { val, t };
-    })
-    .filter((p) => typeof p.val === 'number' && Number.isFinite(p.val) && p.val > 0);
+  let rawPoints = res.points.filter((p) => {
+    const val = Array.isArray(p) ? p[1] : (typeof p?.close === 'number' ? p.close : p?.value);
+    return typeof val === 'number' && Number.isFinite(val) && val > 0;
+  });
 
   const toMs = (t) => (typeof t === 'number' && Number.isFinite(t) ? (t > 1e12 ? t : t * 1000) : NaN);
 
   if (range === '1H' && rawPoints.length > 0) {
     let latestMs = -Infinity;
     for (const p of rawPoints) {
-      const ms = toMs(p.t);
+      const rawT = Array.isArray(p) ? p[0] : p.time;
+      const ms = toMs(rawT);
       if (Number.isFinite(ms) && ms > latestMs) latestMs = ms;
     }
     if (Number.isFinite(latestMs)) {
       const cutoff = latestMs - 3600000;
-      rawPoints = rawPoints.filter((p) => {
-        const ms = toMs(p.t);
+      const sliced = rawPoints.filter((p) => {
+        const rawT = Array.isArray(p) ? p[0] : p.time;
+        const ms = toMs(rawT);
         return Number.isFinite(ms) && ms >= cutoff;
       });
+      if (sliced.length >= 2) {
+        rawPoints = sliced;
+      }
     }
   }
 
   const isMultiDay = range === '1M' || range === '1Y';
-  const points = rawPoints.map((p, idx) => {
-    const ms = toMs(p.t);
+  const points = rawPoints.map((p) => {
+    const rawT = Array.isArray(p) ? p[0] : (p.t ?? p.time);
+    const val = Array.isArray(p) ? p[1] : (typeof p.close === 'number' ? p.close : (p.value ?? p.v));
+    const ms = toMs(rawT);
     let label = '';
     if (Number.isFinite(ms)) {
       const d = new Date(ms);
       label = isMultiDay
         ? d.toLocaleDateString('en-US', { month: 'short', day: 'numeric', ...(range === '1Y' ? { year: '2-digit' } : {}) })
         : d.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
-    } else {
-      label = `${idx}`;
     }
     return {
-      time: label,
-      value: p.val,
       t: Number.isFinite(ms) ? ms : null,
-      v: p.val,
+      v: val,
+      time: label,
+      value: val,
+      close: val,
+      ts: Number.isFinite(ms) ? ms : null,
     };
   });
 
@@ -73,7 +76,7 @@ export function normalizeWorkerHistoryPoints(res, range = '24H') {
     ? res.previousClose
     : null;
 
-  return { points, previousClose: prev, granularity: res?.granularity ?? null, source: res?.source ?? null };
+  return { points, previousClose: prev };
 }
 
 /**
@@ -89,11 +92,13 @@ export async function fetchCachedRangeHistory(assetId, range = '24H') {
     return inFlightHistory.get(key);
   }
 
-  const workerRange = RANGE_TO_WORKER[range] || '24H';
+  const workerRange = RANGE_TO_WORKER[range] || '1D';
   const promise = fetchWorkerHistory(assetId, workerRange)
     .then((res) => {
       const normalized = normalizeWorkerHistoryPoints(res, range);
-      historyCache.set(key, normalized);
+      if (normalized.points.length > 0) {
+        historyCache.set(key, normalized);
+      }
       return normalized;
     })
     .catch(() => ({ points: [], previousClose: null }))
@@ -107,25 +112,37 @@ export async function fetchCachedRangeHistory(assetId, range = '24H') {
 
 /**
  * Pure series builder:
+ * - Supports numbers, { time, value } objects, and [timestamp, close] tuples.
  * - Requires at least `minRealPoints` (default 10) real positive data points.
- * - Constructs points ONLY from real points: no synthetic prevClose or live price prepended/appended.
- * - If prevClose is provided, exposes it as `prevClose` for rendering as a dashed horizontal reference line.
- * - Unrounded floats are preserved.
  */
 export function buildChartSeries({
   data,
   prevClose,
+  currentPrice,
+  includePrevClose = true,
   minRealPoints = MIN_REAL_CHART_POINTS,
 }) {
   const realPoints = [];
   if (Array.isArray(data)) {
     for (let i = 0; i < data.length; i++) {
       const pt = data[i];
-      const rawVal = typeof pt === 'object' && pt !== null
-        ? (pt.v ?? pt.value ?? pt.close ?? pt.price)
-        : pt;
+      let rawVal;
+      let label = `${i}`;
+      if (Array.isArray(pt)) {
+        rawVal = pt[1];
+        if (typeof pt[0] === 'number' && pt[0] > 1e9) {
+          label = new Date(pt[0] > 1e12 ? pt[0] : pt[0] * 1000).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+        } else if (pt[0] !== undefined) {
+          label = String(pt[0]);
+        }
+      } else if (typeof pt === 'object' && pt !== null) {
+        rawVal = pt.value ?? pt.close ?? pt.price;
+        if (pt.time) label = String(pt.time);
+      } else {
+        rawVal = pt;
+      }
+
       if (typeof rawVal === 'number' && Number.isFinite(rawVal) && rawVal > 0) {
-        const label = typeof pt === 'object' && pt !== null && (pt.time || pt.t) ? (pt.time || pt.t) : `${i}`;
         realPoints.push({ time: label, value: rawVal });
       }
     }
@@ -142,19 +159,15 @@ export function buildChartSeries({
     };
   }
 
-  const points = realPoints.map((p, idx) => ({
-    idx,
-    time: p.time,
-    value: p.value,
-  }));
+  const points = [];
+  for (let i = 0; i < realPoints.length; i++) {
+    points.push({ idx: i, time: realPoints[i].time, value: realPoints[i].value });
+  }
 
+  const hasPrev = typeof prevClose === 'number' && Number.isFinite(prevClose) && prevClose > 0;
   const values = points.map((p) => p.value);
-  const validPrevClose = typeof prevClose === 'number' && Number.isFinite(prevClose) && prevClose > 0
-    ? prevClose
-    : null;
-
-  const min = validPrevClose !== null ? Math.min(...values, validPrevClose) : Math.min(...values);
-  const max = validPrevClose !== null ? Math.max(...values, validPrevClose) : Math.max(...values);
+  const min = hasPrev ? Math.min(...values, prevClose) : Math.min(...values);
+  const max = hasPrev ? Math.max(...values, prevClose) : Math.max(...values);
 
   return {
     valid: true,
@@ -162,25 +175,17 @@ export function buildChartSeries({
     values,
     min,
     max,
-    prevClose: validPrevClose,
+    prevClose: hasPrev ? prevClose : null,
   };
 }
 
-/**
- * MiniChart — High-precision sparkline renderer driven exclusively by authentic Worker series.
- *
- * Rules:
- * - If fewer than 10 real points exist: Renders a dashed "no chart data" baseline.
- * - Zero synthetic random/sin/cos curve generators.
- * - Unrounded floats are preserved to eliminate staircase plateaus on energy assets (NG, HOIL).
- * - Series = real points only. prevClose is drawn as a dashed horizontal reference line.
- * - Stroke color matches displayed change sign (grey if flat/null).
- */
 export default function MiniChart({
   data,
   change,
   height = 48,
+  currentPrice,
   prevClose,
+  includePrevClose = true,
   width,
 }) {
   const baseId = useId().replace(/:/g, '');
@@ -189,6 +194,8 @@ export default function MiniChart({
   const series = buildChartSeries({
     data,
     prevClose,
+    currentPrice,
+    includePrevClose,
     minRealPoints: MIN_REAL_CHART_POINTS,
   });
 
@@ -237,7 +244,6 @@ export default function MiniChart({
   const pad = delta > 0 ? delta * 0.08 : (series.min * 0.005 || 0.01);
   const yDomain = [series.min - pad, series.max + pad];
 
-  // Color strictly derived from displayed change sign (neutral grey if flat or null)
   const hasChange = typeof change === 'number' && Number.isFinite(change);
   const isFlat = hasChange && Math.abs(change) < 0.005;
   const color = (!hasChange || isFlat)

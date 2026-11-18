@@ -85,6 +85,14 @@ export function extractStrictAssetTags(text) {
   return matches;
 }
 
+const SECTOR_COLORS = {
+  equities: '#4d9eff',
+  crypto:   '#00d4ff',
+  metals:   '#ffd700',
+  energy:   '#f97316',
+  forex:    '#22d3ee',
+};
+
 /**
  * Unescapes basic HTML entities and strips XML CDATA.
  * @param {string} str
@@ -153,8 +161,10 @@ export function parseRssXml(xml, sourceName, sector) {
       title,
       link,
       publishedAt,
+      published: publishedAt,
       source: sourceName,
       sector: resolvedSector,
+      color: SECTOR_COLORS[resolvedSector] || '#4d9eff',
       summary: desc.slice(0, 280),
       assetTags,
       isSponsored: false,

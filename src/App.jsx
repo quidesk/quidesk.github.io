@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react'
+import React, { useState, useEffect, useCallback } from 'react'
 import Navbar from './components/Navbar'
 import TickerTape from './components/TickerTape'
 import MapPage from './pages/MapPage'
@@ -17,14 +17,14 @@ import OSINTMap from './components/OSINTMap'
 import Logo from './components/Logo'
 import SocialShareBar from './components/SocialShareBar'
 import { Share2 } from 'lucide-react'
+import { mergeAssetState, renderAllCardCanvases } from './utils/marketEngine'
 
 const VALID_TABS = ['map', 'equities', 'crypto', 'metals', 'energy', 'forex', 'compare', 'watchlist', 'portfolio'];
 
-const APP_BUILD_SHA = typeof __BUILD_SHA__ !== 'undefined'
+const BUILD_SHA = typeof __BUILD_SHA__ !== 'undefined'
   ? __BUILD_SHA__
   : (import.meta.env?.VITE_BUILD_SHA || 'dev');
-
-const APP_BUILD_TIME = typeof __BUILD_TIME__ !== 'undefined'
+const BUILD_TIME = typeof __BUILD_TIME__ !== 'undefined'
   ? __BUILD_TIME__
   : (import.meta.env?.VITE_BUILD_TIME || '');
 
@@ -50,6 +50,23 @@ function formatHealthTimestamp(ts) {
     second: '2-digit',
     timeZoneName: 'short',
   });
+}
+
+function extract24hSeries(asset) {
+  if (!asset) return [];
+  if (Array.isArray(asset.history?.['24H']) && asset.history['24H'].length > 0) {
+    return asset.history['24H'].map(pt => (typeof pt === 'object' && pt !== null ? (pt.value ?? pt.close ?? pt[1]) : pt)).filter(Number.isFinite);
+  }
+  if (Array.isArray(asset.history) && asset.history.length > 0) {
+    return asset.history.map(pt => (typeof pt === 'object' && pt !== null ? (pt.value ?? pt.close ?? pt[1]) : pt)).filter(Number.isFinite);
+  }
+  if (Array.isArray(asset.chartData) && asset.chartData.length > 0) {
+    return asset.chartData.map(pt => (typeof pt === 'object' && pt !== null ? (pt.value ?? pt.close ?? pt[1]) : pt)).filter(Number.isFinite);
+  }
+  if (Array.isArray(asset.spark1d) && asset.spark1d.length > 0) {
+    return asset.spark1d.map(pt => (Array.isArray(pt) ? pt[1] : (pt?.value ?? pt?.close ?? pt))).filter(Number.isFinite);
+  }
+  return [];
 }
 
 const SEO_META = {
@@ -99,6 +116,7 @@ export default function App() {
     }
     return 'map';
   });
+  const [focusedAssetId, setFocusedAssetId] = useState(null);
 
   const {
     data,
@@ -122,6 +140,13 @@ export default function App() {
   const { theme, toggle: toggleTheme } = useTheme();
   const newsSignals = useNewsSignals(isLive);
   const [showFeedHealth, setShowFeedHealth] = useState(false);
+
+  const handleSearchSelect = useCallback((asset) => {
+    setActiveTab('map');
+    if (asset && asset.id) {
+      setFocusedAssetId(asset.id);
+    }
+  }, []);
 
   // Sync URL hash and dynamic document metadata for deep-linking SEO
   useEffect(() => {
@@ -161,9 +186,29 @@ export default function App() {
     return () => window.removeEventListener('hashchange', onHashChange);
   }, []);
 
+  // Synchronize all assets into window.marketState with authentic 24H series
+  useEffect(() => {
+    if (typeof window !== 'undefined' && allAssets?.length) {
+      allAssets.forEach(a => {
+        if (a && a.symbol) {
+          mergeAssetState(a.symbol, {
+            ...a,
+            price: a.price,
+            prevClose: a.prevClose,
+            change24h: a.change24h ?? a.changePercent ?? a.change,
+            history: extract24hSeries(a),
+            status: a.status,
+            timestampUtc: a.quoteTs || a.timestamp,
+          });
+        }
+      });
+      renderAllCardCanvases();
+    }
+  }, [allAssets]);
+
   const watchlistProps = {
     isWatched: watchlist.isWatched,
-    onToggleWatch: watchlist.toggleWatch,
+    onToggleWatch: watchlist.toggle,
     convertPrice,
     formatLocalPrice
   }
@@ -171,7 +216,20 @@ export default function App() {
   const renderPage = () => {
     switch (activeTab) {
       case 'map':
-        return <MapPage data={data} allAssets={allAssets} hotspots={hotspots} watchlistProps={watchlistProps} convertPrice={convertPrice} formatLocalPrice={formatLocalPrice} isStale={isStale} newsSignals={newsSignals} />
+        return (
+          <MapPage
+            data={data}
+            allAssets={allAssets}
+            hotspots={hotspots}
+            watchlistProps={watchlistProps}
+            convertPrice={convertPrice}
+            formatLocalPrice={formatLocalPrice}
+            isStale={isStale}
+            newsSignals={newsSignals}
+            focusedAssetId={focusedAssetId}
+            onClearFocusedAsset={() => setFocusedAssetId(null)}
+          />
+        )
       case 'equities':
         return <SectorPage sector="equities" assets={data.equities || []} watchlistProps={watchlistProps} convertPrice={convertPrice} formatLocalPrice={formatLocalPrice} isStale={isStale} />
       case 'crypto':
@@ -187,9 +245,9 @@ export default function App() {
       case 'watchlist':
         return (
           <WatchlistPage
-            watchlist={watchlist.items}
+            watchlist={watchlist.watchlist}
             allAssets={allAssets}
-            onToggleWatch={watchlist.toggleWatch}
+            onToggleWatch={watchlist.toggle}
             alerts={alerts}
             onAddAlert={alerts.addAlert}
             onRemoveAlert={alerts.removeAlert}
@@ -210,7 +268,20 @@ export default function App() {
           />
         )
       default:
-        return <MapPage data={data} allAssets={allAssets} hotspots={hotspots} watchlistProps={watchlistProps} convertPrice={convertPrice} formatLocalPrice={formatLocalPrice} isStale={isStale} newsSignals={newsSignals} />
+        return (
+          <MapPage
+            data={data}
+            allAssets={allAssets}
+            hotspots={hotspots}
+            watchlistProps={watchlistProps}
+            convertPrice={convertPrice}
+            formatLocalPrice={formatLocalPrice}
+            isStale={isStale}
+            newsSignals={newsSignals}
+            focusedAssetId={focusedAssetId}
+            onClearFocusedAsset={() => setFocusedAssetId(null)}
+          />
+        )
     }
   }
 
@@ -226,6 +297,7 @@ export default function App() {
         theme={theme}
         onToggleTheme={toggleTheme}
         allAssets={allAssets}
+        onSelectSearchAsset={handleSearchSelect}
         formatLocalPrice={formatLocalPrice}
         lastUpdate={lastUpdate}
         generatedAt={generatedAt}
@@ -350,8 +422,8 @@ export default function App() {
                 </div>
               );
             })()}
-            <span style={fS.text} title={APP_BUILD_TIME ? `Built ${APP_BUILD_TIME}` : undefined}>
-              {formatBuildIdentity(APP_BUILD_SHA, APP_BUILD_TIME)}
+            <span style={fS.text} title={BUILD_TIME ? `Built ${BUILD_TIME}` : undefined}>
+              {formatBuildIdentity(BUILD_SHA, BUILD_TIME)}
             </span>
             <span style={fS.text}>
               Last tick: {lastUpdate ? formatHealthTimestamp(lastUpdate) : '—'}

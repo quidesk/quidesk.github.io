@@ -5,16 +5,14 @@ import { getSourceCoords, getAssetCoords } from '../data/geoNodes'
 const geoUrl = "https://cdn.jsdelivr.net/npm/world-atlas@2/countries-110m.json"
 
 export default function OSINTMap({ news = [] }) {
-  // Extract links: source -> asset
   const links = useMemo(() => {
     const arr = []
-    // Only process the 15 most recent news to avoid map clutter
     const recentNews = news.slice(0, 15)
-    
+
     recentNews.forEach(item => {
       const srcCoords = getSourceCoords(item.source)
       if (!srcCoords) return
-      
+
       item.mentionedAssets?.forEach(asset => {
         const destCoords = getAssetCoords(asset)
         if (destCoords) {
@@ -22,7 +20,7 @@ export default function OSINTMap({ news = [] }) {
             id: `${item.id}-${asset}`,
             source: srcCoords,
             dest: destCoords,
-            color: item.color || 'var(--neon-green)',
+            color: item.color || 'var(--bull)',
             sourceName: item.source,
             assetName: asset.toUpperCase()
           })
@@ -32,7 +30,6 @@ export default function OSINTMap({ news = [] }) {
     return arr
   }, [news])
 
-  // Unique points for glowing markers
   const points = useMemo(() => {
     const pts = new Map()
     links.forEach(l => {
@@ -60,11 +57,8 @@ export default function OSINTMap({ news = [] }) {
         <span style={styles.liveDot} /> GLOBAL THREAT & INTELLIGENCE MATRIX
       </h3>
       <div style={styles.mapWrapper}>
-        
-        {/* Radar Sweep Effect */}
         <div style={styles.scanline} />
-        
-        {/* Live Intercepts Terminal Overlay */}
+
         <div style={styles.terminal}>
           <div style={styles.terminalHeader}>LATEST INTERCEPTS</div>
           {news.slice(0, 5).map(n => (
@@ -98,7 +92,6 @@ export default function OSINTMap({ news = [] }) {
             }
           </Geographies>
 
-          {/* Draw Animated Tracking Lines */}
           {links.map(link => (
             <Line
               key={link.id}
@@ -115,26 +108,20 @@ export default function OSINTMap({ news = [] }) {
             />
           ))}
 
-          {/* Draw Tracking Markers */}
           {points.map((pt, i) => (
             <Marker key={i} coordinates={pt.coords}>
               <circle r={4} fill={pt.color} opacity={0.8} />
-              
-              {/* Radar Ping Animation */}
               <circle r={14} fill="transparent" stroke={pt.color} strokeWidth={1.5} opacity={0.4}>
                 <animate attributeName="r" from="4" to="30" dur="2s" repeatCount="indefinite" />
                 <animate attributeName="opacity" from="0.8" to="0" dur="2s" repeatCount="indefinite" />
               </circle>
-              
-              {/* Target Reticle */}
               <path d="M -8 0 L -3 0 M 8 0 L 3 0 M 0 -8 L 0 -3 M 0 8 L 0 3" stroke={pt.color} strokeWidth={1.5} opacity={0.8} />
-              
-              <text 
-                textAnchor="middle" 
-                y={-14} 
-                style={{ 
-                  fontFamily: "var(--font-mono)", 
-                  fontSize: "11px", 
+              <text
+                textAnchor="middle"
+                y={-14}
+                style={{
+                  fontFamily: "var(--font-mono)",
+                  fontSize: "11px",
                   fill: "var(--text-primary)",
                   pointerEvents: "none",
                   fontWeight: 700,
@@ -175,8 +162,8 @@ const styles = {
     width: '8px',
     height: '8px',
     borderRadius: '50%',
-    background: 'var(--neon-green)',
-    boxShadow: '0 0 12px var(--neon-green)',
+    background: 'var(--bull)',
+    boxShadow: '0 0 12px var(--bull)',
   },
   mapWrapper: {
     width: '100%',
@@ -215,7 +202,7 @@ const styles = {
     boxShadow: '0 8px 24px rgba(0,0,0,0.6)'
   },
   terminalHeader: {
-    color: 'var(--neon-green)',
+    color: 'var(--bull)',
     marginBottom: '10px',
     borderBottom: '1px dashed rgba(0, 255, 204, 0.4)',
     paddingBottom: '6px',
