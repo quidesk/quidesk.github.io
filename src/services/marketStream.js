@@ -5,7 +5,7 @@
  * at https://quidesk-market-engine.librepisteme.workers.dev
  */
 
-const WORKER_BASE = (import.meta.env?.VITE_MARKET_WORKER_URL || 'https://quidesk-market-engine.librepisteme.workers.dev').replace(/\/$/, '');
+const WORKER_BASE = (import.meta.env?.VITE_MARKET_WORKER_URL || 'https://quidesk-market-engine.quidesk0.workers.dev').replace(/\/$/, '');
 
 /**
  * Fetch all market quotes from Cloudflare Worker edge aggregator
