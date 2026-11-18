@@ -18,6 +18,7 @@ export function computePulseFromQuotes(quotes = {}, lastSync = null) {
     flatCount: pulse.flatCount,
     lastSync,
     totalAssets: pulse.totalCount,
+    sentiment: pulse.sentiment,
   };
 }
 

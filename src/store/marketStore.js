@@ -14,7 +14,16 @@ export function syncAllUI(quotes = {}) {
     const ts = typeof item.quoteTs === 'number' && Number.isFinite(item.quoteTs)
       ? item.quoteTs
       : (typeof item.timestamp === 'number' && Number.isFinite(item.timestamp) ? item.timestamp : null);
-    const unified = { ...item, id: idKey, symbol: symKey, ...(ts !== null ? { timestamp: ts } : {}) };
+    const chg = typeof item.change === 'number' && Number.isFinite(item.change)
+      ? item.change
+      : (typeof item.changePercent === 'number' && Number.isFinite(item.changePercent) ? item.changePercent : null);
+    const unified = {
+      ...item,
+      id: idKey,
+      symbol: symKey,
+      ...(ts !== null ? { timestamp: ts } : {}),
+      ...(chg !== null ? { change: chg, changePercent: chg } : {}),
+    };
     synchronized[idKey] = unified;
     synchronized[symKey] = unified;
   }
@@ -86,7 +95,7 @@ export const useMarketStore = create((set, get) => ({
    * @param {any} quote
    */
   applyTick: (symbol, quote) => {
-    if (!symbol || !quote || typeof quote.price !== 'number') return;
+    if (!symbol || !quote || typeof quote.price !== 'number' || !Number.isFinite(quote.price) || quote.price <= 0) return;
     const idKey = (quote.id || symbol).toLowerCase();
     const symKey = quote.symbol || symbol;
     const existing = get().quotes[idKey] || get().quotes[symKey];

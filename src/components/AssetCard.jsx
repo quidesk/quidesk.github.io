@@ -47,19 +47,24 @@ export default function AssetCard({
   const cardRef = useRef(null);
   const timerRef = useRef(null);
 
+  const local24hPoints = Array.isArray(asset.history?.['24H']) && asset.history['24H'].length >= MIN_REAL_CHART_POINTS
+    ? asset.history['24H']
+    : (Array.isArray(asset.spark1d) && asset.spark1d.length >= MIN_REAL_CHART_POINTS ? asset.spark1d : null);
+
   useEffect(() => {
-    if (tf === '24H' || !asset.id) return;
-    if (asset.history?.[tf]?.length >= MIN_REAL_CHART_POINTS) return;
+    if (!asset.id) return;
+    if (tf === '24H' && local24hPoints) return;
+    if (tf !== '24H' && asset.history?.[tf]?.length >= MIN_REAL_CHART_POINTS) return;
     const key = `${asset.id}-${tf}`;
     if (rangeHistory[key]) return;
     let active = true;
     fetchCachedRangeHistory(asset.id, tf).then((res) => {
-      if (active) {
+      if (active && res && Array.isArray(res.points) && res.points.length > 0) {
         setRangeHistory((p) => ({ ...p, [key]: res }));
       }
     });
     return () => { active = false; };
-  }, [tf, asset.id, asset.history, rangeHistory]);
+  }, [tf, asset.id, asset.history, local24hPoints, rangeHistory]);
 
   useEffect(() => {
     if (typeof asset.price === 'number' && asset.price !== prev) {
@@ -78,13 +83,13 @@ export default function AssetCard({
     );
   }
 
-  const hasPrice = asset.status !== 'unavailable' && typeof asset.price === 'number' && Number.isFinite(asset.price);
-  const rawChange = asset.change24h ?? asset.changePercent ?? asset.change;
+  const hasPrice = asset.status !== 'unavailable' && typeof asset.price === 'number' && Number.isFinite(asset.price) && asset.price > 0;
+  const rawChange = asset.change ?? asset.changePercent ?? asset.change24h;
   const changeVal = asset.status !== 'unavailable' && typeof rawChange === 'number' && Number.isFinite(rawChange)
     ? rawChange
     : null;
   const isFlat = changeVal !== null && Math.abs(changeVal) < 0.005;
-  const isUp = changeVal !== null && changeVal >= 0;
+  const isUp = changeVal !== null && changeVal > 0;
   const meta = SECTOR_META[asset.sector] || {};
 
   // Session status and staleness evaluation strictly from Worker (no client clock override)
@@ -117,8 +122,8 @@ export default function AssetCard({
   const isFuturesDivergence = asset.flags?.includes('spot_futures_basis');
   const basisLabel = (asset.sector === 'crypto' || asset.changeBasis === 'rolling_24h') ? '24H' : '1D';
 
-  const cardTintClass = changeVal === null
-    ? (hasPrice ? 'card-positive' : 'qd-skeleton')
+  const cardTintClass = (changeVal === null || isFlat)
+    ? (hasPrice ? '' : 'qd-skeleton')
     : (isUp ? 'card-positive' : 'card-negative');
 
   function showTooltip() {
@@ -345,9 +350,9 @@ export default function AssetCard({
         <div style={{ width: '100%', height: '52px', marginTop: '4px', marginBottom: '4px' }}>
           <MiniChart
             data={tf === '24H'
-              ? (asset.history?.['24H'] || asset.chartData || asset.spark1d || asset.history)
+              ? (local24hPoints || rangeHistory[`${asset.id}-24H`]?.points || asset.history?.['24H'] || asset.chartData || asset.spark1d || [])
               : (asset.history?.[tf] || rangeHistory[`${asset.id}-${tf}`]?.points || [])}
-            prevClose={asset.prevClose}
+            prevClose={asset.prevClose ?? rangeHistory[`${asset.id}-${tf}`]?.previousClose ?? null}
             change={changeVal}
             width={compact ? 240 : 280}
             height={52}

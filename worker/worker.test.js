@@ -625,4 +625,74 @@ describe('Cloudflare Worker — Phase 1 Contract & Schema Validation', () => {
       expect(res.pointCount).toBe(0);
     });
   });
+
+  describe('Regression Tests — Root Cause Bug Remedies', () => {
+    it('does not mark post-market or pre-market quotes as stale when older than 15 minutes', () => {
+      const def = ASSET_DEFINITIONS.nvda;
+      const now = Date.now();
+      const quoteTs = now - (60 * 60 * 1000); // 1 hour old
+
+      const postQuote = buildAssetQuote(def, {
+        price: 130.5,
+        prevClose: 128.0,
+        quoteTs,
+        session: 'post',
+        source: 'yahoo',
+      }, now);
+      expect(postQuote.status).toBe('closed');
+      expect(postQuote.session).toBe('post');
+
+      const preQuote = buildAssetQuote(def, {
+        price: 131.0,
+        prevClose: 128.0,
+        quoteTs,
+        session: 'pre',
+        source: 'yahoo',
+      }, now);
+      expect(preQuote.status).toBe('closed');
+      expect(preQuote.session).toBe('pre');
+    });
+
+    it('rejects price: 0 or negative price and sets status unavailable and change null', () => {
+      const def = ASSET_DEFINITIONS.btc;
+      const now = Date.now();
+
+      const zeroQuote = buildAssetQuote(def, {
+        price: 0,
+        prevClose: 65000,
+        quoteTs: now,
+        session: '24x7',
+        source: 'binance',
+      }, now);
+
+      expect(zeroQuote.price).toBeNull();
+      expect(zeroQuote.status).toBe('unavailable');
+      expect(zeroQuote.change).toBeNull();
+      expect(zeroQuote.changeStatus).toBe('unavailable');
+      expect(zeroQuote.changePercent).toBeNull();
+
+      const negQuote = buildAssetQuote(def, {
+        price: -50,
+        prevClose: 65000,
+        quoteTs: now,
+      }, now);
+      expect(negQuote.price).toBeNull();
+      expect(negQuote.status).toBe('unavailable');
+    });
+
+    it('exposes changePercent as exact match to change on all valid quotes', () => {
+      const def = ASSET_DEFINITIONS.gold;
+      const now = Date.now();
+
+      const quote = buildAssetQuote(def, {
+        price: 2400.00,
+        prevClose: 2380.00,
+        quoteTs: now,
+        source: 'yahoo',
+      }, now);
+
+      expect(quote.change).toBe(0.84);
+      expect(quote.changePercent).toBe(quote.change);
+    });
+  });
 });

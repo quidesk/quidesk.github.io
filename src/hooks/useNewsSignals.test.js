@@ -86,4 +86,21 @@ describe('News Tagging (Worker Single Source) & Sponsored Separation', () => {
     expect(item.sector).toBe('energy');
     expect(item.published.toISOString()).toBe('2026-11-16T18:00:00.000Z');
   });
+
+  it('handles missing or malformed published dates safely without synthesizing current time', () => {
+    const missingDate = normalizeWorkerNewsItem({
+      id: 'n3',
+      title: 'Article with missing date',
+      link: 'https://example.com/3',
+    });
+    expect(missingDate.published).toBeNull();
+
+    const invalidDate = normalizeWorkerNewsItem({
+      id: 'n4',
+      title: 'Article with malformed date',
+      link: 'https://example.com/4',
+      publishedAt: 'invalid-date-string-xyz',
+    });
+    expect(invalidDate.published).toBeNull();
+  });
 });

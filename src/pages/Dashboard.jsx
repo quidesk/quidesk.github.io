@@ -5,6 +5,7 @@ import DetailChart from '../components/DetailChart';
 import PriceDisplay from '../components/PriceDisplay';
 import { formatPrice, formatChange, SECTOR_META } from '../data/markets';
 import { useMarketPulse } from '../selectors/marketPulse';
+import { selectGainers, selectLosers } from '../selectors/marketSelectors';
 
 export default function Dashboard({ data, setActiveTab, watchlistProps }) {
   const [selectedAsset, setSelectedAsset] = useState(null);
@@ -20,19 +21,13 @@ export default function Dashboard({ data, setActiveTab, watchlistProps }) {
   const activeAsset = selectedAsset ? allAssets.find(a => a.id === selectedAsset.id) || selectedAsset : null;
 
   // Derive pulse and counts atomically from the central Zustand store
-  const { advancingPct, risingCount, fallingCount, totalAssets } = useMarketPulse();
+  const { advancingPct, risingCount, fallingCount, totalAssets, sentiment } = useMarketPulse();
 
-  const gainers = allAssets
-    .filter(a => typeof (a.changePercent ?? a.change) === 'number' && (a.changePercent ?? a.change) > 0)
-    .sort((a, b) => (b.changePercent ?? b.change) - (a.changePercent ?? a.change))
-    .slice(0, 3);
-
-  const losers = allAssets
-    .filter(a => typeof (a.changePercent ?? a.change) === 'number' && (a.changePercent ?? a.change) < 0)
-    .sort((a, b) => (a.changePercent ?? a.change) - (b.changePercent ?? b.change))
-    .slice(0, 3);
+  const gainers = selectGainers(allAssets, 3);
+  const losers = selectLosers(allAssets, 3);
 
   const overallSentiment = totalAssets > 0 ? (risingCount / totalAssets) : 0.5;
+  const sentimentLabel = sentiment === 'bullish' ? '⬆ BULLISH' : (sentiment === 'bearish' ? '⬇ BEARISH' : '↔ NEUTRAL');
 
   return (
     <div style={styles.container}>
@@ -60,7 +55,7 @@ export default function Dashboard({ data, setActiveTab, watchlistProps }) {
             />
           </div>
           <div style={styles.sentimentValue}>
-            {overallSentiment > 0.6 ? '⬆ BULLISH' : overallSentiment < 0.4 ? '⬇ BEARISH' : '↔ NEUTRAL'} ({advancingPct}% advancing)
+            {sentimentLabel} ({advancingPct}% advancing)
           </div>
         </div>
       </div>

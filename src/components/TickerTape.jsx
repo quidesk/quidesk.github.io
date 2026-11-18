@@ -120,8 +120,9 @@ const s = {
     background: 'var(--surface-chrome, #080C14)',
     borderBottom: '1px solid var(--border-subtle)',
     overflow: 'hidden',
-    position: 'sticky',
-    zIndex: 'var(--z-chrome, 100)',
+    position: 'relative',
+    zIndex: 10,
+    isolation: 'isolate',
   },
   label: {
     flexShrink: 0,

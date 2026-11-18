@@ -518,6 +518,7 @@ const s = {
   },
   mobileTop: {
     position: 'sticky', top: 0, zIndex: 100,
+    isolation: 'isolate',
     background: 'var(--surface-chrome, #080C14)',
     borderBottom: '1px solid var(--border-subtle)',
     display: 'flex', alignItems: 'center',

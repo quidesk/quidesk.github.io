@@ -47,7 +47,7 @@ export function buildAssetQuote(def, rawData, now = Date.now()) {
   } else if (quoteTs === null) {
     // Provider gave no timestamp: never synthesize now; mark stale
     status = 'stale';
-  } else if (session === 'closed') {
+  } else if (session === 'closed' || session === 'post' || session === 'pre') {
     status = 'closed';
   } else {
     const ageMs = now - quoteTs;
@@ -69,6 +69,7 @@ export function buildAssetQuote(def, rawData, now = Date.now()) {
     price: price !== null ? parseFloat(price.toFixed(priceDecimals)) : null,
     prevClose: prevClose !== null ? parseFloat(prevClose.toFixed(prevDecimals)) : null,
     change,
+    changePercent: change,
     changeStatus,
     changeBasis,
     quoteTs,

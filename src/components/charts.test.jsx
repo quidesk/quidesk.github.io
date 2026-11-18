@@ -4,6 +4,7 @@ import { renderToStaticMarkup } from 'react-dom/server';
 import MiniChart, { buildChartSeries, normalizeWorkerHistoryPoints } from './MiniChart';
 import DetailChart from './DetailChart';
 import { detectHotspots } from '../data/markets';
+import { useMarketStore } from '../store/marketStore';
 
 const TEN_UP_POINTS = [100, 101, 102, 103, 104, 105, 106, 107, 108, 109];
 
@@ -178,6 +179,47 @@ describe('Phase 2: Authentic Charts & Worker History Suite', () => {
       expect(hotspots[0].quoteTs).toBe(1730000000000);
       expect(hotspots[0].severity).toBe('high');
       expect(hotspots[0].signal).toBe('bullish_breakout');
+    });
+  });
+
+  describe('4. Store & Client Regression Tests', () => {
+    it('marketStore rejects zero, negative, or NaN prices via applyTick', () => {
+      const store = useMarketStore.getState();
+      // Initialize with a valid price
+      store.applyTick('BTC', {
+        id: 'btc',
+        symbol: 'BTC',
+        price: 65000,
+        timestamp: 1000,
+      });
+      expect(useMarketStore.getState().quotes['btc'].price).toBe(65000);
+
+      // Attempt to apply a 0 price
+      store.applyTick('BTC', {
+        id: 'btc',
+        symbol: 'BTC',
+        price: 0,
+        timestamp: 2000,
+      });
+      expect(useMarketStore.getState().quotes['btc'].price).toBe(65000); // Retained 65000, rejected 0
+
+      // Attempt to apply a negative price
+      store.applyTick('BTC', {
+        id: 'btc',
+        symbol: 'BTC',
+        price: -100,
+        timestamp: 3000,
+      });
+      expect(useMarketStore.getState().quotes['btc'].price).toBe(65000);
+
+      // Attempt to apply a NaN price
+      store.applyTick('BTC', {
+        id: 'btc',
+        symbol: 'BTC',
+        price: NaN,
+        timestamp: 4000,
+      });
+      expect(useMarketStore.getState().quotes['btc'].price).toBe(65000);
     });
   });
 });

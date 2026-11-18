@@ -306,10 +306,11 @@ const s = {
   },
   sidebar: {
     display:'flex', flexDirection:'column', gap:'24px',
-    position: 'sticky', top: '80px',
-    maxHeight: 'calc(100vh - 100px)',
+    position: 'sticky', top: '140px',
+    maxHeight: 'calc(100vh - 160px)',
     overflowY: 'auto',
     scrollbarWidth: 'thin',
+    isolation: 'isolate',
   },
   sideCard: {
     background:'var(--bg-card)', border:'1px solid var(--border-stone, #639CC5)', borderRadius:'12px',

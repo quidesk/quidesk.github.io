@@ -5,7 +5,7 @@ import { FreshnessBadge, FallbackNotice } from './FreshnessBadge';
 import { getFreshnessLevel } from '../lib/freshness';
 import { useMarketStore } from '../store/marketStore';
 import PriceDisplay from './PriceDisplay';
-import MiniChart from './MiniChart';
+import MiniChart, { fetchCachedRangeHistory, MIN_REAL_CHART_POINTS } from './MiniChart';
 import { formatForexSecondaryValue, formatCardUnitSuffix, getAssetPrecision } from '../utils/formatters';
 
 export default function MarketCard({ asset: propAsset, onClick, isWatched, onToggleWatch }) {
@@ -22,15 +22,35 @@ export default function MarketCard({ asset: propAsset, onClick, isWatched, onTog
     chartData: propAsset?.chartData || storeQuote?.chartData || propAsset?.spark1d || storeQuote?.spark1d,
   };
 
-  const hasPrice = asset.status !== 'unavailable' && typeof asset.price === 'number' && Number.isFinite(asset.price);
-  const rawChange = asset.change24h ?? asset.changePercent ?? asset.change;
+  const hasPrice = asset.status !== 'unavailable' && typeof asset.price === 'number' && Number.isFinite(asset.price) && asset.price > 0;
+  const rawChange = asset.change ?? asset.changePercent ?? asset.change24h;
   const changeVal = asset.status !== 'unavailable' && typeof rawChange === 'number' && Number.isFinite(rawChange)
     ? rawChange
     : null;
   const isFlat = changeVal !== null && Math.abs(changeVal) < 0.005;
-  const isPositive = changeVal !== null && changeVal >= 0;
+  const isPositive = changeVal !== null && changeVal > 0;
   const [flash, setFlash] = useState(null);
   const [prevPrice, setPrevPrice] = useState(asset.price);
+  const [historyPoints, setHistoryPoints] = useState(null);
+  const [historyPrevClose, setHistoryPrevClose] = useState(null);
+
+  useEffect(() => {
+    const existing = asset.chartData || asset.spark1d || asset.history?.['24H'];
+    if (Array.isArray(existing) && existing.length >= MIN_REAL_CHART_POINTS) return;
+    if (!asset.id) return;
+
+    let active = true;
+    fetchCachedRangeHistory(asset.id, '24H').then((res) => {
+      if (!active) return;
+      if (res && Array.isArray(res.points) && res.points.length >= MIN_REAL_CHART_POINTS) {
+        setHistoryPoints(res.points);
+        if (typeof res.previousClose === 'number') {
+          setHistoryPrevClose(res.previousClose);
+        }
+      }
+    });
+    return () => { active = false; };
+  }, [asset.id, asset.chartData, asset.spark1d, asset.history]);
 
   useEffect(() => {
     if (typeof asset.price === 'number' && asset.price !== prevPrice) {
@@ -51,8 +71,8 @@ export default function MarketCard({ asset: propAsset, onClick, isWatched, onTog
     ? 'rgba(255,45,107,0.15)'
     : 'transparent';
 
-  const cardTintClass = changeVal === null
-    ? (hasPrice ? 'card-positive' : 'qd-skeleton')
+  const cardTintClass = (changeVal === null || isFlat)
+    ? (hasPrice ? '' : 'qd-skeleton')
     : (isPositive ? 'card-positive' : 'card-negative');
 
   const isForex = (asset.sector || '').toLowerCase() === 'forex' || (
@@ -205,8 +225,12 @@ export default function MarketCard({ asset: propAsset, onClick, isWatched, onTog
       {/* Mini Worker-Served Real Chart */}
       <div style={styles.chartWrap}>
         <MiniChart
-          data={asset.chartData || asset.spark1d || (asset.history?.['24H'] || asset.history)}
-          prevClose={asset.prevClose}
+          data={(Array.isArray(asset.chartData) && asset.chartData.length >= MIN_REAL_CHART_POINTS && asset.chartData)
+            || (Array.isArray(asset.spark1d) && asset.spark1d.length >= MIN_REAL_CHART_POINTS && asset.spark1d)
+            || (Array.isArray(asset.history?.['24H']) && asset.history['24H'].length >= MIN_REAL_CHART_POINTS && asset.history['24H'])
+            || historyPoints
+            || []}
+          prevClose={asset.prevClose ?? historyPrevClose}
           change={changeVal}
           width={240}
           height={52}

@@ -95,7 +95,9 @@ function getMockNews() {
 }
 
 function timeAgo(date) {
+  if (!date || !(date instanceof Date) || isNaN(date.getTime())) return ''
   const diff = (Date.now() - date.getTime()) / 1000
+  if (diff < 0) return 'just now'
   if (diff < 60) return `${Math.floor(diff)}s ago`
   if (diff < 3600) return `${Math.floor(diff / 60)}m ago`
   if (diff < 86400) return `${Math.floor(diff / 3600)}h ago`
@@ -128,13 +130,21 @@ export default function NewsPage() {
         const parsed = articles.map((n, i) => {
           const sec = (n.sector || '').toLowerCase()
           const category = sec === 'equities' ? 'stocks' : (sec === 'energy' || sec === 'metals' ? 'commodities' : (sec || 'general'))
+          const rawDate = n.publishedAt || n.published
+          let publishedAt = null
+          if (rawDate) {
+            const d = new Date(rawDate)
+            if (!isNaN(d.getTime())) {
+              publishedAt = d
+            }
+          }
           return {
             id: n.id || `news-${i}`,
             title: n.title,
             description: n.summary || '',
             url: sanitizeUrl(n.link),
             source: n.source || 'OSINT Feed',
-            publishedAt: n.publishedAt ? new Date(n.publishedAt) : (n.published ? new Date(n.published) : new Date()),
+            publishedAt,
             category,
           }
         })
