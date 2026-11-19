@@ -347,8 +347,10 @@ export default function App() {
         {renderPage()}
       </main>
 
-      {/* OSINT Live Tracker Map */}
-      <OSINTMap news={newsSignals.news} />
+      {/* ── Act 5: Geopolitical OSINT Intelligence Radar ── */}
+      <section className="sc-reveal" aria-label="Geopolitical OSINT intelligence radar">
+        <OSINTMap news={newsSignals.news} />
+      </section>
 
       {/* Disclaimer */}
       <div style={fS.disclaimer}>

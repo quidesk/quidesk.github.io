@@ -94,11 +94,75 @@ export default function MapPage({
 
   return (
     <div style={s.page} className="page-wrap" role="tabpanel" id="panel-map" aria-labelledby="tab-map">
-      <div className="fade-up" style={{ marginBottom:'16px' }}>
-        <NarrativeStrip allAssets={allAssets} hotspots={hotspots} />
-      </div>
+      {/* ── Act 1: Dimensional Layered Hero ── */}
+      <section className="sc-hero-wrapper fade-up" aria-label="Terminal intelligence overview">
+        <div className="sc-plane-bg" aria-hidden="true" />
+        <div className="sc-plane-mid" aria-hidden="true" />
+        <div className="sc-plane-fg">
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '12px' }}>
+            <div style={{ display: 'inline-flex', alignItems: 'center', gap: '8px' }}>
+              <span style={{
+                fontFamily: 'var(--font-mono)', fontSize: '10px', fontWeight: 700,
+                color: 'var(--color-stone)', letterSpacing: '0.14em',
+                background: 'rgba(99, 156, 197, 0.12)', border: '1px solid var(--border-stone)',
+                borderRadius: '4px', padding: '3px 8px', textTransform: 'uppercase'
+              }}>
+                SOVEREIGN INTELLIGENCE TERMINAL
+              </span>
+              <span style={{ fontFamily: 'var(--font-mono)', fontSize: '10px', color: 'var(--text-dim)' }}>
+                GLOBAL MULTI-ASSET MATRIX
+              </span>
+            </div>
 
-      <div className="row g-4 mb-5">
+            <div className="sc-hero-kpis">
+              <div className="sc-kpi-pill">
+                <span>ASSETS:</span>
+                <span className="sc-kpi-val">{allAssets?.length || 32}</span>
+              </div>
+              <div className="sc-kpi-pill">
+                <span>SECTORS:</span>
+                <span className="sc-kpi-val">5 CLASSES</span>
+              </div>
+              <div className="sc-kpi-pill">
+                <span>LATENCY:</span>
+                <span className="sc-kpi-val" style={{ color: 'var(--bull)' }}>&lt;15MS EDGE</span>
+              </div>
+              <div className="sc-kpi-pill">
+                <span>ARBITRAGE:</span>
+                <span className="sc-kpi-val" style={{ color: 'var(--bull)' }}>100% VERIFIED</span>
+              </div>
+            </div>
+          </div>
+
+          <div style={{ maxWidth: '980px' }}>
+            <h1 style={{
+              fontFamily: 'var(--font-display)',
+              fontSize: 'clamp(24px, 3.2vw, 38px)',
+              fontWeight: 800,
+              color: 'var(--text-primary)',
+              letterSpacing: '-0.025em',
+              lineHeight: 1.15,
+              margin: '6px 0 10px 0',
+            }}>
+              Global Asset Telemetry: Real Time, Zero Latency
+            </h1>
+            <p style={{
+              fontFamily: 'var(--font-body)',
+              fontSize: 'clamp(13px, 1.1vw, 15px)',
+              color: 'var(--text-secondary)',
+              lineHeight: 1.5,
+              margin: 0,
+            }}>
+              Sub-second edge financial tracking across Equities, Cryptocurrencies, Precious Metals, Energy Commodities, and Foreign Exchange with verified cross-currency triangulation.
+            </p>
+          </div>
+
+          <NarrativeStrip allAssets={allAssets} hotspots={hotspots} />
+        </div>
+      </section>
+
+      {/* ── Act 2 & 3: The Peak — Interactive 3D Orbital Map & Tactical Signal Radar ── */}
+      <div className="row g-4 mb-5 sc-reveal">
         <div className="col-12 col-xl-9" style={s.mapCol}>
           <div className="fade-up-1" style={s.mapHeader}>
             <div>
@@ -233,7 +297,8 @@ export default function MapPage({
         </div>
       )}
 
-      <div style={s.sectorsStrip}>
+      {/* ── Act 4: High-Velocity Sector Matrix ── */}
+      <div style={s.sectorsStrip} className="sc-reveal">
         {['equities','crypto','metals','energy','forex'].map(k => {
           const m = SECTOR_META[k];
           const sectorAssets = allAssets.filter(a => a.sector === k);
