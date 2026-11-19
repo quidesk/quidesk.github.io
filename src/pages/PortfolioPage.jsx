@@ -50,7 +50,7 @@ export default function PortfolioPage({ portfolio, allAssets }) {
   })
 
   return (
-    <div style={s.page} className='page-wrap'>
+    <div style={s.page} className='page-wrap' role="tabpanel" id="panel-portfolio" aria-labelledby="tab-portfolio">
 
       {/* Header */}
       <div className="fade-up" style={s.header}>

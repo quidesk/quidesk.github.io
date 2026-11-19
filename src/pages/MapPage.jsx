@@ -19,8 +19,11 @@ function NarrativeStrip({ allAssets, hotspots }) {
   const pulse = computeMarketPulse(allAssets, hotspots);
 
   return (
-    <div style={ns.wrap}>
-      <div style={ns.eyebrow}>MARKET PULSE</div>
+    <div style={ns.wrap} className="hud-narrative-strip">
+      <div style={ns.eyebrow}>
+        <span style={ns.pulseDot} aria-hidden="true" />
+        MARKET PULSE
+      </div>
       <div style={ns.text}>{pulse.narrative}</div>
     </div>
   );
@@ -28,17 +31,27 @@ function NarrativeStrip({ allAssets, hotspots }) {
 
 const ns = {
   wrap: {
-    display:'flex', alignItems:'center', gap:'14px',
-    padding:'10px 20px', borderRadius:'8px',
-    background:'var(--bg-surface)', border:'1px solid var(--border-subtle)',
+    display: 'flex', alignItems: 'center', gap: '14px',
+    padding: '12px 22px', borderRadius: '10px',
+    background: 'linear-gradient(90deg, rgba(99, 156, 197, 0.12) 0%, rgba(3, 32, 53, 0.6) 100%)',
+    border: '1px solid var(--border-stone)',
+    boxShadow: 'inset 0 1px 0 rgba(255, 255, 255, 0.08), 0 4px 20px rgba(0, 0, 0, 0.25)',
+    backdropFilter: 'blur(12px)',
   },
   eyebrow: {
-    fontFamily:'var(--font-mono)', fontSize:'9px', letterSpacing:'0.15em',
-    color:'var(--accent)', flexShrink:0,
+    fontFamily: 'var(--font-mono)', fontSize: '9px', letterSpacing: '0.15em',
+    color: 'var(--color-stone)', flexShrink: 0, fontWeight: 700,
+    display: 'inline-flex', alignItems: 'center', gap: '8px',
+  },
+  pulseDot: {
+    width: '6px', height: '6px', borderRadius: '50%',
+    background: 'var(--bull)', boxShadow: '0 0 6px var(--bull)',
+    animation: 'pulseDot 1.8s ease-in-out infinite',
+    display: 'inline-block',
   },
   text: {
-    fontFamily:'var(--font-body)', fontSize:'12px', color:'var(--text-secondary)',
-    lineHeight:1.4,
+    fontFamily: 'var(--font-body)', fontSize: '13px', color: 'var(--text-primary)',
+    lineHeight: 1.5, fontWeight: 450,
   },
 };
 
@@ -80,7 +93,7 @@ export default function MapPage({
   }, [gainers, losers]);
 
   return (
-    <div style={s.page} className="page-wrap">
+    <div style={s.page} className="page-wrap" role="tabpanel" id="panel-map" aria-labelledby="tab-map">
       <div className="fade-up" style={{ marginBottom:'16px' }}>
         <NarrativeStrip allAssets={allAssets} hotspots={hotspots} />
       </div>

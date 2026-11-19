@@ -36,7 +36,7 @@ export default function WatchlistPage({
   };
 
   return (
-    <div style={s.page} className="page-wrap">
+    <div style={s.page} className="page-wrap" role="tabpanel" id="panel-watchlist" aria-labelledby="tab-watchlist">
       <div className="fade-up" style={s.header}>
         <h1 style={s.title}>Watchlist</h1>
         <p style={s.sub}>{watched.length} instruments tracked</p>

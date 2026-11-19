@@ -192,20 +192,33 @@ export default function Navbar({
 
         {/* Tier 2: Navigation Tabs & Search Command */}
         <div style={s.heroNavTier}>
-          <div style={s.tabs}>
-            {NAV_TABS.map(t => (
-              <button
-                key={t.id}
-                style={{ ...s.tab, ...(active === t.id ? s.tabOn : {}) }}
-                onClick={() => setActive(t.id)}
-              >
-                {t.label}
-                {t.id === 'map' && hotspotCount > 0 && (
-                  <span style={s.hotBadge}>{hotspotCount}</span>
-                )}
-                {active === t.id && <div style={s.tabBar}/>}
-              </button>
-            ))}
+          <div
+            style={s.tabs}
+            role="tablist"
+            aria-label="Terminal views"
+            {...{ focusgroup: 'tablist nomemory' }}
+          >
+            {NAV_TABS.map(t => {
+              const isSelected = active === t.id;
+              return (
+                <button
+                  key={t.id}
+                  type="button"
+                  role="tab"
+                  id={`tab-${t.id}`}
+                  aria-selected={isSelected}
+                  aria-controls={`panel-${t.id}`}
+                  style={{ ...s.tab, ...(isSelected ? s.tabOn : {}) }}
+                  onClick={() => setActive(t.id)}
+                >
+                  {t.label}
+                  {t.id === 'map' && hotspotCount > 0 && (
+                    <span style={s.hotBadge}>{hotspotCount}</span>
+                  )}
+                  {isSelected && <div style={s.tabBar} aria-hidden="true" />}
+                </button>
+              );
+            })}
           </div>
 
           <div style={s.heroSearchWrap}>
@@ -293,20 +306,27 @@ export default function Navbar({
       </nav>
 
       {/* ── Mobile bottom nav ── */}
-      <div className="mobile-nav d-md-none">
-        {NAV_TABS.map(t => (
-          <button
-            key={t.id}
-            className={'mobile-nav-btn' + (active === t.id ? ' active' : '')}
-            onClick={() => setActive(t.id)}
-          >
-            <span style={{ fontSize:'15px', lineHeight:1 }}>
-              {t.id==='map'?'◉':t.id==='equities'?'📈':t.id==='crypto'?'₿':t.id==='metals'?'◎':t.id==='energy'?'⚡':t.id==='compare'?'⇄':t.id==='watchlist'?'★':t.id==='forex'?'⇄':'◈'}
-            </span>
-            {t.short}
-          </button>
-        ))}
-      </div>
+      <nav className="mobile-nav d-md-none" role="tablist" aria-label="Mobile navigation">
+        {NAV_TABS.map(t => {
+          const isSelected = active === t.id;
+          return (
+            <button
+              key={t.id}
+              type="button"
+              role="tab"
+              id={`mob-tab-${t.id}`}
+              aria-selected={isSelected}
+              className={'mobile-nav-btn' + (isSelected ? ' active' : '')}
+              onClick={() => setActive(t.id)}
+            >
+              <span style={{ fontSize:'15px', lineHeight:1 }}>
+                {t.id==='map'?'◉':t.id==='equities'?'📈':t.id==='crypto'?'₿':t.id==='metals'?'◎':t.id==='energy'?'⚡':t.id==='compare'?'⇄':t.id==='watchlist'?'★':t.id==='forex'?'⇄':'◈'}
+              </span>
+              {t.short}
+            </button>
+          );
+        })}
+      </nav>
     </>
   )
 }
@@ -469,23 +489,33 @@ const s = {
   tabs: {
     display: 'flex', gap: '6px', flex: 1,
     overflowX: 'auto', scrollbarWidth: 'none',
+    scrollSnapType: 'inline proximity',
+    scrollPaddingInline: '8px',
   },
   tab: {
     position: 'relative', background: 'none', border: '1px solid transparent',
     color: 'var(--text-dim)', fontFamily: 'var(--font-body)',
     fontSize: '13px', fontWeight: 500,
-    padding: '7px 12px', cursor: 'pointer',
-    transition: 'all 0.2s', borderRadius: '8px',
+    padding: '7px 14px', cursor: 'pointer',
+    transition: 'all 0.18s cubic-bezier(0.16, 1, 0.3, 1)', borderRadius: '8px',
     whiteSpace: 'nowrap', display: 'flex', alignItems: 'center', gap: '6px',
+    scrollSnapAlign: 'start',
   },
   tabOn: {
     color: 'var(--text-primary)', fontWeight: 600,
     background: 'var(--bg-card)',
-    borderColor: 'var(--border-subtle)',
-    boxShadow: 'inset 0 1px 0 rgba(255,255,255,0.06), 0 2px 10px rgba(0,0,0,0.1)'
+    borderColor: 'var(--border-stone)',
+    boxShadow: 'inset 0 1px 0 rgba(255,255,255,0.08), 0 2px 10px rgba(0,0,0,0.18)',
   },
   tabBar: {
-    display: 'none'
+    position: 'absolute',
+    bottom: '-1px',
+    left: '12px',
+    right: '12px',
+    height: '2px',
+    background: 'var(--color-stone)',
+    borderRadius: '2px',
+    boxShadow: '0 0 8px var(--color-stone)',
   },
   hotBadge: {
     fontFamily: 'var(--font-mono)', fontSize: '9px',

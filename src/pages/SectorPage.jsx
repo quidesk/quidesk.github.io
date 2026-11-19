@@ -26,7 +26,7 @@ export default function SectorPage({ sector, assets, watchlistProps, convertPric
     : stats.avgChange >= 0 ? 'var(--bull)' : 'var(--bear)';
 
   return (
-    <div style={s.page} className='page-wrap'>
+    <div style={s.page} className='page-wrap' role="tabpanel" id={`panel-${sector}`} aria-labelledby={`tab-${sector}`}>
       {/* Header */}
       <div className="fade-up" style={s.header}>
         <div style={{ display:'flex', alignItems:'center', gap:'10px' }}>
@@ -149,13 +149,13 @@ const s = {
     letterSpacing:'0.06em',
   },
   statsBar: {
-    display:'grid', gridTemplateColumns:'repeat(5, 1fr)',
+    display:'grid', gridTemplateColumns:'repeat(auto-fit, minmax(150px, 1fr))',
     gap:'1px', background:'var(--border-subtle)',
-    border:'1px solid var(--border-stone, #639CC5)', borderRadius:'8px',
+    border:'1px solid var(--border-stone, #639CC5)', borderRadius:'10px',
     overflow:'hidden', marginTop:'14px',
-    boxShadow: 'inset 0 1px 0 rgba(99, 156, 197, 0.12)',
+    boxShadow: 'inset 0 1px 0 rgba(99, 156, 197, 0.12), 0 4px 16px rgba(0, 0, 0, 0.2)',
   },
-  statItem: { background:'var(--bg-card)', padding:'12px 16px' },
+  statItem: { background:'var(--bg-card)', padding:'14px 18px', display:'flex', flexDirection:'column', gap:'4px' },
   statL: { fontFamily:'var(--font-mono)', fontSize:'8px', color:'var(--text-dim)', letterSpacing:'0.12em', marginBottom:'4px' },
   statV: { fontFamily:'var(--font-mono)', fontSize:'14px', color:'var(--text-primary)' },
   sortRow: { display:'flex', alignItems:'center', gap:'6px', flexWrap:'wrap' },

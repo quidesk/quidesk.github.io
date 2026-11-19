@@ -133,7 +133,7 @@ export default function ComparePage({ data }) {
   const removeAsset = (id) => setSelected(p => p.filter(x => x !== id));
 
   return (
-    <div style={s.page} className='page-wrap'>
+    <div style={s.page} className='page-wrap' role="tabpanel" id="panel-compare" aria-labelledby="tab-compare">
       <div className="fade-up" style={s.header}>
         <div>
           <h1 style={s.title}>Compare Assets</h1>

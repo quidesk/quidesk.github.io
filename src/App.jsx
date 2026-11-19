@@ -118,6 +118,22 @@ export default function App() {
   });
   const [focusedAssetId, setFocusedAssetId] = useState(null);
 
+  const handleTabChange = useCallback((newTab) => {
+    if (newTab === activeTab) return;
+    if (
+      typeof document !== 'undefined' &&
+      document.startViewTransition &&
+      typeof window !== 'undefined' &&
+      !window.matchMedia('(prefers-reduced-motion: reduce)').matches
+    ) {
+      document.startViewTransition(() => {
+        setActiveTab(newTab);
+      });
+    } else {
+      setActiveTab(newTab);
+    }
+  }, [activeTab]);
+
   const {
     data,
     allAssets,
@@ -142,11 +158,11 @@ export default function App() {
   const [showFeedHealth, setShowFeedHealth] = useState(false);
 
   const handleSearchSelect = useCallback((asset) => {
-    setActiveTab('map');
+    handleTabChange('map');
     if (asset && asset.id) {
       setFocusedAssetId(asset.id);
     }
-  }, []);
+  }, [handleTabChange]);
 
   // Sync URL hash and dynamic document metadata for deep-linking SEO
   useEffect(() => {
@@ -289,7 +305,7 @@ export default function App() {
     <div style={{ minHeight:'100vh', display:'flex', flexDirection:'column' }}>
       <Navbar
         active={activeTab}
-        setActive={setActiveTab}
+        setActive={handleTabChange}
         isLive={isLive}
         setIsLive={setIsLive}
         hotspotCount={hotspots.length}
