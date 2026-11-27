@@ -1,6 +1,6 @@
 import { describe, it, expect, vi, afterEach } from 'vitest';
 import worker, { getCorsOrigin, withHeaders, buildNormalizedCacheKey } from './index.js';
-import { buildAssetQuote, handleQuotes } from './routes/quotes.js';
+import { buildAssetQuote, handleQuotes, formatCompactVolume } from './routes/quotes.js';
 import { handleHistory } from './routes/history.js';
 import { extractStrictAssetTags, parseRssXml } from './providers/news.js';
 import { checkMetalsBasis } from './providers/metals.js';
@@ -980,5 +980,91 @@ describe('Cloudflare Worker — Phase 1 Contract & Schema Validation', () => {
       expect(articles).toHaveLength(1);
       expect(articles[0].link).toBe('https://decrypt.co/safe-article');
     });
+  });
+});
+
+describe('Remediation Regression Tests — Standby Health, Volume & Basis Divergence', () => {
+  it('keeps unused failover crypto tiers in standby (ok: true) when Binance satisfies all 6 assets', async () => {
+    const now = Date.now();
+    const cryptoDefs = Object.values(ASSET_DEFINITIONS).filter((a) => a.sector === 'crypto');
+    const binanceSymbols = ['BTCUSDT', 'ETHUSDT', 'SOLUSDT', 'BNBUSDT', 'XRPUSDT', 'ADAUSDT'];
+    const binancePayload = binanceSymbols.map((symbol, idx) => ({
+      symbol,
+      lastPrice: String(100 + idx * 10),
+      openPrice: String(95 + idx * 10),
+      quoteVolume: String(1800000000 + idx * 1000000),
+      closeTime: now,
+    }));
+    const mockKlines = Array.from({ length: 24 }, (_, idx) => [
+      now - (24 - idx) * 3600 * 1000,
+      '100',
+      '105',
+      '99',
+      String(100 + idx * 0.2),
+      '1000',
+    ]);
+
+    vi.spyOn(globalThis, 'fetch').mockImplementation(async (input) => {
+      const url = typeof input === 'string' ? input : input.url;
+      if (url.includes('binance') && url.includes('klines')) {
+        return new Response(JSON.stringify(mockKlines), { status: 200 });
+      }
+      if (url.includes('binance')) {
+        return new Response(JSON.stringify(binancePayload), { status: 200 });
+      }
+      throw new Error(`Unexpected fallback fetch when Binance succeeded: ${url}`);
+    });
+
+    const { quotes, health } = await fetchMultiTierCrypto({});
+    expect(Object.keys(quotes)).toHaveLength(cryptoDefs.length);
+    expect(health.binance.ok).toBe(true);
+    expect(health.binance.state).toBe('ok');
+    expect(health.kraken.ok).toBe(true);
+    expect(health.kraken.state).toBe('standby');
+    expect(health.kraken.skipped).toBe(true);
+    expect(health.cryptocompare.ok).toBe(true);
+    expect(health.cryptocompare.state).toBe('standby');
+    expect(health.cryptocompare.skipped).toBe(true);
+  });
+
+  it('formatCompactVolume and buildAssetQuote format volume and preserve basisDivergence', () => {
+    expect(formatCompactVolume(13269826)).toBe('13.3M');
+    expect(formatCompactVolume(1800000000, 'USD')).toBe('$1.80B');
+    expect(formatCompactVolume(1500)).toBe('1.5K');
+    expect(formatCompactVolume(0)).toBeNull();
+    expect(formatCompactVolume(null)).toBeNull();
+
+    const now = Date.now();
+    const goldDef = ASSET_DEFINITIONS.gold;
+    const metalQuote = buildAssetQuote(goldDef, {
+      price: 3250,
+      prevClose: 3200,
+      quoteTs: now,
+      source: 'yahoo',
+      session: 'regular',
+      spark1d: [3200, 3225, 3250],
+      flags: ['spot_futures_basis'],
+      spotPrice: 3180,
+      basisDivergence: 2.2,
+      volume: 13269826,
+    }, now);
+
+    expect(metalQuote.volume).toBe('13.3M');
+    expect(metalQuote.basisDivergence).toBe(2.2);
+    expect(metalQuote.spotPrice).toBe(3180);
+
+    const btcDef = ASSET_DEFINITIONS.btc;
+    const cryptoQuote = buildAssetQuote(btcDef, {
+      price: 85000,
+      prevClose: 82000,
+      quoteTs: now,
+      source: 'binance',
+      session: '24x7',
+      spark1d: [82000, 83500, 85000],
+      volume: 1800000000,
+      volumeUnit: 'USD',
+    }, now);
+
+    expect(cryptoQuote.volume).toBe('$1.80B');
   });
 });

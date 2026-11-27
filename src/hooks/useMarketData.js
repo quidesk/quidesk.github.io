@@ -4,12 +4,11 @@ import { useMarketStore } from '../store/marketStore';
 import { STATIC_ASSETS_METADATA, detectHotspots } from '../data/markets';
 import { selectGainers, selectLosers } from '../selectors/marketSelectors';
 
-const BASE_POLL_INTERVAL_MS = 20000; // 20s
-const MAX_BACKOFF_MS = 60000;        // 60s
+const BASE_POLL_INTERVAL_MS = 20000; // 20s normal cadence
+const COLD_START_RETRY_MS = 1500;    // 1.5s fast retry on initial cold-start failure
+const COLD_START_MAX_GRACE_RETRIES = 2;
+const MAX_BACKOFF_MS = 60000;        // 60s max backoff
 
-/**
- * Creates initial skeleton asset map with null numbers and status 'unavailable'.
- */
 function buildSkeletonMap() {
   const map = {};
   for (const [id, meta] of Object.entries(STATIC_ASSETS_METADATA)) {
@@ -34,13 +33,6 @@ function buildSkeletonMap() {
   return map;
 }
 
-/**
- * useMarketData Hook
- *
- * Exclusively queries the Cloudflare Worker feed (/v1/quotes).
- * Pauses when the tab is hidden or when isLive is toggled off.
- * Implements exponential backoff on errors and AbortController request cancellation.
- */
 export function useMarketData() {
   const storeQuotes = useMarketStore((s) => s.quotes);
   const generatedAt = useMarketStore((s) => s.generatedAt);
@@ -53,11 +45,13 @@ export function useMarketData() {
   const setHealth = useMarketStore((s) => s.setHealth);
 
   const [isLive, setIsLive] = useState(true);
-  const [backoffDelay, setBackoffDelay] = useState(BASE_POLL_INTERVAL_MS);
+  const backoffDelayRef = useRef(BASE_POLL_INTERVAL_MS);
+  const consecutiveFailuresRef = useRef(0);
+  const hasHydratedRef = useRef(false);
   const abortControllerRef = useRef(null);
   const pollTimerRef = useRef(null);
 
-  // Initialize store with skeleton map if empty
+  // Initialize store with skeleton map once if empty
   useEffect(() => {
     if (Object.keys(storeQuotes).length === 0) {
       applySnapshot({ assets: buildSkeletonMap(), generatedAt: null, health: {} });
@@ -74,8 +68,10 @@ export function useMarketData() {
     try {
       const payload = await fetchWorkerQuotes({ signal: controller.signal });
       if (payload && payload.assets) {
+        hasHydratedRef.current = true;
+        consecutiveFailuresRef.current = 0;
+        backoffDelayRef.current = BASE_POLL_INTERVAL_MS;
         applySnapshot(payload);
-        setBackoffDelay(BASE_POLL_INTERVAL_MS);
       }
       if (typeof fetchWorkerHealth === 'function') {
         fetchWorkerHealth()
@@ -85,9 +81,17 @@ export function useMarketData() {
           .catch(() => null);
       }
     } catch (err) {
-      if (err.name === 'AbortError') return;
-      console.warn('[useMarketData] Worker feed fetch failed:', err.message);
-      setWorkerError(err.message);
+      if (err?.name === 'AbortError' && controller.signal.aborted) return;
+      consecutiveFailuresRef.current += 1;
+      console.warn('[useMarketData] Worker feed fetch failed:', err?.message || err);
+
+      // During initial cold-start, retry rapidly (1.5s -> 3s) before flashing OFFLINE
+      if (!hasHydratedRef.current && consecutiveFailuresRef.current <= COLD_START_MAX_GRACE_RETRIES) {
+        backoffDelayRef.current = COLD_START_RETRY_MS * consecutiveFailuresRef.current;
+        return;
+      }
+
+      setWorkerError(err?.message || 'Worker unreachable');
       if (typeof fetchWorkerHealth === 'function') {
         fetchWorkerHealth()
           .then((h) => {
@@ -95,50 +99,54 @@ export function useMarketData() {
           })
           .catch(() => null);
       }
-      setBackoffDelay((prev) => Math.min(prev * 2, MAX_BACKOFF_MS));
+      backoffDelayRef.current = Math.min(
+        Math.max(backoffDelayRef.current * 2, BASE_POLL_INTERVAL_MS),
+        MAX_BACKOFF_MS
+      );
     }
   }, [applySnapshot, setWorkerError, setHealth]);
 
-  // Main polling loop
+  // Main polling loop (backoff stored in ref so effect never thrashes/aborts itself)
   useEffect(() => {
     if (!isLive) return;
+    let cancelled = false;
 
-    let isTabVisible = document.visibilityState === 'visible';
+    const scheduleNext = () => {
+      if (cancelled) return;
+      if (pollTimerRef.current) clearTimeout(pollTimerRef.current);
+      pollTimerRef.current = setTimeout(() => {
+        if (cancelled) return;
+        if (document.visibilityState === 'visible') {
+          executeFetch().finally(scheduleNext);
+        } else {
+          scheduleNext();
+        }
+      }, backoffDelayRef.current);
+    };
 
     const handleVisibilityChange = () => {
-      isTabVisible = document.visibilityState === 'visible';
-      if (isTabVisible && isLive) {
-        executeFetch();
+      if (document.visibilityState === 'visible' && !cancelled) {
+        if (pollTimerRef.current) clearTimeout(pollTimerRef.current);
+        executeFetch().finally(scheduleNext);
       }
     };
 
     document.addEventListener('visibilitychange', handleVisibilityChange);
 
-    if (isTabVisible) {
-      executeFetch();
+    if (document.visibilityState === 'visible') {
+      executeFetch().finally(scheduleNext);
+    } else {
+      scheduleNext();
     }
 
-    const scheduleNext = () => {
-      if (pollTimerRef.current) clearTimeout(pollTimerRef.current);
-      pollTimerRef.current = setTimeout(() => {
-        if (isLive && document.visibilityState === 'visible') {
-          executeFetch().finally(scheduleNext);
-        } else {
-          scheduleNext();
-        }
-      }, backoffDelay);
-    };
-
-    scheduleNext();
-
     return () => {
+      cancelled = true;
       document.removeEventListener('visibilitychange', handleVisibilityChange);
       if (pollTimerRef.current) clearTimeout(pollTimerRef.current);
       if (abortControllerRef.current) abortControllerRef.current.abort();
     };
-  }, [isLive, backoffDelay, executeFetch]);
+  }, [isLive, executeFetch]);
 
-  // Derive consolidated asset list with hydrated chartData and 24H history
   const allAssets = useMemo(() => {
     const baseMap = buildSkeletonMap();
     Object.values(storeQuotes).forEach((q) => {
@@ -186,19 +194,10 @@ export function useMarketData() {
     return Object.values(baseMap);
   }, [storeQuotes]);
 
-  // Grouped by sector
   const data = useMemo(() => {
-    const grouped = {
-      equities: [],
-      crypto: [],
-      metals: [],
-      energy: [],
-      forex: [],
-    };
+    const grouped = { equities: [], crypto: [], metals: [], energy: [], forex: [] };
     allAssets.forEach((a) => {
-      if (grouped[a.sector]) {
-        grouped[a.sector].push(a);
-      }
+      if (grouped[a.sector]) grouped[a.sector].push(a);
     });
     return grouped;
   }, [allAssets]);

@@ -19,6 +19,15 @@ export function getStalenessThresholdMs(def) {
   return 900000;                                      // 15 min (Equities, G10 FX, Metals, Energy)
 }
 
+export function formatCompactVolume(val, unit = null) {
+  if (typeof val !== 'number' || !Number.isFinite(val) || val <= 0) return null;
+  const prefix = unit === 'USD' ? '$' : '';
+  if (val >= 1e9) return `${prefix}${(val / 1e9).toFixed(2)}B`;
+  if (val >= 1e6) return `${prefix}${(val / 1e6).toFixed(1)}M`;
+  if (val >= 1e3) return `${prefix}${(val / 1e3).toFixed(1)}K`;
+  return `${prefix}${Math.round(val)}`;
+}
+
 /**
  * Normalizes an asset into the strict canonical schema.
  */
@@ -83,11 +92,16 @@ export function buildAssetQuote(def, rawData, now = Date.now()) {
     session,
     status,
     flags,
+    volume: formatCompactVolume(rawData?.volume, rawData?.volumeUnit),
     spark1d,
   };
 
   if (typeof rawData?.spotPrice === 'number' && Number.isFinite(rawData.spotPrice)) {
     result.spotPrice = rawData.spotPrice;
+  }
+
+  if (typeof rawData?.basisDivergence === 'number' && Number.isFinite(rawData.basisDivergence)) {
+    result.basisDivergence = rawData.basisDivergence;
   }
 
   return result;
@@ -123,9 +137,9 @@ export async function handleQuotes(request, env) {
   const t0Metals = Date.now();
   try {
     spotMetals = await fetchSpotMetals(env?.GOLD_API_KEY);
-    health.perSource['gold-api'] = { ok: true, lastOk: now, latencyMs: Date.now() - t0Metals };
+    health.perSource['gold-api'] = { ok: true, state: 'ok', lastOk: now, latencyMs: Date.now() - t0Metals };
   } catch {
-    health.perSource['gold-api'] = { ok: false, lastOk: null, latencyMs: Date.now() - t0Metals };
+    health.perSource['gold-api'] = { ok: false, state: 'down', lastOk: null, latencyMs: Date.now() - t0Metals };
   }
 
   // 3. Fetch Non-Crypto Yahoo Assets (Equities, Energy, Metals, FX) + SGD=X
@@ -137,9 +151,12 @@ export async function handleQuotes(request, env) {
   await Promise.allSettled([
     ...yahooDefs.map(async (def) => {
       try {
+        const chartOpts = (def.sector === 'metals' || def.sector === 'energy')
+          ? { range: '2d', interval: '15m', trailingWindowMs: 24 * 3600 * 1000 }
+          : { range: '1d', interval: '5m' };
         const chart = def.id === 'brent'
-          ? await fetchFrontMonthBrent({ range: '1d', interval: '5m' }, now)
-          : await fetchYahooChart(def.yahooSymbol, { range: '1d', interval: '5m' });
+          ? await fetchFrontMonthBrent(chartOpts, now)
+          : await fetchYahooChart(def.yahooSymbol, chartOpts);
 
         if (chart) {
           const session = determineSessionState(
@@ -150,21 +167,25 @@ export async function handleQuotes(request, env) {
           );
           let flags = Array.isArray(chart.flags) ? [...chart.flags] : [];
           let spotPrice = null;
+          let basisDivergence = null;
           if (def.sector === 'metals' && def.spotSymbol && spotMetals[def.id]) {
             const basis = checkMetalsBasis(chart.price, spotMetals[def.id]);
             flags = [...flags, ...basis.flags];
             spotPrice = basis.spotPrice;
+            basisDivergence = basis.basisDivergence;
           }
 
           yahooResults[def.id] = {
             price: chart.price,
             prevClose: chart.prevClose,
+            volume: chart.volume ?? null,
             quoteTs: chart.quoteTs,
             source: 'yahoo',
             session,
             changeBasis: 'prev_close',
             flags,
             spotPrice,
+            basisDivergence,
             spark1d: chart.spark1d,
           };
         } else if (def.sector === 'equities' && env?.FINNHUB_KEY) {
@@ -219,6 +240,7 @@ export async function handleQuotes(request, env) {
   const yahooSuccessCount = Object.keys(yahooResults).length;
   health.perSource.yahoo = {
     ok: yahooSuccessCount >= 10,
+    state: yahooSuccessCount >= 10 ? 'ok' : 'down',
     lastOk: yahooSuccessCount > 0 ? now : null,
     latencyMs: Date.now() - t0Yahoo,
     assetsIngested: yahooSuccessCount,

@@ -98,15 +98,26 @@ export function determineSessionState(currentTradingPeriod, nowSeconds, sector, 
  * Extracts and filters a clean sparkline from chart indicators.
  * Preserves unrounded floats to avoid staircase quantization on energy/FX series.
  */
-export function extractSparkline(timestamps, closes, maxPoints = 60) {
+export function extractSparkline(timestamps, closes, maxPoints = 60, trailingWindowMs = null) {
   if (!Array.isArray(timestamps) || !Array.isArray(closes)) return [];
-  const points = [];
+  let points = [];
 
   for (let i = 0; i < timestamps.length; i++) {
     const t = timestamps[i];
     const c = closes[i];
     if (typeof t === 'number' && typeof c === 'number' && Number.isFinite(c) && c > 0) {
       points.push([t * 1000, c]);
+    }
+  }
+
+  if (typeof trailingWindowMs === 'number' && trailingWindowMs > 0 && points.length > 0) {
+    const latestTs = points[points.length - 1][0];
+    const cutoff = latestTs - trailingWindowMs;
+    const sliced = points.filter((p) => p[0] >= cutoff);
+    if (sliced.length >= 12) {
+      points = sliced;
+    } else if (points.length > 24) {
+      points = points.slice(-24);
     }
   }
 
@@ -126,7 +137,7 @@ export function extractSparkline(timestamps, closes, maxPoints = 60) {
  * Fetches Yahoo v8 chart for a single symbol.
  */
 export async function fetchYahooChart(symbol, options = {}) {
-  const { range = '1d', interval = '5m', timeoutMs = 8000 } = options;
+  const { range = '1d', interval = '5m', timeoutMs = 8000, trailingWindowMs = null } = options;
   const url = `https://query1.finance.yahoo.com/v8/finance/chart/${encodeURIComponent(symbol)}?range=${range}&interval=${interval}`;
 
   const res = await fetch(url, {
@@ -161,14 +172,18 @@ export async function fetchYahooChart(symbol, options = {}) {
     throw new Error(`Invalid price ${rawPrice} for ${symbol}`);
   }
 
+  const rawVol = meta.regularMarketVolume;
+  const volume = (typeof rawVol === 'number' && Number.isFinite(rawVol) && rawVol > 0) ? rawVol : null;
+
   const timestamps = result.timestamp || [];
   const closes = result.indicators?.quote?.[0]?.close || [];
-  const spark1d = extractSparkline(timestamps, closes, 60);
+  const spark1d = extractSparkline(timestamps, closes, 60, trailingWindowMs);
 
   return {
     symbol,
     price: rawPrice,
     prevClose,
+    volume,
     quoteTs,
     marketState: meta.marketState || null,
     currentTradingPeriod: meta.currentTradingPeriod,

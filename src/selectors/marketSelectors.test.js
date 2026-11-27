@@ -89,3 +89,29 @@ describe('Market Selectors — Single Source of Truth', () => {
     });
   });
 });
+
+describe('selectSectorStats — Aggregation Method Consistency', () => {
+  it('returns method: median (with meanChange) for Equities and method: mean for all other sectors', async () => {
+    const { selectSectorStats } = await import('./marketSelectors.js');
+
+    const eqStats = selectSectorStats([
+      { id: 'sp500', sector: 'equities', price: 5000, change: 1.0, status: 'live' },
+      { id: 'nasdaq', sector: 'equities', price: 18000, change: 2.0, status: 'live' },
+      { id: 'nifty', sector: 'equities', price: 24000, change: 9.0, status: 'live' },
+    ]);
+    expect(eqStats.method).toBe('median');
+    expect(eqStats.avgChange).toBe(2.0);
+    expect(eqStats.meanChange).toBe(4.0);
+
+    for (const sector of ['crypto', 'metals', 'energy', 'forex']) {
+      const sectorStats = selectSectorStats([
+        { id: `${sector}-1`, sector, price: 100, change: 1.0, status: 'live' },
+        { id: `${sector}-2`, sector, price: 100, change: 2.0, status: 'live' },
+        { id: `${sector}-3`, sector, price: 100, change: 9.0, status: 'live' },
+      ]);
+      expect(sectorStats.method).toBe('mean');
+      expect(sectorStats.avgChange).toBe(4.0);
+      expect(sectorStats.meanChange).toBe(4.0);
+    }
+  });
+});

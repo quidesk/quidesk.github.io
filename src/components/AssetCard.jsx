@@ -307,6 +307,19 @@ export default function AssetCard({
           )}
         </div>
 
+        {!compact && asset.sector === 'metals' && typeof asset.spotPrice === 'number' && asset.flags?.includes('spot_futures_basis') && (
+          <div style={{
+            fontFamily: 'var(--font-mono)',
+            fontSize: '10px',
+            color: 'var(--text-dim)',
+            marginTop: '-4px',
+            marginBottom: '6px',
+          }}>
+            Spot ${asset.spotPrice.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+            {typeof asset.basisDivergence === 'number' ? ` · ${asset.basisDivergence.toFixed(1)}% fut. basis` : ' · futures basis'}
+          </div>
+        )}
+
         {/* Time-Range Toggles */}
         <div style={{ display: 'flex', justifyContent: 'flex-end', marginBottom: compact ? '4px' : '8px' }}>
           <TimeRangeToggles

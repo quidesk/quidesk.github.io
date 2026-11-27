@@ -390,8 +390,9 @@ export default function App() {
           <div style={fS.metaRow}>
             {(() => {
               const entries = Object.entries(sourcesHealth || {});
-              const okCount = entries.filter(([, v]) => v?.ok).length;
-              const allOk = entries.length > 0 && okCount === entries.length && isWorkerOnline;
+              const activeEntries = entries.filter(([, v]) => v?.state !== 'standby' && !v?.skipped);
+              const okCount = activeEntries.filter(([, v]) => v?.ok).length;
+              const allOk = activeEntries.length > 0 && okCount === activeEntries.length && isWorkerOnline;
               const dotColor = !isWorkerOnline
                 ? 'var(--bear)'
                 : (entries.length === 0 ? 'var(--text-dim)' : (allOk ? 'var(--bull)' : 'var(--amber)'));
@@ -407,7 +408,7 @@ export default function App() {
                   >
                     <span style={{ ...fS.healthDot, background: dotColor }} />
                     <span>
-                      Feed {entries.length > 0 ? `${okCount}/${entries.length} ok` : (isWorkerOnline ? 'syncing' : 'offline')}
+                      Feed {activeEntries.length > 0 ? `${okCount}/${activeEntries.length} ok` : (isWorkerOnline ? 'syncing' : 'offline')}
                     </span>
                   </button>
                   {showFeedHealth && (
@@ -418,10 +419,10 @@ export default function App() {
                       ) : (
                         entries.map(([name, info]) => (
                           <div key={name} style={fS.healthRow}>
-                            <span style={{ ...fS.healthDot, background: info?.ok ? 'var(--bull)' : 'var(--bear)' }} />
+                            <span style={{ ...fS.healthDot, background: (info?.state === 'standby' || info?.skipped) ? 'var(--text-dim)' : (info?.ok ? 'var(--bull)' : 'var(--bear)') }} />
                             <span style={fS.healthName}>{name}</span>
-                            <span style={{ color: info?.ok ? 'var(--bull)' : 'var(--bear)' }}>
-                              {info?.ok ? 'ok' : 'down'}
+                            <span style={{ color: (info?.state === 'standby' || info?.skipped) ? 'var(--text-dim)' : (info?.ok ? 'var(--bull)' : 'var(--bear)') }}>
+                              {(info?.state === 'standby' || info?.skipped) ? 'standby' : (info?.ok ? 'ok' : 'down')}
                             </span>
                             <span style={fS.healthDim}>
                               {typeof info?.latencyMs === 'number' ? `${info.latencyMs}ms` : '—'}

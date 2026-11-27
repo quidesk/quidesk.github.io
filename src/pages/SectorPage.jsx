@@ -43,7 +43,7 @@ export default function SectorPage({ sector, assets, watchlistProps, convertPric
             { l:'INSTRUMENTS',  v: stats.totalCount },
             { l:'ADVANCING',    v: stats.advancingCount, c:'var(--bull)' },
             { l:'DECLINING',    v: stats.decliningCount, c:'var(--bear)' },
-            { l:'AVG CHANGE',   v: formatChange(stats.avgChange), c: avgColor },
+            { l: stats.method === 'median' ? 'MEDIAN CHANGE' : 'AVG CHANGE', v: formatChange(stats.avgChange), c: avgColor },
             {
               l: 'TOP GAINER',
               v: stats.topGainer ? `${stats.topGainer.symbol} ${formatChange(stats.topGainer.change)}` : '—',
@@ -105,7 +105,7 @@ export default function SectorPage({ sector, assets, watchlistProps, convertPric
           <table style={{ width:'100%', borderCollapse:'collapse', minWidth:'600px' }}>
             <thead>
               <tr>
-                {['Symbol','Name','Price','24H Change','Volume','Mkt Cap'].map(h => (
+                {['Symbol', 'Name', 'Price', '24H Change', 'Volume', ...(sorted.some(a => a.marketCap && a.marketCap !== '—') ? ['Mkt Cap'] : []), 'Status'].map(h => (
                   <th key={h} style={s.th}>{h}</th>
                 ))}
               </tr>
@@ -128,8 +128,13 @@ export default function SectorPage({ sector, assets, watchlistProps, convertPric
                       {chg !== null && !isFlat && <span style={{ marginRight: '3px' }}>{chg >= 0 ? '▲' : '▼'}</span>}
                       {formatChange(chg)}
                     </td>
-                    <td style={{ ...s.td, color:'var(--text-secondary)' }}>{a.volume}</td>
-                    <td style={{ ...s.td, color:'var(--text-secondary)' }}>{a.marketCap || '—'}</td>
+                    <td style={{ ...s.td, color:'var(--text-secondary)' }}>{a.volume || '—'}</td>
+                    {sorted.some(x => x.marketCap && x.marketCap !== '—') && (
+                      <td style={{ ...s.td, color:'var(--text-secondary)' }}>{a.marketCap || '—'}</td>
+                    )}
+                    <td style={{ ...s.td, fontFamily:'var(--font-mono)', fontSize:'11px', color: a.status === 'live' ? 'var(--bull)' : 'var(--text-dim)' }}>
+                      {a.status ? a.status.toUpperCase() : '—'}
+                    </td>
                   </tr>
                 );
               })}

@@ -375,7 +375,8 @@ export function drawCardCanvasChart(canvas, asset) {
   const tf = canvas.getAttribute?.('data-tf') || '24H';
   const plotSeries = [...series];
   if ((tf === '24H' || tf === '1H') && Math.abs(plotSeries[plotSeries.length - 1] - price) > 1e-8) {
-    plotSeries.push(price);
+    // Update the trailing live bar in place rather than appending a synthetic cliff point
+    plotSeries[plotSeries.length - 1] = price;
   }
 
   const showBaseline = tf === '24H' && Number.isFinite(prevClose) && prevClose > 0;
@@ -410,6 +411,7 @@ export function drawCardCanvasChart(canvas, asset) {
     ctx.restore();
   }
 
+  // 1. Trace and stroke the smooth price curve
   ctx.beginPath();
   ctx.moveTo(pts[0].x, pts[0].y);
   for (let i = 1; i < pts.length; i++) {
@@ -422,16 +424,18 @@ export function drawCardCanvasChart(canvas, asset) {
   ctx.lineWidth = 1.85;
   ctx.stroke();
 
-  const lastPt = pts[pts.length - 1];
-  ctx.beginPath();
-  ctx.arc(lastPt.x - 2, lastPt.y, 2.5, 0, Math.PI * 2);
-  ctx.fillStyle = color;
-  ctx.fill();
-
+  // 2. Close and fill the gradient area UNDER the curve BEFORE starting a new path for the dot
   ctx.lineTo(width, height);
   ctx.lineTo(0, height);
   ctx.closePath();
   ctx.fillStyle = grad;
+  ctx.fill();
+
+  // 3. Draw the terminal live dot as its own separate path
+  const lastPt = pts[pts.length - 1];
+  ctx.beginPath();
+  ctx.arc(Math.max(lastPt.x - 2, 2.5), lastPt.y, 2.5, 0, Math.PI * 2);
+  ctx.fillStyle = color;
   ctx.fill();
 }
 

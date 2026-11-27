@@ -107,6 +107,7 @@ export async function fetchBinanceTier(neededSymbols, timeoutMs = 4000) {
     const price = parseFloat(item.lastPrice);
     const parsedOpen = parseFloat(item.openPrice);
     const parsedPrev = parseFloat(item.prevClosePrice);
+    const quoteVol = parseFloat(item.quoteVolume);
     const open24h = (Number.isFinite(parsedOpen) && parsedOpen > 0)
       ? parsedOpen
       : ((Number.isFinite(parsedPrev) && parsedPrev > 0) ? parsedPrev : null);
@@ -117,6 +118,8 @@ export async function fetchBinanceTier(neededSymbols, timeoutMs = 4000) {
         symbol: entry.symbol,
         price,
         prevClose: open24h,
+        volume: Number.isFinite(quoteVol) && quoteVol > 0 ? quoteVol : null,
+        volumeUnit: 'USD',
         quoteTs: typeof item.closeTime === 'number' && item.closeTime > 0 ? item.closeTime : Date.now(),
         source: 'binance',
         changeBasis: 'rolling_24h',
@@ -207,6 +210,7 @@ export async function fetchCryptoCompareTier(neededSymbols, timeoutMs = 4000) {
     if (usd) {
       const price = parseFloat(usd.PRICE);
       const open24h = parseFloat(usd.OPEN24HOUR);
+      const volUsd = parseFloat(usd.VOLUME24HOURTO);
       const prevClose = (Number.isFinite(open24h) && open24h > 0) ? open24h : null;
       const ts = typeof usd.LASTUPDATE === 'number' && usd.LASTUPDATE > 0
         ? usd.LASTUPDATE * 1000
@@ -218,6 +222,8 @@ export async function fetchCryptoCompareTier(neededSymbols, timeoutMs = 4000) {
           symbol: cfg.symbol,
           price,
           prevClose,
+          volume: Number.isFinite(volUsd) && volUsd > 0 ? volUsd : null,
+          volumeUnit: 'USD',
           quoteTs: ts,
           source: 'cryptocompare',
           changeBasis: 'rolling_24h',
@@ -318,14 +324,14 @@ export async function fetchMultiTierCrypto(env = {}, now = Date.now()) {
   let remaining = [...allIds];
   const quotes = {};
   const health = {
-    binance: { ok: false, lastOk: null, latencyMs: 0 },
-    kraken: { ok: false, lastOk: null, latencyMs: 0 },
-    cryptocompare: { ok: false, lastOk: null, latencyMs: 0 },
+    binance: { ok: false, state: 'down', lastOk: null, latencyMs: 0 },
+    kraken: { ok: true, state: 'standby', skipped: true, lastOk: null, latencyMs: 0 },
+    cryptocompare: { ok: true, state: 'standby', skipped: true, lastOk: null, latencyMs: 0 },
   };
 
   const cgKey = env?.COINGECKO_API_KEY || env?.CG_API_KEY;
   if (cgKey) {
-    health.coingecko = { ok: false, lastOk: null, latencyMs: 0 };
+    health.coingecko = { ok: true, state: 'standby', skipped: true, lastOk: null, latencyMs: 0 };
   }
 
   // Tier 1: Binance
@@ -334,13 +340,13 @@ export async function fetchMultiTierCrypto(env = {}, now = Date.now()) {
     try {
       const res = await fetchBinanceTier(remaining, 4000);
       const count = Object.keys(res).length;
-      health.binance = { ok: count > 0, lastOk: count > 0 ? now : null, latencyMs: Date.now() - t0 };
+      health.binance = { ok: count > 0, state: count > 0 ? 'ok' : 'down', lastOk: count > 0 ? now : null, latencyMs: Date.now() - t0 };
       for (const [id, q] of Object.entries(res)) {
         quotes[id] = q;
       }
       remaining = remaining.filter(id => !quotes[id]);
     } catch {
-      health.binance = { ok: false, lastOk: null, latencyMs: Date.now() - t0 };
+      health.binance = { ok: false, state: 'down', lastOk: null, latencyMs: Date.now() - t0 };
     }
   }
 
@@ -350,13 +356,13 @@ export async function fetchMultiTierCrypto(env = {}, now = Date.now()) {
     try {
       const res = await fetchKrakenTier(remaining, 4000);
       const count = Object.keys(res).length;
-      health.kraken = { ok: count > 0, lastOk: count > 0 ? now : null, latencyMs: Date.now() - t0 };
+      health.kraken = { ok: count > 0, state: count > 0 ? 'ok' : 'down', skipped: false, lastOk: count > 0 ? now : null, latencyMs: Date.now() - t0 };
       for (const [id, q] of Object.entries(res)) {
         quotes[id] = q;
       }
       remaining = remaining.filter(id => !quotes[id]);
     } catch {
-      health.kraken = { ok: false, lastOk: null, latencyMs: Date.now() - t0 };
+      health.kraken = { ok: false, state: 'down', skipped: false, lastOk: null, latencyMs: Date.now() - t0 };
     }
   }
 
@@ -366,13 +372,13 @@ export async function fetchMultiTierCrypto(env = {}, now = Date.now()) {
     try {
       const res = await fetchCryptoCompareTier(remaining, 4000);
       const count = Object.keys(res).length;
-      health.cryptocompare = { ok: count > 0, lastOk: count > 0 ? now : null, latencyMs: Date.now() - t0 };
+      health.cryptocompare = { ok: count > 0, state: count > 0 ? 'ok' : 'down', skipped: false, lastOk: count > 0 ? now : null, latencyMs: Date.now() - t0 };
       for (const [id, q] of Object.entries(res)) {
         quotes[id] = q;
       }
       remaining = remaining.filter(id => !quotes[id]);
     } catch {
-      health.cryptocompare = { ok: false, lastOk: null, latencyMs: Date.now() - t0 };
+      health.cryptocompare = { ok: false, state: 'down', skipped: false, lastOk: null, latencyMs: Date.now() - t0 };
     }
   }
 

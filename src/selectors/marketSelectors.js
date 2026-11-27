@@ -202,6 +202,10 @@ export function selectSectorStats(assets = []) {
     avgChange = parseFloat(avgChange.toFixed(2));
   }
 
+  const meanChange = pool.length > 0
+    ? parseFloat((pool.reduce((acc, v) => acc + v, 0) / pool.length).toFixed(2))
+    : null;
+
   return {
     totalCount: list.length,
     validCount: valid.length,
@@ -209,6 +213,8 @@ export function selectSectorStats(assets = []) {
     decliningCount: changes.filter(c => c <= -0.005).length,
     flatCount: changes.filter(c => Math.abs(c) < 0.005).length,
     avgChange,
+    meanChange,
+    method: isEquities ? 'median' : 'mean',
     topGainer: selectGainers(list, 1)[0] || null,
     topLoser: selectLosers(list, 1)[0] || null,
     isClosed: valid.length > 0 && valid.every(a => a.status === 'closed' || a.tradingPeriod === 'closed'),
