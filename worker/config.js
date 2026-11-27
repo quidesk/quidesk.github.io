@@ -90,6 +90,7 @@ export const ASSET_DEFINITIONS = {
     unit: 'USD',
     decimals: 2,
     binanceSymbol: 'BTCUSDT',
+    yahooSymbol: 'BTC-USD',
     coingeckoId: 'bitcoin',
   },
   eth: {
@@ -100,6 +101,7 @@ export const ASSET_DEFINITIONS = {
     unit: 'USD',
     decimals: 2,
     binanceSymbol: 'ETHUSDT',
+    yahooSymbol: 'ETH-USD',
     coingeckoId: 'ethereum',
   },
   sol: {
@@ -110,6 +112,7 @@ export const ASSET_DEFINITIONS = {
     unit: 'USD',
     decimals: 2,
     binanceSymbol: 'SOLUSDT',
+    yahooSymbol: 'SOL-USD',
     coingeckoId: 'solana',
   },
   bnb: {
@@ -120,6 +123,7 @@ export const ASSET_DEFINITIONS = {
     unit: 'USD',
     decimals: 2,
     binanceSymbol: 'BNBUSDT',
+    yahooSymbol: 'BNB-USD',
     coingeckoId: 'binancecoin',
   },
   xrp: {
@@ -130,6 +134,7 @@ export const ASSET_DEFINITIONS = {
     unit: 'USD',
     decimals: 4,
     binanceSymbol: 'XRPUSDT',
+    yahooSymbol: 'XRP-USD',
     coingeckoId: 'ripple',
   },
   ada: {
@@ -140,6 +145,7 @@ export const ASSET_DEFINITIONS = {
     unit: 'USD',
     decimals: 4,
     binanceSymbol: 'ADAUSDT',
+    yahooSymbol: 'ADA-USD',
     coingeckoId: 'cardano',
   },
 

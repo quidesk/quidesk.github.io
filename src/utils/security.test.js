@@ -26,6 +26,13 @@ describe('Security Utilities', () => {
 
     it('blocks protocol-relative URLs that could bypass scheme checks', () => {
       expect(sanitizeUrl('//evil.com/payload')).toBe('#');
+      expect(sanitizeUrl('/\\evil.com/payload')).toBe('#');
+    });
+
+    it('blocks control-character smuggling in schemes and URLs', () => {
+      expect(sanitizeUrl('java\tscript:alert(1)')).toBe('#');
+      expect(sanitizeUrl('java\nscript:alert(1)')).toBe('#');
+      expect(sanitizeUrl('https://example.com/\u0000evil')).toBe('#');
     });
 
     it('handles null, undefined, or empty values with fallback', () => {

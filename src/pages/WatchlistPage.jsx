@@ -83,7 +83,7 @@ export default function WatchlistPage({
               gap: '6px',
               padding: '8px 16px',
               background: 'var(--accent)',
-              color: '#000',
+              color: 'var(--sc-accent-ink)',
               fontFamily: 'var(--font-mono)',
               fontSize: '11px',
               fontWeight: 700,
@@ -185,7 +185,7 @@ const s = {
   sub: { fontFamily:'var(--font-body)', fontSize:'12px', color:'var(--text-secondary)', marginTop:'3px' },
   alertBanner: {
     display:'flex', alignItems:'center', gap:'10px',
-    background:'rgba(240,165,0,0.07)', border:'1px solid var(--border-accent)',
+    background:'var(--accent-subtle)', border:'1px solid var(--border-accent)',
     borderRadius:'8px', padding:'10px 14px',
   },
   alertText: { fontFamily:'var(--font-body)', fontSize:'12px', color:'var(--text-secondary)', flex:1 },

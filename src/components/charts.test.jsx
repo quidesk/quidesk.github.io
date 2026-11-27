@@ -1,10 +1,11 @@
-import { describe, it, expect } from 'vitest';
+import { describe, it, expect, vi } from 'vitest';
 import React from 'react';
 import { renderToStaticMarkup } from 'react-dom/server';
 import MiniChart, { buildChartSeries, normalizeWorkerHistoryPoints } from './MiniChart';
 import DetailChart from './DetailChart';
 import { detectHotspots } from '../data/markets';
 import { useMarketStore } from '../store/marketStore';
+import { drawCardCanvasChart } from '../utils/marketEngine';
 
 const TEN_UP_POINTS = [100, 101, 102, 103, 104, 105, 106, 107, 108, 109];
 
@@ -220,6 +221,59 @@ describe('Phase 2: Authentic Charts & Worker History Suite', () => {
         timestamp: 4000,
       });
       expect(useMarketStore.getState().quotes['btc'].price).toBe(65000);
+    });
+
+    it('drawCardCanvasChart does not mutate or prepend prevClose, and renders honest placeholder for < 2 points', () => {
+      const originalSeries = [10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25, 26, 27, 28, 29, 30, 31, 32, 33];
+      const seriesCopy = [...originalSeries];
+
+      const fillTextMock = vi.fn();
+      const mockCtx = {
+        canvas: { width: 300, height: 100, style: {} },
+        clearRect: vi.fn(),
+        beginPath: vi.fn(),
+        moveTo: vi.fn(),
+        lineTo: vi.fn(),
+        quadraticCurveTo: vi.fn(),
+        arc: vi.fn(),
+        closePath: vi.fn(),
+        stroke: vi.fn(),
+        fill: vi.fn(),
+        scale: vi.fn(),
+        save: vi.fn(),
+        restore: vi.fn(),
+        setLineDash: vi.fn(),
+        createLinearGradient: vi.fn(() => ({ addColorStop: vi.fn() })),
+        fillText: fillTextMock,
+      };
+      const mockCanvas = {
+        getContext: () => mockCtx,
+        getBoundingClientRect: () => ({ width: 150, height: 50 }),
+        clientWidth: 260,
+        width: 300,
+        height: 100,
+        style: {},
+      };
+
+      drawCardCanvasChart(mockCanvas, {
+        price: 33,
+        spark1d: seriesCopy,
+        prevClose: 8,
+        change: 2.5,
+        sector: 'metals',
+      });
+
+      expect(seriesCopy).toEqual(originalSeries);
+      expect(seriesCopy.length).toBe(24);
+
+      drawCardCanvasChart(mockCanvas, {
+        price: 10,
+        spark1d: [10],
+        prevClose: 10,
+        change: 0,
+        sector: 'metals',
+      });
+      expect(fillTextMock).toHaveBeenCalledWith('No 24H history', expect.any(Number), expect.any(Number));
     });
   });
 });

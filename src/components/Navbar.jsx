@@ -6,15 +6,15 @@ import ShareModal from './ShareModal'
 import { deriveFeedStatus } from '../lib/freshness'
 
 const NAV_TABS = [
-  { id:'map',       label:'Market Map',  short:'Map'  },
-  { id:'equities',  label:'Equities',    short:'EQ'   },
-  { id:'crypto',    label:'Crypto',      short:'₿'    },
-  { id:'metals',    label:'Metals',      short:'Au'   },
-  { id:'energy',    label:'Energy',      short:'Oil'  },
-  { id:'forex',     label:'Forex',       short:'FX'   },
-  { id:'compare',   label:'Compare',     short:'Cmp'  },
-  { id:'watchlist', label:'Watchlist',   short:'★'    },
-  { id:'portfolio', label:'Portfolio',   short:'P&L'  },
+  { id:'map',       label:'Market Map',  short:'Map' },
+  { id:'equities',  label:'Equities',    short:'EQ'  },
+  { id:'crypto',    label:'Crypto',      short:'Cry' },
+  { id:'metals',    label:'Metals',      short:'Mtl' },
+  { id:'energy',    label:'Energy',      short:'Eng' },
+  { id:'forex',     label:'Forex',       short:'FX'  },
+  { id:'compare',   label:'Compare',     short:'Cmp' },
+  { id:'watchlist', label:'Watchlist',   short:'Fav' },
+  { id:'portfolio', label:'Portfolio',   short:'P&L' },
 ]
 
 export default function Navbar({
@@ -86,13 +86,29 @@ export default function Navbar({
     badgeLabel = '● LIVE';
   }
 
+  const statusBg = feedStatus.key === 'live'
+    ? 'var(--sc-gain-bg)'
+    : feedStatus.key === 'delayed'
+    ? 'var(--amber-dim)'
+    : feedStatus.key === 'offline'
+    ? 'var(--sc-loss-bg)'
+    : 'var(--bg-surface)';
+
+  const statusBorder = feedStatus.key === 'live'
+    ? 'rgba(54, 201, 130, 0.32)'
+    : feedStatus.key === 'delayed'
+    ? 'var(--border-accent)'
+    : feedStatus.key === 'offline'
+    ? 'rgba(240, 106, 100, 0.32)'
+    : 'var(--border-subtle)';
+
   return (
     <>
       {/* ── Desktop Hero Header ── */}
       <header style={s.heroNav} className="d-none d-md-block">
         <div style={s.heroTopTier}>
           <div style={{ display: 'flex', alignItems: 'center', gap: '16px' }}>
-            <button style={s.heroBrand} onClick={() => setActive('map')} title="Quidesk — Live Market Intelligence Terminal">
+            <button type="button" style={s.heroBrand} onClick={() => setActive('map')} title="Quidesk Live Market Intelligence Terminal">
               <div style={s.logoGlowWrapper}>
                 <Logo size={42} />
               </div>
@@ -115,17 +131,11 @@ export default function Navbar({
               style={{
                 ...s.heroLiveBadge,
                 cursor: 'pointer',
-                background: feedStatus.key === 'live' ? 'rgba(34, 212, 122, 0.08)' : 'rgba(240, 64, 96, 0.08)',
-                borderColor: feedStatus.key === 'live' ? 'rgba(34, 212, 122, 0.25)' : 'rgba(240, 64, 96, 0.25)',
+                background: statusBg,
+                borderColor: statusBorder,
                 color: pillActiveColor,
               }}
             >
-              <span style={{
-                ...s.heroLiveDot,
-                background: pillActiveColor,
-                boxShadow: feedStatus.key === 'live' ? '0 0 8px var(--bull)' : 'none',
-                animation: feedStatus.key === 'live' ? 'pulseDot 1.6s ease-in-out infinite' : 'none',
-              }} />
               <span style={{ ...s.heroLiveText, color: pillActiveColor }}>
                 {badgeLabel}
               </span>
@@ -158,11 +168,11 @@ export default function Navbar({
               </div>
             )}
 
-            <button style={s.iconBtn} onClick={() => window.location.reload()} title="Refresh telemetry">
+            <button type="button" style={s.iconBtn} onClick={() => window.location.reload()} title="Refresh telemetry" aria-label="Refresh telemetry">
               <RefreshCw size={14} color="var(--text-secondary)"/>
             </button>
 
-            <button style={s.iconBtn} onClick={onToggleTheme} title="Toggle theme">
+            <button type="button" style={s.iconBtn} onClick={onToggleTheme} title="Toggle light or dark theme" aria-label="Toggle theme">
               {theme === 'dark'
                 ? <Sun size={14} color="var(--text-secondary)"/>
                 : <Moon size={14} color="var(--text-secondary)"/>
@@ -170,6 +180,7 @@ export default function Navbar({
             </button>
 
             <button
+              type="button"
               style={s.shareNavBtn}
               onClick={() => setShowGlobalShare(true)}
               title="Share terminal insight"
@@ -258,50 +269,72 @@ export default function Navbar({
       />
 
       {/* ── Mobile top bar ── */}
-      <nav style={s.mobileTop} className="d-md-none">
-        <button style={s.heroBrandMobile} onClick={() => setActive('map')}>
-          <div style={{ ...s.logoGlowWrapper, boxShadow: '0 2px 14px rgba(212, 175, 55, 0.22)' }}>
-            <Logo size={46} />
-          </div>
-          <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-start', gap: '2px' }}>
-            <div style={{ display: 'flex', alignItems: 'baseline', gap: '6px' }}>
-              <span style={{ fontFamily: 'var(--font-brand, var(--font-display))', fontSize: '19px', fontWeight: 800, color: '#fff', letterSpacing: '-0.02em', lineHeight: 1 }}>
+      <nav style={s.mobileTop} className="d-md-none" aria-label="Mobile top bar">
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', width: '100%', gap: '8px', minWidth: 0 }}>
+          <button type="button" style={{ ...s.heroBrandMobile, minWidth: 0, flex: '1 1 auto' }} onClick={() => setActive('map')}>
+            <div style={s.logoGlowWrapper}>
+              <Logo size={36} />
+            </div>
+            <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-start', gap: '2px', minWidth: 0 }}>
+              <span style={{ fontFamily: 'var(--font-brand, var(--font-display))', fontSize: '18px', fontWeight: 800, color: 'var(--text-primary)', letterSpacing: '-0.025em', lineHeight: 1 }}>
                 Quidesk
               </span>
-            </div>
-            <div style={{ display: 'flex', alignItems: 'center', gap: '8px', paddingTop: '2px' }}>
-              <span style={{ fontSize: '9px', color: 'var(--text-secondary)', fontWeight: 500, letterSpacing: '0.01em' }}>
+              <span style={{ fontSize: '10px', color: 'var(--text-secondary)', fontWeight: 500, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', maxWidth: '150px' }}>
                 Live Market Intelligence
               </span>
-              <div onClick={(e) => { e.stopPropagation(); handleMobileShare(); }} style={{ padding: '2px 6px', background: '#4d9eff', borderRadius: '4px', border: 'none', display: 'flex', alignItems: 'center', gap: '4px', cursor: 'pointer', boxShadow: '0 2px 8px rgba(77, 158, 255, 0.35)' }}>
-                <Share2 size={10} color="#ffffff" />
-                <span style={{ fontSize: '10px', color: '#ffffff', fontWeight: 700 }}>Share</span>
-              </div>
             </div>
+          </button>
+
+          <div style={{ display: 'flex', alignItems: 'center', gap: '6px', flexShrink: 0 }}>
+            <button
+              type="button"
+              onClick={handleMobileShare}
+              style={{
+                padding: '4px 8px',
+                minHeight: '30px',
+                background: 'var(--accent-dim)',
+                borderRadius: '6px',
+                border: '1px solid var(--border-accent)',
+                display: 'inline-flex',
+                alignItems: 'center',
+                gap: '4px',
+                cursor: 'pointer',
+                color: 'var(--accent)',
+                fontSize: '10px',
+                fontWeight: 700,
+              }}
+              aria-label="Share terminal"
+            >
+              <Share2 size={11} color="var(--accent)" />
+              <span>Share</span>
+            </button>
+            <button type="button" style={s.iconBtn} onClick={() => window.location.reload()} title="Refresh" aria-label="Refresh telemetry">
+              <RefreshCw size={13} color="var(--text-secondary)"/>
+            </button>
+            <button type="button" style={s.iconBtn} onClick={onToggleTheme} title="Toggle theme" aria-label="Toggle theme">
+              {theme === 'dark'
+                ? <Sun size={14} color="var(--text-secondary)"/>
+                : <Moon size={14} color="var(--text-secondary)"/>
+              }
+            </button>
+            <button
+              type="button"
+              style={{ ...s.liveBtn, background: statusBg, borderColor: statusBorder, color: pillActiveColor, padding:'4px 8px' }}
+              onClick={() => setIsLive && setIsLive(v => !v)}
+              title={`Feed status: ${feedStatus.label}`}
+              aria-label={`Feed status: ${feedStatus.label}`}
+            >
+              <span style={{
+                ...s.liveDot,
+                background: pillActiveColor,
+                animation: feedStatus.key === 'live' ? 'pulseDot 1.6s ease-in-out infinite' : 'none',
+              }}/>
+            </button>
           </div>
-        </button>
-        <div style={{ display:'flex', alignItems:'center', gap:'8px' }}>
-          <SearchBar allAssets={allAssets || []} onSelect={handleSearchPick}/>
-          <button style={s.iconBtn} onClick={() => window.location.reload()} title="Refresh">
-            <RefreshCw size={13} color="var(--text-secondary)"/>
-          </button>
-          <button style={s.iconBtn} onClick={onToggleTheme}>
-            {theme === 'dark'
-              ? <Sun size={14} color="var(--text-secondary)"/>
-              : <Moon size={14} color="var(--text-secondary)"/>
-            }
-          </button>
-          <button
-            style={{ ...s.liveBtn, ...(isLive && feedStatus.key !== 'offline' ? s.liveBtnOn : s.liveBtnOff), padding:'4px 8px', borderColor: pillActiveColor, color: pillActiveColor }}
-            onClick={() => setIsLive && setIsLive(v => !v)}
-            title={`Feed status: ${feedStatus.label}`}
-          >
-            <span style={{
-              ...s.liveDot,
-              background: pillActiveColor,
-              animation: feedStatus.key === 'live' ? 'pulseDot 1.6s ease-in-out infinite' : 'none',
-            }}/>
-          </button>
+        </div>
+
+        <div style={{ width: '100%', minWidth: 0 }}>
+          <SearchBar allAssets={allAssets || []} onSelect={handleSearchPick} fullWidth />
         </div>
       </nav>
 
@@ -319,8 +352,8 @@ export default function Navbar({
               className={'mobile-nav-btn' + (isSelected ? ' active' : '')}
               onClick={() => setActive(t.id)}
             >
-              <span style={{ fontSize:'15px', lineHeight:1 }}>
-                {t.id==='map'?'◉':t.id==='equities'?'📈':t.id==='crypto'?'₿':t.id==='metals'?'◎':t.id==='energy'?'⚡':t.id==='compare'?'⇄':t.id==='watchlist'?'★':t.id==='forex'?'⇄':'◈'}
+              <span style={{ fontSize:'14px', lineHeight:1, fontFamily: 'var(--font-mono)' }} aria-hidden="true">
+                {t.id==='map'?'◉':t.id==='equities'?'↗':t.id==='crypto'?'₿':t.id==='metals'?'Au':t.id==='energy'?'Oil':t.id==='compare'?'⇄':t.id==='watchlist'?'★':t.id==='forex'?'¥':'◈'}
               </span>
               {t.short}
             </button>
@@ -335,17 +368,17 @@ const s = {
   heroNav: {
     position: 'sticky', top: 0, zIndex: 1000,
     isolation: 'isolate',
-    background: 'rgba(8, 12, 20, 0.97)',
-    backdropFilter: 'blur(16px)',
-    WebkitBackdropFilter: 'blur(16px)',
+    background: 'var(--surface-chrome)',
+    backdropFilter: 'blur(18px)',
+    WebkitBackdropFilter: 'blur(18px)',
     borderBottom: '1px solid var(--border-subtle)',
-    boxShadow: '0 8px 32px rgba(0,0,0,0.3)',
+    boxShadow: '0 4px 20px rgba(0, 0, 0, 0.16)',
   },
   heroTopTier: {
     display: 'flex',
     alignItems: 'center',
     justifyContent: 'space-between',
-    padding: '14px 28px',
+    padding: '12px 28px',
     maxWidth: '1700px',
     margin: '0 auto',
     gap: '24px',
@@ -353,7 +386,7 @@ const s = {
   heroBrand: {
     display: 'flex',
     alignItems: 'center',
-    gap: '16px',
+    gap: '14px',
     background: 'none',
     border: 'none',
     cursor: 'pointer',
@@ -376,14 +409,14 @@ const s = {
     justifyContent: 'center',
     flexShrink: 0,
     padding: '2px',
-    borderRadius: '16px',
-    background: 'radial-gradient(circle, rgba(212, 175, 55, 0.16) 0%, rgba(11, 14, 20, 0) 75%)',
-    boxShadow: '0 4px 20px rgba(212, 175, 55, 0.25)',
+    borderRadius: '14px',
+    background: 'var(--accent-subtle)',
+    border: '1px solid var(--border-subtle)',
   },
   heroBrandText: {
     display: 'flex',
     flexDirection: 'column',
-    gap: '4px',
+    gap: '3px',
   },
   heroTitleRow: {
     display: 'flex',
@@ -393,22 +426,21 @@ const s = {
   },
   heroTitle: {
     fontFamily: 'var(--font-brand, var(--font-display))',
-    fontSize: '26px',
+    fontSize: '24px',
     fontWeight: 800,
-    color: '#ffffff',
+    color: 'var(--text-primary)',
     letterSpacing: '-0.025em',
     lineHeight: 1,
     whiteSpace: 'nowrap',
-    textShadow: '0 2px 10px rgba(0,0,0,0.5)',
   },
   heroBadge: {
     fontFamily: 'var(--font-mono)',
     fontSize: '10px',
     fontWeight: 700,
-    color: '#D4AF37',
+    color: 'var(--accent)',
     letterSpacing: '0.14em',
-    background: 'rgba(212, 175, 55, 0.08)',
-    border: '1px solid rgba(212, 175, 55, 0.35)',
+    background: 'var(--accent-dim)',
+    border: '1px solid var(--border-accent)',
     borderRadius: '4px',
     padding: '3px 8px',
     textTransform: 'uppercase',
@@ -417,10 +449,10 @@ const s = {
     display: 'inline-flex',
     alignItems: 'center',
     gap: '6px',
-    background: 'rgba(34, 212, 122, 0.08)',
-    border: '1px solid rgba(34, 212, 122, 0.25)',
-    borderRadius: '4px',
-    padding: '3px 8px',
+    background: 'var(--sc-gain-bg)',
+    border: '1px solid var(--border-subtle)',
+    borderRadius: '6px',
+    padding: '4px 10px',
   },
   heroLiveDot: {
     width: '6px',
@@ -429,22 +461,22 @@ const s = {
   },
   heroLiveText: {
     fontFamily: 'var(--font-mono)',
-    fontSize: '9px',
+    fontSize: '10px',
     fontWeight: 700,
     color: 'var(--bull)',
-    letterSpacing: '0.08em',
+    letterSpacing: '0.06em',
   },
   heroTagline: {
     fontFamily: 'var(--font-body)',
     fontSize: '12px',
     color: 'var(--text-secondary)',
     fontWeight: 500,
-    letterSpacing: '0.02em',
+    letterSpacing: '0.01em',
   },
   heroTelemetry: {
     display: 'flex',
     alignItems: 'center',
-    gap: '12px',
+    gap: '10px',
     flexShrink: 0,
   },
   telemetryPill: {
@@ -453,15 +485,15 @@ const s = {
     alignItems: 'flex-end',
     gap: '2px',
     padding: '4px 10px',
-    background: 'rgba(255, 255, 255, 0.03)',
+    background: 'var(--bg-surface)',
     border: '1px solid var(--border-subtle)',
     borderRadius: '6px',
   },
   telemetryLabel: {
     fontFamily: 'var(--font-mono)',
-    fontSize: '8px',
+    fontSize: '9px',
     color: 'var(--text-dim)',
-    letterSpacing: '0.1em',
+    letterSpacing: '0.08em',
     fontWeight: 600,
   },
   telemetryVal: {
@@ -469,6 +501,7 @@ const s = {
     fontSize: '11px',
     color: 'var(--text-secondary)',
     fontWeight: 600,
+    fontVariantNumeric: 'tabular-nums lining-nums',
   },
   heroNavTier: {
     display: 'flex',
@@ -497,15 +530,15 @@ const s = {
     color: 'var(--text-dim)', fontFamily: 'var(--font-body)',
     fontSize: '13px', fontWeight: 500,
     padding: '7px 14px', cursor: 'pointer',
-    transition: 'all 0.18s cubic-bezier(0.16, 1, 0.3, 1)', borderRadius: '8px',
+    transition: 'all 0.2s cubic-bezier(0.22, 1, 0.36, 1)', borderRadius: '8px',
     whiteSpace: 'nowrap', display: 'flex', alignItems: 'center', gap: '6px',
     scrollSnapAlign: 'start',
   },
   tabOn: {
     color: 'var(--text-primary)', fontWeight: 600,
-    background: 'var(--bg-card)',
-    borderColor: 'var(--border-stone)',
-    boxShadow: 'inset 0 1px 0 rgba(255,255,255,0.08), 0 2px 10px rgba(0,0,0,0.18)',
+    background: 'var(--bg-card-hover)',
+    borderColor: 'var(--sc-border-strong)',
+    boxShadow: 'inset 0 1px 0 rgba(255,255,255,0.06)',
   },
   tabBar: {
     position: 'absolute',
@@ -513,41 +546,41 @@ const s = {
     left: '12px',
     right: '12px',
     height: '2px',
-    background: 'var(--color-stone)',
+    background: 'var(--sc-accent)',
     borderRadius: '2px',
-    boxShadow: '0 0 8px var(--color-stone)',
   },
   hotBadge: {
-    fontFamily: 'var(--font-mono)', fontSize: '9px',
+    fontFamily: 'var(--font-mono)', fontSize: '10px',
     background: 'var(--accent-dim)', color: 'var(--accent)',
     border: '1px solid var(--border-accent)',
-    borderRadius: '3px', padding: '0 5px', lineHeight: '16px',
+    borderRadius: '4px', padding: '0 5px', lineHeight: '16px',
   },
   alertPill: {
     fontFamily: 'var(--font-mono)', fontSize: '10px',
     color: 'var(--bear)', background: 'var(--bear-dim)',
-    border: '1px solid rgba(240,64,96,0.25)',
-    borderRadius: '4px', padding: '3px 8px', cursor: 'pointer',
+    border: '1px solid rgba(240, 106, 100, 0.32)',
+    borderRadius: '4px', padding: '4px 8px', cursor: 'pointer',
   },
   iconBtn: {
-    background: 'none', border: '1px solid var(--border-subtle)',
-    borderRadius: '6px', padding: '6px 8px',
-    cursor: 'pointer', display: 'flex', alignItems: 'center',
-    transition: 'border-color 0.15s',
+    background: 'var(--bg-surface)', border: '1px solid var(--border-subtle)',
+    borderRadius: '6px', padding: '6px 9px', minWidth: '30px', minHeight: '30px',
+    cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center',
+    transition: 'border-color 0.2s cubic-bezier(0.22, 1, 0.36, 1)',
   },
   liveBtn: {
     display: 'flex', alignItems: 'center', gap: '6px',
     border: '1px solid', borderRadius: '6px',
-    fontFamily: 'var(--font-mono)', fontSize: '11px', fontWeight: 500,
-    padding: '5px 12px', cursor: 'pointer', transition: 'all 0.15s',
+    fontFamily: 'var(--font-mono)', fontSize: '11px', fontWeight: 600,
+    padding: '5px 12px', cursor: 'pointer', transition: 'all 0.2s',
+    minHeight: '30px',
   },
   liveBtnOn: {
-    background: 'rgba(34,212,122,0.07)',
-    borderColor: 'rgba(34,212,122,0.2)', color: 'var(--bull)',
+    background: 'var(--sc-gain-bg)',
+    borderColor: 'rgba(54, 201, 130, 0.32)', color: 'var(--bull)',
   },
   liveBtnOff: {
-    background: 'rgba(240,64,96,0.07)',
-    borderColor: 'rgba(240,64,96,0.2)', color: 'var(--bear)',
+    background: 'var(--sc-loss-bg)',
+    borderColor: 'rgba(240, 106, 100, 0.32)', color: 'var(--bear)',
   },
   liveDot: {
     width: '6px', height: '6px', borderRadius: '50%', flexShrink: 0,
@@ -555,37 +588,40 @@ const s = {
   clock: { textAlign: 'right' },
   clockTime: {
     fontFamily: 'var(--font-mono)', fontSize: '13px',
-    color: 'var(--text-primary)', letterSpacing: '0.05em',
+    color: 'var(--text-primary)', letterSpacing: '0.04em',
+    fontVariantNumeric: 'tabular-nums lining-nums',
   },
   clockDate: {
-    fontFamily: 'var(--font-mono)', fontSize: '9px',
-    color: 'var(--text-dim)', letterSpacing: '0.04em',
+    fontFamily: 'var(--font-mono)', fontSize: '10px',
+    color: 'var(--text-dim)', letterSpacing: '0.03em',
   },
   mobileTop: {
     position: 'sticky', top: 0, zIndex: 100,
-    background: 'var(--bg-overlay)', backdropFilter: 'blur(20px)',
+    background: 'var(--surface-chrome)', backdropFilter: 'blur(18px)',
+    WebkitBackdropFilter: 'blur(18px)',
     borderBottom: '1px solid var(--border-subtle)',
-    display: 'flex', alignItems: 'center',
-    justifyContent: 'space-between',
-    padding: '12px 16px', gap: '10px', minHeight: '76px',
-    boxShadow: '0 4px 20px rgba(0,0,0,0.25)',
+    display: 'flex', flexDirection: 'column', alignItems: 'stretch',
+    padding: '10px 12px', gap: '8px',
+    width: '100%', boxSizing: 'border-box', overflowX: 'clip',
+    boxShadow: '0 4px 16px rgba(0, 0, 0, 0.16)',
   },
   shareNavBtn: {
     display: 'flex',
     alignItems: 'center',
     gap: '6px',
-    background: 'rgba(77, 158, 255, 0.08)',
-    border: '1px solid rgba(77, 158, 255, 0.25)',
+    background: 'var(--accent-dim)',
+    border: '1px solid var(--border-accent)',
     borderRadius: '6px',
-    padding: '5px 11px',
+    padding: '6px 12px',
+    minHeight: '30px',
     cursor: 'pointer',
     color: 'var(--accent)',
     fontFamily: 'var(--font-mono)',
     fontSize: '11px',
     fontWeight: 600,
-    transition: 'all 0.15s ease',
+    transition: 'all 0.2s cubic-bezier(0.22, 1, 0.36, 1)',
   },
   shareNavText: {
-    letterSpacing: '0.03em',
+    letterSpacing: '0.02em',
   },
 }

@@ -10,6 +10,7 @@ export default function ShareModal({ isOpen, onClose, data, formatLocalPrice }) 
   const [imgUrl, setImgUrl] = useState(null)
   const [loading, setLoading] = useState(true)
   const [renderData, setRenderData] = useState(null)
+  const [copyStatus, setCopyStatus] = useState('')
   const nodeRef = useRef(null)
 
   // 1. Capture snapshot of data when modal opens so live updates don't cause flickering
@@ -20,6 +21,7 @@ export default function ShareModal({ isOpen, onClose, data, formatLocalPrice }) 
       setRenderData(null)
       setImgUrl(null)
       setLoading(true)
+      setCopyStatus('')
     }
   }, [isOpen, data, renderData])
 
@@ -31,7 +33,7 @@ export default function ShareModal({ isOpen, onClose, data, formatLocalPrice }) 
       requestAnimationFrame(() => {
         toPng(nodeRef.current, { 
           pixelRatio: 1.5, 
-          backgroundColor: '#0a0a0a',
+          backgroundColor: '#0B0C0F',
           skipFonts: true, 
         })
           .then((dataUrl) => {
@@ -76,25 +78,26 @@ export default function ShareModal({ isOpen, onClose, data, formatLocalPrice }) 
       await navigator.clipboard.write([
         new ClipboardItem({ 'image/png': blob })
       ])
-      alert('Image copied to clipboard!')
+      setCopyStatus('Image copied to clipboard.')
+      setTimeout(() => setCopyStatus(''), 2500)
     } catch (e) {
-      alert('Failed to copy image.')
+      setCopyStatus('Clipboard copy unavailable. Use Download Image.')
     }
   }
 
   return (
-    <div style={s.overlay}>
+    <div style={s.overlay} role="dialog" aria-modal="true" aria-label="Share Insight">
       <div style={s.modal}>
         <div style={s.header}>
           <span style={s.title}>Share Insight</span>
-          <button style={s.closeBtn} onClick={onClose}><X size={18} /></button>
+          <button type="button" style={s.closeBtn} onClick={onClose} aria-label="Close modal"><X size={18} /></button>
         </div>
 
         <div style={s.previewContainer}>
           {loading ? (
             <div style={s.loadingBox}>Generating preview...</div>
           ) : (
-            <img src={imgUrl} alt="Preview" style={s.previewImg} />
+            <img src={imgUrl} alt="Market snapshot share preview" style={s.previewImg} />
           )}
         </div>
 
@@ -107,10 +110,15 @@ export default function ShareModal({ isOpen, onClose, data, formatLocalPrice }) 
           />
         </div>
         <div style={s.actionsSub}>
-          <button style={{...s.btnSub, flex: 0.5, border: 'none', background: 'rgba(255,255,255,0.05)'}} onClick={onClose}>Close</button>
-          <button style={s.btnSub} onClick={handleDownload}><Download size={14} /> Download Image</button>
-          <button style={s.btnSub} onClick={handleCopy}><Copy size={14} /> Copy Image</button>
+          <button type="button" style={{...s.btnSub, flex: 0.5, border: '1px solid var(--border-subtle)', background: 'var(--sc-surface-elevated)'}} onClick={onClose}>Close</button>
+          <button type="button" style={s.btnSub} onClick={handleDownload}><Download size={14} /> Download Image</button>
+          <button type="button" style={s.btnSub} onClick={handleCopy}><Copy size={14} /> Copy Image</button>
         </div>
+        {copyStatus && (
+          <div role="status" style={{ padding: '0 20px 14px', fontFamily: 'var(--font-mono)', fontSize: '11px', color: 'var(--accent)', textAlign: 'center' }}>
+            {copyStatus}
+          </div>
+        )}
 
         {/* Hidden node to render the card for html-to-image */}
         <div style={s.hiddenNodeWrapper}>
@@ -130,7 +138,7 @@ export default function ShareModal({ isOpen, onClose, data, formatLocalPrice }) 
               const a = renderData.asset;
               const chg = a.status === 'unavailable' ? null : (typeof a.change === 'number' && Number.isFinite(a.change) ? a.change : null);
               const isFlat = chg !== null && Math.abs(chg) < 0.005;
-              const chgColor = chg === null || isFlat ? '#94a3b8' : (chg >= 0 ? '#10b981' : '#ef4444');
+              const chgColor = chg === null || isFlat ? '#8E939E' : (chg >= 0 ? '#36C982' : '#F06A64');
               return (
                 <div style={s.assetContent}>
                   <div style={s.assetTop}>
@@ -170,16 +178,16 @@ export default function ShareModal({ isOpen, onClose, data, formatLocalPrice }) 
                 <div style={s.newsLabel}>OSINT ALERT</div>
                 <div style={s.newsTitle}>"{renderData.news.title}"</div>
                 <div style={s.newsMeta}>
-                  <span style={{ color: renderData.news.color || '#4d9eff' }}>{renderData.news.source}</span>
-                  <span style={{ color: '#555' }}> • </span>
-                  <span style={{ color: '#888' }}>Live</span>
+                  <span style={{ color: renderData.news.color || '#D2B47C' }}>{renderData.news.source}</span>
+                  <span style={{ color: '#6B7280' }}> • </span>
+                  <span style={{ color: '#9CA3AF' }}>Live</span>
                 </div>
               </div>
             )}
 
             {renderData.type === 'global' && renderData.assets && (
               <div style={{ display: 'flex', flexDirection: 'column', gap: '12px', marginTop: '16px' }}>
-                <div style={{ color: '#fff', fontSize: '16px', fontWeight: 900, letterSpacing: '0.1em', marginBottom: '2px' }}>MARKET HOTSPOT</div>
+                <div style={{ color: '#F4F4F5', fontSize: '16px', fontWeight: 900, letterSpacing: '0.1em', marginBottom: '2px' }}>MARKET HOTSPOT</div>
                 <div className="row row-cols-1 row-cols-sm-2 g-2">
                   {renderData.assets.map(a => {
                     let cName = a.name;
@@ -191,7 +199,7 @@ export default function ShareModal({ isOpen, onClose, data, formatLocalPrice }) 
                     if(a.symbol === 'BTC') cName = 'Bitcoin';
                     const chg = a.status === 'unavailable' ? null : (typeof a.change === 'number' && Number.isFinite(a.change) ? a.change : null);
                     const isFlat = chg !== null && Math.abs(chg) < 0.005;
-                    const chgColor = chg === null || isFlat ? '#94a3b8' : (chg >= 0 ? '#34d399' : '#f87171');
+                    const chgColor = chg === null || isFlat ? '#8E939E' : (chg >= 0 ? '#36C982' : '#F06A64');
                     
                     return (
                       <div className="col" key={a.id}>
@@ -246,7 +254,7 @@ const s = {
     flexShrink: 0
   },
   title: {
-    color: '#fff', fontSize: '15px', fontWeight: 600, letterSpacing: '0.05em'
+    color: 'var(--text-primary)', fontSize: '15px', fontWeight: 600, letterSpacing: '0.03em'
   },
   closeBtn: {
     background: 'none', border: 'none', color: 'var(--text-dim)', cursor: 'pointer',
@@ -284,7 +292,7 @@ const s = {
     position: 'absolute', left: '-9999px', top: '-9999px'
   },
   shareCard: {
-    width: '400px', background: '#0a0a0a', border: '1px solid #333',
+    width: '400px', background: '#0B0C0F', border: '1px solid #2A2D36',
     borderRadius: '12px', padding: '24px', display: 'flex', flexDirection: 'column', gap: '20px',
     fontFamily: 'system-ui, sans-serif'
   },
@@ -295,13 +303,13 @@ const s = {
     display: 'flex', alignItems: 'center', gap: '8px'
   },
   brandIcon: {
-    width: '16px', height: '16px', borderRadius: '4px', background: '#fff'
+    width: '16px', height: '16px', borderRadius: '4px', background: '#F4F4F5'
   },
   brandName: {
-    color: '#fff', fontSize: '14px', fontWeight: 800, letterSpacing: '0.1em'
+    color: '#F4F4F5', fontSize: '14px', fontWeight: 800, letterSpacing: '0.1em'
   },
   watermark: {
-    color: '#666', fontSize: '12px', fontFamily: 'monospace'
+    color: '#8E939E', fontSize: '12px', fontFamily: 'monospace'
   },
   assetContent: {
     display: 'flex', flexDirection: 'column', gap: '16px'
@@ -310,28 +318,28 @@ const s = {
     display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start'
   },
   assetSymbol: {
-    color: '#fff', fontSize: '24px', fontWeight: 700, fontFamily: 'monospace'
+    color: '#F4F4F5', fontSize: '24px', fontWeight: 700, fontFamily: 'monospace'
   },
   assetName: {
-    color: '#888', fontSize: '13px'
+    color: '#B4B8C2', fontSize: '13px'
   },
   assetPrice: {
-    color: '#fff', fontSize: '24px', fontWeight: 700, fontFamily: 'monospace'
+    color: '#F4F4F5', fontSize: '24px', fontWeight: 700, fontFamily: 'monospace'
   },
   assetChange: {
     fontSize: '14px', fontWeight: 600, fontFamily: 'monospace', textAlign: 'right'
   },
   assetChart: {
-    height: '100px', width: '100%', background: '#111', borderRadius: '8px', padding: '10px'
+    height: '100px', width: '100%', background: '#13151A', borderRadius: '8px', padding: '10px'
   },
   newsContent: {
     display: 'flex', flexDirection: 'column', gap: '12px', padding: '10px 0'
   },
   newsLabel: {
-    color: '#f97316', fontSize: '11px', fontWeight: 700, letterSpacing: '0.1em'
+    color: '#D2B47C', fontSize: '11px', fontWeight: 700, letterSpacing: '0.1em'
   },
   newsTitle: {
-    color: '#fff', fontSize: '20px', fontWeight: 600, lineHeight: 1.4
+    color: '#F4F4F5', fontSize: '20px', fontWeight: 600, lineHeight: 1.4
   },
   newsMeta: {
     fontSize: '12px', fontFamily: 'monospace', marginTop: '8px'

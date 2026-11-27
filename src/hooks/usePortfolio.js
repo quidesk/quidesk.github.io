@@ -11,26 +11,38 @@ const DEFAULT_HOLDINGS = [
   { id:'wti',  symbol:'WTI',     name:'Crude Oil WTI', qty:10,  avgCost:72,    sector:'energy' },
 ]
 
+const VALID_ID_RE = /^[a-z0-9_-]{1,32}$/i
+
 export function usePortfolio(liveAssets) {
   const [holdings, setHoldings] = useState(() => {
     try {
       const s = localStorage.getItem(STORAGE_KEY)
       if (!s) return DEFAULT_HOLDINGS
       const parsed = JSON.parse(s)
-      // Validate: must be an array of holding objects
       if (!Array.isArray(parsed)) return DEFAULT_HOLDINGS
-      const valid = parsed.filter(h =>
-        h && typeof h === 'object' &&
-        typeof h.id === 'string' &&
-        typeof h.qty === 'number' &&
-        typeof h.avgCost === 'number'
-      )
+      const valid = []
+      for (const h of parsed.slice(0, 100)) {
+        if (!h || typeof h !== 'object' || Array.isArray(h)) continue
+        if (typeof h.id !== 'string' || !VALID_ID_RE.test(h.id)) continue
+        if (!Number.isFinite(h.qty) || h.qty <= 0 || h.qty > 1e12) continue
+        if (!Number.isFinite(h.avgCost) || h.avgCost < 0 || h.avgCost > 1e12) continue
+        valid.push({
+          id: h.id,
+          symbol: typeof h.symbol === 'string' ? h.symbol.slice(0, 20) : h.id.toUpperCase(),
+          name: typeof h.name === 'string' ? h.name.slice(0, 80) : h.id,
+          qty: h.qty,
+          avgCost: h.avgCost,
+          sector: typeof h.sector === 'string' ? h.sector.slice(0, 24) : 'equities',
+        })
+      }
       return valid.length > 0 ? valid : DEFAULT_HOLDINGS
     } catch { return DEFAULT_HOLDINGS }
   })
 
   useEffect(() => {
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(holdings))
+    try {
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(holdings))
+    } catch {}
   }, [holdings])
 
   const enriched = useMemo(() => holdings.map(h => {

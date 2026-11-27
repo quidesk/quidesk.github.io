@@ -24,10 +24,14 @@ function useSettings() {
       if (!parsed || typeof parsed !== 'object' || Array.isArray(parsed)) return DEFAULT_SETTINGS
       const validated = { ...DEFAULT_SETTINGS }
       for (const [key, defaultVal] of Object.entries(DEFAULT_SETTINGS)) {
-        if (key in parsed && typeof parsed[key] === typeof defaultVal) {
+        if (Object.prototype.hasOwnProperty.call(parsed, key) && typeof parsed[key] === typeof defaultVal) {
+          if (typeof defaultVal === 'number' && !Number.isFinite(parsed[key])) continue
           validated[key] = parsed[key]
         }
       }
+      validated.refreshInterval = Math.min(60000, Math.max(1000, validated.refreshInterval))
+      validated.priceDecimals = [2, 4, 6].includes(validated.priceDecimals) ? validated.priceDecimals : 2
+      validated.tickerSpeed = Math.min(200, Math.max(10, validated.tickerSpeed))
       return validated
     } catch {
       return DEFAULT_SETTINGS
@@ -37,12 +41,16 @@ function useSettings() {
   const save = (updates) => {
     const next = { ...settings, ...updates }
     setSettings(next)
-    localStorage.setItem('quidesk-settings', JSON.stringify(next))
+    try {
+      localStorage.setItem('quidesk-settings', JSON.stringify(next))
+    } catch {}
   }
 
   const reset = () => {
     setSettings(DEFAULT_SETTINGS)
-    localStorage.setItem('quidesk-settings', JSON.stringify(DEFAULT_SETTINGS))
+    try {
+      localStorage.setItem('quidesk-settings', JSON.stringify(DEFAULT_SETTINGS))
+    } catch {}
   }
 
   return { settings, save, reset }

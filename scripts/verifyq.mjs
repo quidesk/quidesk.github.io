@@ -491,8 +491,12 @@ export async function runVerifyQ(options = {}) {
       console.log(`[VerifyQ] Navigating to ${url}...`);
       await page.goto(url, { waitUntil: 'domcontentloaded', timeout: 35000 });
 
-      console.log('[VerifyQ] Waiting 5.5s for WebSocket & REST feeds to hydrate...');
-      await new Promise(r => setTimeout(r, 5500));
+      console.log('[VerifyQ] Waiting for WebSocket & REST feeds to hydrate...');
+      await page.waitForFunction(() => {
+        const prices = Array.from(document.querySelectorAll('.card div[style*="font-mono"]'));
+        return prices.some((el) => /[$₹€£¥0-9]/.test(el.textContent || '') && el.textContent.trim() !== '—');
+      }, { timeout: 12000 }).catch(() => {});
+      await new Promise(r => setTimeout(r, 1500));
 
       // Capture Full Page High-Resolution Snapshot
       if (!skipSnapshot) {
@@ -571,7 +575,7 @@ export async function runVerifyQ(options = {}) {
       if (displayedAssets.length === 0) {
         console.log('[VerifyQ] Fallback: Ingesting active quotes directly from Cloudflare Worker feed...');
         try {
-          const feedUrl = 'https://quidesk-market-engine.librepisteme.workers.dev/v1/quotes';
+          const feedUrl = 'https://quidesk-market-engine.quidesk0.workers.dev/v1/quotes';
           const feedRes = await fetch(feedUrl, { signal: AbortSignal.timeout(6000) });
           if (feedRes.ok) {
             const feedJson = await feedRes.json();

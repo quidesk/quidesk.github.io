@@ -5,7 +5,7 @@ import {
 } from 'recharts'
 import { formatPrice } from '../data/markets'
 
-const COLORS = ['#00f5ff', '#ff6b00', '#00ff9d', '#ff0080', '#ffea00', '#c0c0c0']
+const COLORS = ['#D2B47C', '#7AA2F7', '#36C982', '#E08262', '#4DB6AC', '#B4B8C2']
 
 export default function ChartsPage({ data }) {
   const [compareMode, setCompareMode] = useState('performance')
@@ -26,7 +26,7 @@ export default function ChartsPage({ data }) {
   const changeData = allAssets.map(a => ({
     symbol: a.symbol,
     change: parseFloat(a.change.toFixed(2)),
-    fill: a.change >= 0 ? '#00ff9d' : '#ff2d6b',
+    fill: a.change >= 0 ? '#36C982' : '#F06A64',
   }))
 
   const modes = [

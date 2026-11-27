@@ -1,6 +1,7 @@
 import React from 'react'
 import { ExternalLink } from 'lucide-react'
 import { PLATFORM_COLORS } from '../data/affiliates'
+import { sanitizeUrl } from '../utils/security'
 
 /**
  * AffiliateLinks — renders contextual trade/buy CTAs
@@ -23,7 +24,7 @@ export default function AffiliateLinks({ links, compact = false }) {
           return (
             <a
               key={i}
-              href={link.url}
+              href={sanitizeUrl(link.url)}
               target="_blank"
               rel="noopener noreferrer sponsored"
               style={{

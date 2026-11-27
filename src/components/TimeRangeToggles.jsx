@@ -21,9 +21,9 @@ export function TimeRangeToggles({
       {RANGES.map((r) => {
         const isSelected = selected === r;
         const isDisabled = Array.isArray(disabledRanges) && disabledRanges.includes(r);
-        const activeBg = accentColor ? `${accentColor}20` : 'var(--bg-surface, rgba(255,255,255,0.1))';
-        const activeColor = accentColor || 'var(--text-primary, #ffffff)';
-        const activeBorder = accentColor ? `1px solid ${accentColor}50` : '1px solid var(--accent, #00f5ff)';
+        const activeBg = accentColor ? `${accentColor}22` : 'var(--accent-dim)';
+        const activeColor = accentColor || 'var(--text-primary)';
+        const activeBorder = accentColor ? `1px solid ${accentColor}58` : '1px solid var(--border-accent)';
 
         return (
           <button
@@ -35,31 +35,33 @@ export function TimeRangeToggles({
               if (!isDisabled && onChange) onChange(r);
             }}
             className={`time-range-btn px-2 py-1 rounded text-xs ${
-              isSelected ? 'active bg-blue-600 text-white' : 'bg-gray-800 text-gray-400'
+              isSelected ? 'active' : ''
             }`}
             style={{
-              padding: '2px 7px',
+              padding: '3px 8px',
+              minHeight: '22px',
               borderRadius: '4px',
               fontFamily: 'var(--font-mono, monospace)',
               fontSize: '10px',
+              fontWeight: isSelected ? 600 : 500,
               cursor: isDisabled ? 'not-allowed' : 'pointer',
               opacity: isDisabled ? 0.4 : 1,
-              border: isSelected ? activeBorder : '1px solid var(--border-subtle, rgba(255,255,255,0.08))',
-              background: isSelected ? activeBg : 'var(--bg-overlay, rgba(255,255,255,0.03))',
-              color: isSelected ? activeColor : 'var(--text-dim, #8b949e)',
-              transition: 'all 0.15s ease',
+              border: isSelected ? activeBorder : '1px solid var(--border-subtle)',
+              background: isSelected ? activeBg : 'var(--sc-surface-elevated)',
+              color: isSelected ? activeColor : 'var(--text-dim)',
+              transition: 'all 0.16s cubic-bezier(0.22, 1, 0.36, 1)',
               lineHeight: '14px',
             }}
             onMouseEnter={(e) => {
               if (!isSelected) {
-                e.currentTarget.style.color = 'var(--text-primary, #ffffff)';
-                e.currentTarget.style.background = 'var(--bg-surface, rgba(255,255,255,0.06))';
+                e.currentTarget.style.color = 'var(--text-primary)';
+                e.currentTarget.style.background = 'var(--bg-surface)';
               }
             }}
             onMouseLeave={(e) => {
               if (!isSelected) {
-                e.currentTarget.style.color = 'var(--text-dim, #8b949e)';
-                e.currentTarget.style.background = 'var(--bg-overlay, rgba(255,255,255,0.03))';
+                e.currentTarget.style.color = 'var(--text-dim)';
+                e.currentTarget.style.background = 'var(--sc-surface-elevated)';
               }
             }}
           >

@@ -1,10 +1,11 @@
 import { describe, it, expect, vi, afterEach } from 'vitest';
-import worker, { getCorsOrigin, withHeaders } from './index.js';
+import worker, { getCorsOrigin, withHeaders, buildNormalizedCacheKey } from './index.js';
 import { buildAssetQuote, handleQuotes } from './routes/quotes.js';
 import { handleHistory } from './routes/history.js';
 import { extractStrictAssetTags, parseRssXml } from './providers/news.js';
 import { checkMetalsBasis } from './providers/metals.js';
-import { determineSessionState } from './providers/yahoo.js';
+import { determineSessionState, fetchFrontMonthBrent } from './providers/yahoo.js';
+import { fetchMultiTierCrypto } from './providers/crypto.js';
 import { fetchFrankfurterFallback } from './providers/forex.js';
 import { ASSET_DEFINITIONS } from './config.js';
 import quotesFixture from './fixtures/quotes.fixture.json';
@@ -693,6 +694,291 @@ describe('Cloudflare Worker — Phase 1 Contract & Schema Validation', () => {
 
       expect(quote.change).toBe(0.84);
       expect(quote.changePercent).toBe(quote.change);
+    });
+
+    it('BNB Yahoo fallback & 6-coin sparkline backfill (spark1d.length >= 10)', async () => {
+      const originalFetch = globalThis.fetch;
+      globalThis.fetch = vi.fn(async (url) => {
+        const urlStr = String(url);
+        if (urlStr.includes('binance')) {
+          return { ok: false, status: 451 };
+        }
+        if (urlStr.includes('kraken.com/0/public/Ticker')) {
+          return {
+            ok: true,
+            json: async () => ({
+              error: [],
+              result: {
+                XXBTZUSD: { c: ['65000'], o: '64000' },
+                XETHZUSD: { c: ['3500'], o: '3400' },
+                SOLUSD: { c: ['150'], o: '145' },
+                XXRPZUSD: { c: ['0.60'], o: '0.58' },
+                ADAUSD: { c: ['0.45'], o: '0.44' },
+              },
+            }),
+          };
+        }
+        if (urlStr.includes('kraken.com/0/public/OHLC')) {
+          return { ok: false, status: 500 };
+        }
+        if (urlStr.includes('cryptocompare')) {
+          return { ok: false, status: 429 };
+        }
+        if (urlStr.includes('finance.yahoo.com')) {
+          const nowSec = Math.floor(Date.now() / 1000);
+          return {
+            ok: true,
+            json: async () => ({
+              chart: {
+                result: [
+                  {
+                    meta: {
+                      regularMarketPrice: 642.50,
+                      chartPreviousClose: 630.00,
+                      regularMarketTime: nowSec,
+                    },
+                    timestamp: Array.from({ length: 24 }, (_, i) => nowSec - (23 - i) * 1800),
+                    indicators: {
+                      quote: [
+                        {
+                          close: Array.from({ length: 24 }, (_, i) => 630 + i * 0.5),
+                        },
+                      ],
+                    },
+                  },
+                ],
+              },
+            }),
+          };
+        }
+        return { ok: false, status: 404 };
+      });
+
+      try {
+        const { quotes } = await fetchMultiTierCrypto({});
+        expect(quotes.bnb).toBeDefined();
+        expect(quotes.bnb.price).toBe(642.50);
+        
+        const bnbQuote = buildAssetQuote(ASSET_DEFINITIONS.bnb, quotes.bnb, Date.now());
+        expect(bnbQuote.status).toBe('live');
+
+        const coins = ['btc', 'eth', 'sol', 'bnb', 'xrp', 'ada'];
+        for (const coin of coins) {
+          expect(quotes[coin]).toBeDefined();
+          expect(quotes[coin].price).toBeGreaterThan(0);
+          expect(Array.isArray(quotes[coin].spark1d)).toBe(true);
+          expect(quotes[coin].spark1d.length).toBeGreaterThanOrEqual(10);
+        }
+      } finally {
+        globalThis.fetch = originalFetch;
+      }
+    });
+
+    it('Brent front-month override when prompt curve diverges > 1.5%', async () => {
+      const originalFetch = globalThis.fetch;
+      const nowMs = Date.now();
+      const nowSec = Math.floor(nowMs / 1000);
+
+      globalThis.fetch = vi.fn(async (url) => {
+        const urlStr = String(url);
+        if (urlStr.includes('BZ=F') || urlStr.includes('BZ%3DF')) {
+          return {
+            ok: true,
+            json: async () => ({
+              chart: {
+                result: [{
+                  meta: { regularMarketPrice: 89.27, chartPreviousClose: 90.00, regularMarketTime: nowSec },
+                  timestamp: [nowSec],
+                  indicators: { quote: [{ close: [89.27] }] },
+                }],
+              },
+            }),
+          };
+        }
+        if (urlStr.includes('BZ') && (urlStr.includes('.NYM') || urlStr.includes('%2ENYM'))) {
+          return {
+            ok: true,
+            json: async () => ({
+              chart: {
+                result: [{
+                  meta: { regularMarketPrice: 91.99, chartPreviousClose: 90.00, regularMarketTime: nowSec },
+                  timestamp: [nowSec],
+                  indicators: { quote: [{ close: [91.99] }] },
+                }],
+              },
+            }),
+          };
+        }
+        return { ok: false, status: 404 };
+      });
+
+      try {
+        const brent = await fetchFrontMonthBrent({}, nowMs);
+        expect(brent.price).toBe(91.99);
+        expect(brent.flags).toContain('brent_front_month_override');
+      } finally {
+        globalThis.fetch = originalFetch;
+      }
+    });
+
+    it('prefers live continuous BZ=F over an expired/lagging front-month NYM contract', async () => {
+      const originalFetch = globalThis.fetch;
+      const nowMs = Date.UTC(2026, 10, 26, 23, 15, 0); // Nov 26, 2026 23:15 UTC
+      const liveSec = Math.floor((nowMs - 120000) / 1000); // 2m old
+      const expiredSec = Math.floor((nowMs - 5 * 3600 * 1000) / 1000); // 5h old expired Jan contract
+
+      globalThis.fetch = vi.fn(async (url) => {
+        const urlStr = String(url);
+        if (urlStr.includes('BZ=F') || urlStr.includes('BZ%3DF')) {
+          return {
+            ok: true,
+            json: async () => ({
+              chart: {
+                result: [{
+                  meta: { regularMarketPrice: 91.75, chartPreviousClose: 90.64, regularMarketTime: liveSec },
+                  timestamp: [liveSec],
+                  indicators: { quote: [{ close: [91.75] }] },
+                }],
+              },
+            }),
+          };
+        }
+        if (urlStr.includes('BZF27')) {
+          return {
+            ok: true,
+            json: async () => ({
+              chart: {
+                result: [{
+                  meta: { regularMarketPrice: 96.12, chartPreviousClose: 94.61, regularMarketTime: expiredSec },
+                  timestamp: [expiredSec],
+                  indicators: { quote: [{ close: [96.12] }] },
+                }],
+              },
+            }),
+          };
+        }
+        if (urlStr.includes('BZG27')) {
+          return {
+            ok: true,
+            json: async () => ({
+              chart: {
+                result: [{
+                  meta: { regularMarketPrice: 91.75, chartPreviousClose: 90.64, regularMarketTime: liveSec },
+                  timestamp: [liveSec],
+                  indicators: { quote: [{ close: [91.75] }] },
+                }],
+              },
+            }),
+          };
+        }
+        return { ok: false, status: 404 };
+      });
+
+      try {
+        const brent = await fetchFrontMonthBrent({}, nowMs);
+        expect(brent.price).toBe(91.75);
+        expect(brent.quoteTs).toBe(liveSec * 1000);
+        expect(brent.flags || []).not.toContain('brent_front_month_override');
+      } finally {
+        globalThis.fetch = originalFetch;
+      }
+    });
+
+    it('INR pair 60m freshness threshold (30m stays live, >60m turns stale)', () => {
+      const now = Date.now();
+      const quote30m = buildAssetQuote(ASSET_DEFINITIONS.usdinr, {
+        price: 93.44,
+        prevClose: 93.46,
+        quoteTs: now - 1800000,
+        session: 'regular',
+        source: 'yahoo',
+      }, now);
+      expect(quote30m.status).toBe('live');
+
+      const quote70m = buildAssetQuote(ASSET_DEFINITIONS.usdinr, {
+        price: 93.44,
+        prevClose: 93.46,
+        quoteTs: now - 4200000,
+        session: 'regular',
+        source: 'yahoo',
+      }, now);
+      expect(quote70m.status).toBe('stale');
+    });
+  });
+
+  describe('9. Stage 2 Security Hardening Regression Suite', () => {
+    it('rejects origin userinfo/subdomain bypasses and arbitrary localhost ports in production', () => {
+      const prodEnv = {
+        ENVIRONMENT: 'production',
+        ALLOWED_ORIGINS: 'https://quidesk.github.io,http://localhost:4173',
+      };
+      expect(getCorsOrigin('http://localhost:80@evil.com', prodEnv)).toBeNull();
+      expect(getCorsOrigin('http://localhost:4173.evil.com', prodEnv)).toBeNull();
+      expect(getCorsOrigin('http://localhost:4173/path', prodEnv)).toBeNull();
+      expect(getCorsOrigin('http://localhost:9999', prodEnv)).toBeNull();
+      expect(getCorsOrigin('http://localhost:4173', prodEnv)).toBe('http://localhost:4173');
+      expect(getCorsOrigin('https://quidesk.github.io', prodEnv)).toBe('https://quidesk.github.io');
+
+      const devEnv = { ENVIRONMENT: 'development', ALLOWED_ORIGINS: 'https://quidesk.github.io' };
+      expect(getCorsOrigin('http://localhost:9999', devEnv)).toBe('http://localhost:9999');
+      expect(getCorsOrigin('http://localhost:80@evil.com', devEnv)).toBeNull();
+    });
+
+    it('normalizes cache keys to strip cache-buster params and caller headers', () => {
+      const urlWithBuster = new URL('https://quidesk-market-engine.quidesk0.workers.dev/v1/quotes?_t=17950000&foo=bar');
+      const key = buildNormalizedCacheKey(urlWithBuster, '/v1/quotes');
+      expect(key.url).toBe('https://quidesk-market-engine.quidesk0.workers.dev/v1/quotes');
+      expect(key.headers.has('Origin')).toBe(false);
+    });
+
+    it('sets HSTS, Referrer-Policy, Permissions-Policy, CSP, and sanitizes 405/404 responses', async () => {
+      const postRes = await worker.fetch(new Request('https://worker.internal/v1/quotes', {
+        method: 'POST',
+        headers: { Origin: 'https://quidesk.github.io' },
+      }), { ENVIRONMENT: 'production', ALLOWED_ORIGINS: 'https://quidesk.github.io' });
+      expect(postRes.status).toBe(405);
+      expect(postRes.headers.get('Strict-Transport-Security')).toContain('max-age=31536000');
+      expect(postRes.headers.get('Content-Security-Policy')).toContain("frame-ancestors 'none'");
+      expect(postRes.headers.get('Referrer-Policy')).toBe('strict-origin-when-cross-origin');
+
+      const notFoundRes = await worker.fetch(new Request('https://worker.internal/%3Cscript%3E'), {
+        ENVIRONMENT: 'production',
+        ALLOWED_ORIGINS: 'https://quidesk.github.io',
+      });
+      expect(notFoundRes.status).toBe(404);
+      const body = await notFoundRes.json();
+      expect(body.error).toBe('Not found');
+    });
+
+    it('validates /v1/history id & range strictly with 400 and avoids input reflection', async () => {
+      const badId = await handleHistory(new Request('https://worker.internal/v1/history?id=<script>&range=24H'), {});
+      expect(badId.statusCode).toBe(400);
+      expect(badId.error).toBe('Invalid asset id');
+
+      const badRange = await handleHistory(new Request('https://worker.internal/v1/history?id=spx&range=100Y'), {});
+      expect(badRange.statusCode).toBe(400);
+      expect(badRange.error).toBe('Invalid range parameter');
+    });
+
+    it('strips unsafe javascript:/data: RSS article links at the Worker ingestion boundary', () => {
+      const freshDate = new Date(Date.now() - 1800000).toUTCString();
+      const xml = `
+        <rss><channel>
+          <item>
+            <title>XSS Link Payload</title>
+            <link>javascript:alert(document.domain)</link>
+            <pubDate>${freshDate}</pubDate>
+          </item>
+          <item>
+            <title>Valid HTTPS Bitcoin News</title>
+            <link>https://decrypt.co/safe-article?utm_source=x</link>
+            <pubDate>${freshDate}</pubDate>
+          </item>
+        </channel></rss>
+      `;
+      const articles = parseRssXml(xml, 'Decrypt', 'crypto');
+      expect(articles).toHaveLength(1);
+      expect(articles[0].link).toBe('https://decrypt.co/safe-article');
     });
   });
 });

@@ -1,0 +1,423 @@
+/**
+ * Quidesk ScrollCraft Styles
+ * Working-Surface Editorial Chapters Grammar
+ * Aesthetic: Obsidian Slate & Champagne Brass (Light/Dark Adaptive)
+ */
+
+/* ── Act Container Common ── */
+.sc-act {
+  position: relative;
+  width: 100%;
+  margin-bottom: 36px;
+}
+
+/* ══════════════════════════════════════════════════════════════════════
+   ACT 1: STREAMLINED TELEMETRY CONTROL STRIP (HEADING REMOVED)
+   ══════════════════════════════════════════════════════════════════════ */
+.sc-telemetry-strip {
+  position: relative;
+  overflow: clip;
+  border-radius: 14px;
+  background: var(--sc-surface);
+  border: 1px solid var(--sc-border);
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.04),
+    0 6px 24px rgba(0, 0, 0, 0.18);
+  padding: 18px 22px;
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+.sc-strip-top {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 12px;
+}
+
+.sc-matrix-tag {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.sc-matrix-eyebrow {
+  font-family: var(--sc-font-mono);
+  font-size: 11px;
+  font-weight: 700;
+  color: var(--sc-accent);
+  letter-spacing: 0.10em;
+  background: var(--accent-dim);
+  border: 1px solid var(--border-accent);
+  border-radius: 6px;
+  padding: 4px 10px;
+  text-transform: uppercase;
+}
+
+.sc-matrix-sub {
+  font-family: var(--sc-font-mono);
+  font-size: 11px;
+  color: var(--sc-ink-muted);
+  letter-spacing: 0.06em;
+}
+
+.sc-hero-kpis {
+  display: flex;
+  gap: 10px;
+  flex-wrap: wrap;
+  align-items: center;
+}
+
+.sc-kpi-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-family: var(--sc-font-mono);
+  font-size: 11px;
+  letter-spacing: 0.04em;
+  color: var(--sc-ink-soft);
+  background: var(--sc-surface-elevated);
+  border: 1px solid var(--sc-border);
+  border-radius: 6px;
+  padding: 5px 10px;
+  font-variant-numeric: tabular-nums lining-nums;
+}
+
+.sc-kpi-val {
+  font-weight: 700;
+  color: var(--sc-ink);
+}
+
+.sc-sector-strip {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+  align-items: center;
+}
+
+.sc-sector-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  background: var(--sc-surface-elevated);
+  border: 1px solid var(--sc-border);
+  border-radius: 8px;
+  padding: 6px 12px;
+  min-height: 32px;
+  cursor: pointer;
+  color: var(--sc-ink-soft);
+  font-family: var(--sc-font-mono);
+  font-size: 12px;
+  transition: border-color var(--ease-fast), transform var(--ease-fast), background-color var(--ease-fast);
+}
+
+.sc-sector-chip:hover {
+  border-color: var(--sc-border-strong);
+  transform: translateY(-1px);
+}
+
+.sc-sector-chip:active {
+  transform: scale(0.98);
+}
+
+/* ══════════════════════════════════════════════════════════════════════
+   ACT 2: GLOBAL ASSET ATLAS & HEIGHT-MATCHED RAIL
+   ══════════════════════════════════════════════════════════════════════ */
+.sc-act2-layout {
+  display: grid;
+  grid-template-columns: 1fr 380px;
+  gap: 18px;
+  align-items: stretch;
+}
+
+@media (max-width: 1200px) {
+  .sc-act2-layout {
+    grid-template-columns: 1fr;
+  }
+}
+
+.sc-map-panel,
+.sc-rail-panel {
+  background: var(--sc-surface);
+  border: 1px solid var(--sc-border);
+  border-radius: 14px;
+  overflow: hidden;
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.04),
+    0 4px 20px rgba(0, 0, 0, 0.18);
+  display: flex;
+  flex-direction: column;
+}
+
+.sc-rail-header {
+  padding: 14px 18px;
+  border-bottom: 1px solid var(--sc-border);
+  background: var(--sc-surface-elevated);
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.sc-rail-body {
+  padding: 14px 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  overflow-y: auto;
+  max-height: 620px;
+}
+
+/* ══════════════════════════════════════════════════════════════════════
+   ACT 3: THE ENGINEERED PEAK (HORIZONTAL LEDGER & TELEMETRY VERNIER)
+   ══════════════════════════════════════════════════════════════════════ */
+.sc-act3-peak {
+  border-radius: 16px;
+  background: var(--sc-surface);
+  border: 1px solid var(--sc-border-strong);
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.06),
+    0 12px 36px rgba(0, 0, 0, 0.24);
+  padding: 24px 28px;
+}
+
+.sc-peak-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-end;
+  flex-wrap: wrap;
+  gap: 16px;
+  margin-bottom: 18px;
+}
+
+.sc-peak-title {
+  font-family: var(--sc-font-display);
+  font-size: clamp(22px, 2.2vw, 28px);
+  font-weight: 700;
+  color: var(--sc-ink);
+  letter-spacing: -0.02em;
+  margin: 0;
+}
+
+/* Signature Move: The Telemetry Vernier */
+.sc-vernier-rail {
+  position: relative;
+  width: 100%;
+  height: 30px;
+  background: var(--sc-canvas);
+  border: 1px solid var(--sc-border);
+  border-radius: 8px;
+  overflow: hidden;
+  margin-bottom: 18px;
+  display: flex;
+  align-items: center;
+  padding: 0 12px;
+}
+
+.sc-vernier-ticks {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-end;
+  padding: 0 8px 4px 8px;
+  pointer-events: none;
+  opacity: 0.45;
+}
+
+.sc-vernier-tick {
+  width: 1px;
+  background: var(--sc-ink-muted);
+  height: 6px;
+}
+
+.sc-vernier-tick.major {
+  height: 12px;
+  background: var(--sc-accent);
+}
+
+.sc-vernier-indicator {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  width: 3px;
+  background: var(--sc-accent-warm);
+  box-shadow: 0 0 8px var(--sc-accent-warm);
+  transition: left 0.14s cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+.sc-vernier-hud {
+  position: relative;
+  z-index: 2;
+  font-family: var(--sc-font-mono);
+  font-size: 11px;
+  letter-spacing: 0.06em;
+  color: var(--sc-accent);
+  display: flex;
+  justify-content: space-between;
+  width: 100%;
+}
+
+/* Horizontal Asset Scroll Track */
+.sc-asset-track-wrap {
+  position: relative;
+  overflow-x: auto;
+  scroll-behavior: smooth;
+  -webkit-overflow-scrolling: touch;
+  padding-bottom: 12px;
+}
+
+.sc-asset-track {
+  display: flex;
+  gap: 14px;
+  min-width: max-content;
+}
+
+.sc-asset-card-peak {
+  width: 274px;
+  flex-shrink: 0;
+  cursor: pointer;
+  transition: transform var(--ease-fast);
+}
+
+.sc-asset-card-peak:hover {
+  transform: translateY(-2px);
+}
+
+/* Sector Jump Navigation */
+.sc-sector-nav {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+  align-items: center;
+}
+
+.sc-sector-pill {
+  font-family: var(--sc-font-mono);
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.05em;
+  padding: 6px 14px;
+  min-height: 32px;
+  border-radius: 6px;
+  background: var(--sc-surface-elevated);
+  border: 1px solid var(--sc-border);
+  color: var(--sc-ink-soft);
+  cursor: pointer;
+  transition:
+    background-color var(--ease-fast),
+    border-color var(--ease-fast),
+    color var(--ease-fast),
+    transform var(--ease-fast);
+}
+
+.sc-sector-pill:hover,
+.sc-sector-pill.active {
+  background: var(--sc-accent);
+  border-color: var(--sc-accent);
+  color: var(--sc-accent-ink);
+}
+
+.sc-sector-pill:active {
+  transform: scale(0.98);
+}
+
+/* ══════════════════════════════════════════════════════════════════════
+   ACT 4: SPLIT-STICKY GEOPOLITICAL RADAR & NEWS INTEL
+   ══════════════════════════════════════════════════════════════════════ */
+.sc-act4-split {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 20px;
+  align-items: start;
+}
+
+@media (max-width: 1024px) {
+  .sc-act4-split {
+    grid-template-columns: 1fr;
+  }
+}
+
+.sc-sticky-globe {
+  position: sticky;
+  top: 84px;
+  background: var(--sc-surface);
+  border: 1px solid var(--sc-border);
+  border-radius: 14px;
+  overflow: hidden;
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.18);
+}
+
+/* ══════════════════════════════════════════════════════════════════════
+   ACT 5: SOVEREIGN TERMINAL COMMAND DOCK
+   ══════════════════════════════════════════════════════════════════════ */
+.sc-act5-dock {
+  background: var(--sc-surface);
+  border: 1px solid var(--sc-border-strong);
+  border-radius: 14px;
+  padding: 18px 24px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 16px;
+}
+
+.sc-dock-telemetry {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
+.sc-dock-hud {
+  display: flex;
+  gap: 10px;
+  align-items: center;
+  flex-wrap: wrap;
+  font-family: var(--sc-font-mono);
+  font-size: 11px;
+  color: var(--sc-ink-muted);
+}
+
+.sc-hud-key {
+  background: var(--sc-surface-elevated);
+  border: 1px solid var(--sc-border-strong);
+  border-radius: 4px;
+  padding: 2px 7px;
+  color: var(--sc-ink);
+  font-weight: 600;
+}
+
+/* ══════════════════════════════════════════════════════════════════════
+   SCROLL-DRIVEN ENTRY & REDUCED MOTION ACCESSIBILITY
+   ══════════════════════════════════════════════════════════════════════ */
+@media (prefers-reduced-motion: no-preference) {
+  @supports ((animation-timeline: view()) and (animation-range: entry)) {
+    .sc-reveal {
+      view-timeline-name: --sc-reveal-tl;
+      animation: scRevealEntry linear both;
+      animation-timeline: --sc-reveal-tl;
+      animation-range: entry 4% cover 22%;
+    }
+
+    @keyframes scRevealEntry {
+      from { opacity: 0.55; transform: translateY(14px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .sc-reveal,
+  .sc-asset-card-peak,
+  .sc-sector-chip,
+  .sc-sector-pill,
+  .sc-vernier-indicator {
+    transform: none !important;
+    animation: none !important;
+    transition: none !important;
+    opacity: 1 !important;
+  }
+}

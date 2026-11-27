@@ -13,8 +13,7 @@ const WORKER_BASE = (import.meta.env?.VITE_MARKET_WORKER_URL || 'https://quidesk
  */
 export async function fetchMarketStream() {
   try {
-    const res = await fetch(`${WORKER_BASE}/api/market?_t=${Date.now()}`, {
-      cache: 'no-cache',
+    const res = await fetch(`${WORKER_BASE}/api/market`, {
       headers: {
         'Accept': 'application/json',
       },
@@ -54,8 +53,7 @@ export async function fetchMarketStream() {
 export async function fetchAssetStream(symbol) {
   if (!symbol) return null;
   try {
-    const res = await fetch(`${WORKER_BASE}/api/market?symbol=${encodeURIComponent(symbol)}&_t=${Date.now()}`, {
-      cache: 'no-cache',
+    const res = await fetch(`${WORKER_BASE}/api/market?symbol=${encodeURIComponent(symbol)}`, {
       headers: { 'Accept': 'application/json' },
     });
     if (res.ok) {

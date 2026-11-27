@@ -32,6 +32,9 @@ function getCorsHeaders(requestOrigin) {
     'Vary': 'Origin',
     'X-Content-Type-Options': 'nosniff',
     'X-Frame-Options': 'DENY',
+    'Referrer-Policy': 'strict-origin-when-cross-origin',
+    'Strict-Transport-Security': 'max-age=31536000; includeSubDomains; preload',
+    'Content-Security-Policy': "default-src 'none'; frame-ancestors 'none'",
   };
 }
 
@@ -77,12 +80,12 @@ export async function onRequest(context) {
     });
   }
 
-  // 5. Read API keys strictly from Worker environment variables (never committed to git)
-  const apiKey = env.FINNHUB_KEY || env.VITE_FINNHUB_KEY;
+  // 5. Read API keys strictly from Cloudflare secret/environment bindings (never VITE_* client prefix)
+  const apiKey = env.FINNHUB_KEY;
   if (!apiKey) {
     return new Response(JSON.stringify({ error: 'Market data provider key not configured' }), {
       status: 503,
-      headers: { 'Content-Type': 'application/json', ...getCorsHeaders(origin) }
+      headers: { 'Content-Type': 'application/json', 'Cache-Control': 'no-store', ...getCorsHeaders(origin) }
     });
   }
 
@@ -95,9 +98,9 @@ export async function onRequest(context) {
     });
 
     if (!upstreamRes.ok) {
-      return new Response(JSON.stringify({ error: `Upstream returned status ${upstreamRes.status}` }), {
+      return new Response(JSON.stringify({ error: 'Upstream market provider unavailable' }), {
         status: 502,
-        headers: { 'Content-Type': 'application/json', ...getCorsHeaders(origin) }
+        headers: { 'Content-Type': 'application/json', 'Cache-Control': 'no-store', ...getCorsHeaders(origin) }
       });
     }
 

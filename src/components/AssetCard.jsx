@@ -148,9 +148,9 @@ export default function AssetCard({
   };
 
   const bg = flash === 'up'
-    ? 'rgba(34,212,122,0.08)'
+    ? 'var(--sc-gain-bg)'
     : flash === 'down'
-    ? 'rgba(240,64,96,0.08)'
+    ? 'var(--sc-loss-bg)'
     : isStale
     ? 'var(--bg-overlay)'
     : 'var(--bg-card)';
@@ -164,7 +164,7 @@ export default function AssetCard({
           padding: compact ? '12px' : '16px',
           cursor: 'pointer',
           background: bg,
-          transition: 'background 0.4s ease, border-color 0.15s, transform 0.15s, box-shadow 0.15s',
+          transition: 'background-color 0.35s cubic-bezier(0.22, 1, 0.36, 1), border-color 0.2s cubic-bezier(0.22, 1, 0.36, 1), transform 0.2s cubic-bezier(0.22, 1, 0.36, 1), box-shadow 0.2s cubic-bezier(0.22, 1, 0.36, 1)',
           borderRadius: '12px',
         }}
         onClick={() => { if (onClick) onClick(asset); }}
@@ -182,7 +182,7 @@ export default function AssetCard({
                   fontSize: '13px',
                   fontWeight: 700,
                   color: meta.color || 'var(--text-primary)',
-                  letterSpacing: '0.04em',
+                  letterSpacing: '0.03em',
                   whiteSpace: 'nowrap',
                   flexShrink: 0
                 }}
@@ -190,7 +190,7 @@ export default function AssetCard({
                 {asset.symbol}
               </span>
               {!compact && (
-                <span style={{ fontFamily: 'var(--font-mono)', fontSize: '8px', color: meta.color || 'var(--accent)', background: (meta.color || '#f0a500') + '14', border: '1px solid ' + (meta.color || '#f0a500') + '30', borderRadius: '3px', padding: '0 5px', lineHeight: '14px', whiteSpace: 'nowrap', flexShrink: 0 }}>
+                <span style={{ fontFamily: 'var(--font-mono)', fontSize: '9px', color: meta.color || 'var(--accent)', background: (meta.color || '#D2B47C') + '16', border: '1px solid ' + (meta.color || '#D2B47C') + '38', borderRadius: '4px', padding: '0 5px', lineHeight: '15px', whiteSpace: 'nowrap', flexShrink: 0 }}>
                   {meta.label}
                 </span>
               )}
@@ -203,7 +203,7 @@ export default function AssetCard({
               />
             </div>
             {!compact && (
-              <div style={{ fontFamily: 'var(--font-body)', fontSize: '10px', color: 'var(--text-dim)', marginTop: '2px', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+              <div style={{ fontFamily: 'var(--font-body)', fontSize: '11px', color: 'var(--text-dim)', marginTop: '2px', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
                 {asset.name}
               </div>
             )}
@@ -214,9 +214,9 @@ export default function AssetCard({
               style={
                 changeVal === null || isFlat
                   ? {
-                      color: 'var(--text-dim, #8b949e)',
-                      background: 'rgba(139, 148, 158, 0.12)',
-                      border: '1px solid rgba(139, 148, 158, 0.25)',
+                      color: 'var(--text-dim, #8E939E)',
+                      background: 'rgba(142, 147, 158, 0.12)',
+                      border: '1px solid rgba(142, 147, 158, 0.28)',
                       whiteSpace: 'nowrap',
                       flexShrink: 0,
                     }

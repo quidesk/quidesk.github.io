@@ -66,9 +66,9 @@ export default function MarketCard({ asset: propAsset, onClick, isWatched, onTog
   const freshness = getFreshnessLevel(asset);
 
   const flashColor = flash === 'up'
-    ? 'rgba(0,255,157,0.15)'
+    ? 'var(--sc-gain-bg)'
     : flash === 'down'
-    ? 'rgba(255,45,107,0.15)'
+    ? 'var(--sc-loss-bg)'
     : 'transparent';
 
   const chgDecimal = D(changeVal ?? 0);
@@ -84,13 +84,13 @@ export default function MarketCard({ asset: propAsset, onClick, isWatched, onTog
       style={{
         ...styles.card,
         background: flash ? flashColor : styles.card.background,
-        transition: 'background 0.3s ease, border-color 0.3s ease',
+        transition: 'background-color 0.3s cubic-bezier(0.22, 1, 0.36, 1), border-color 0.2s cubic-bezier(0.22, 1, 0.36, 1)',
       }}
       onClick={() => onClick && onClick(asset)}
       onMouseEnter={e => {
         e.currentTarget.style.borderColor = 'var(--border-accent)';
         e.currentTarget.style.transform = 'translateY(-2px)';
-        e.currentTarget.style.boxShadow = '0 8px 30px rgba(97,175,239,0.12)';
+        e.currentTarget.style.boxShadow = '0 8px 24px rgba(0, 0, 0, 0.24)';
       }}
       onMouseLeave={e => {
         e.currentTarget.style.borderColor = 'var(--border-subtle)';

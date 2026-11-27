@@ -4,11 +4,11 @@ import ShareModal from './ShareModal'
 import { sanitizeUrl } from '../utils/security'
 
 const SECTOR_LABELS = {
-  crypto:   { label:'Crypto',    color:'#a78bfa' },
-  equities: { label:'Equities',  color:'#4d9eff' },
-  metals:   { label:'Metals',    color:'#f0a500' },
-  energy:   { label:'Energy',    color:'#f97316' },
-  forex:    { label:'Forex',     color:'#22d3ee' },
+  crypto:   { label:'Crypto',    color:'#D2B47C' },
+  equities: { label:'Equities',  color:'#7AA2F7' },
+  metals:   { label:'Metals',    color:'#DEC38A' },
+  energy:   { label:'Energy',    color:'#E08262' },
+  forex:    { label:'Forex',     color:'#4DB6AC' },
 }
 
 function timeAgo(date) {
@@ -229,21 +229,20 @@ export default function NewsSignals({ news, loading, lastFetch, onRefresh, layou
 const s = {
   wrap: {
     background: 'var(--bg-card)',
-    border: '1px solid var(--border-stone, #639CC5)',
-    borderRadius: '12px',
+    border: '1px solid var(--sc-border)',
+    borderRadius: '14px',
     overflow: 'hidden',
     display: 'flex',
     flexDirection: 'column',
-    boxShadow: 'inset 0 1px 0 rgba(99, 156, 197, 0.15), 0 4px 24px rgba(2, 24, 39, 0.45)',
-    backdropFilter: 'blur(16px)'
+    boxShadow: 'inset 0 1px 0 rgba(255, 255, 255, 0.04), 0 4px 20px rgba(0, 0, 0, 0.18)',
   },
   header: {
     display: 'flex',
     justifyContent: 'space-between',
     alignItems: 'center',
-    padding: '16px 20px',
+    padding: '14px 18px',
     borderBottom: '1px solid var(--border-subtle)',
-    background: 'var(--bg-overlay, #032035)',
+    background: 'var(--sc-surface-elevated)',
   },
   headerLeft: {
     display: 'flex', alignItems: 'center', gap: '8px',

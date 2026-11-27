@@ -1,48 +1,37 @@
 # Quidesk — Design System & Creative Direction
 
-> **Award-Caliber Sovereign Market Intelligence Terminal**  
-> Rooted in the principles of `/awwwards`, `/scroll-craft`, and `/modern-web-guidance`.
+> **Suave Obsidian Slate & Champagne Brass Market Intelligence Terminal**  
+> Guided by `/awwwards`, `/scroll-craft`, `/landing-page-design`, and `/modern-web-guidance`.
 
 ---
 
 ## 1. Concept Card
 
-* **Idea:** A real-time, sovereign edge market intelligence terminal tracking global financial benchmarks across equities, cryptocurrencies, precious metals, energy commodities, and foreign exchange with zero latency bottlenecks and institutional precision.
-* **Metaphor:** The Celestial Astrolabe & High-Density Financial Matrix — fusing ancient navigational precision with modern algorithmic telemetry.
-* **Signature Moment:** The **Interactive 3D Orbital Market Map & Correlation Web**: celestial asset orbs with dynamic liquid volume, gravity clamping, and luminous cross-asset correlation lines pulsing with live price action.
-* **Emotion:** Instant authority, crystalline lucidity, effortless mastery over global macro complexity.
-* **Motion Verb:** *Orbit, pulse, calibrate.* Smooth continuous transitions, zero jarring flashes, tactile magnetic snaps.
-* **Poster Frame:** The 4K Terminal Viewport — glowing astrolabe insignia, ambient Egyptian Navy & Obsidian matrix, glowing emerald/scarlet tick ripples, and the orbital market sphere.
+* **Idea:** An architectural multi-asset market intelligence desk tracking global benchmarks across equities, cryptocurrencies, precious metals, energy commodities, and foreign exchange with sub-second clarity and restrained typographic calm.
+* **Metaphor:** Swiss Precision Horology & Carbon-Slate Telemetry Desk — clean graphite planes, hairline rules, champagne brass markers, and tabular numerals without visual noise.
+* **Signature Moment:** The **Telemetry Vernier (`data-sc-vernier`) & Interactive Global Asset Atlas**: calibrated micro-graduations tracking horizontal ledger exploration alongside an orbital multi-asset correlation web.
+* **Emotion:** Quiet mastery, instant legibility, zero visual fatigue across long analytical sessions.
+* **Motion Verb:** *Calibrate, glide, settle.* Weighted deceleration (`cubic-bezier(0.22, 1, 0.36, 1)`), compositor-only transforms, and static parity under reduced motion.
+* **Poster Frame:** Desktop viewport with top TickerTape & Header seamlessly aligned to the Market Pulse strip, Sector summary chips, Live Global Multi-Asset Map, and Top Movers rail above the fold.
 
 ---
 
 ## 2. Art Direction System
 
-### Color Palette (6-Role Architecture)
-| Role | Dark Token | Light Token | Purpose |
+### Color Palette (6-Role Architecture — WCAG AA/AAA Verified)
+| Role | Dark Token (`#0B0C0F`) | Light Token (`#F6F7F8`) | Purpose |
 | :--- | :--- | :--- | :--- |
-| **Canvas / Ground** | `#05080F` (Obsidian Void) | `#F0F4F8` | Deep backdrop with subtle architectural grid mesh |
-| **Surface / Card** | `rgba(10, 18, 30, 0.72)` | `rgba(255, 255, 255, 0.90)` | Frosted glass with `inset 0 1px 0 rgba(255,255,255,0.08)` |
-| **Line / Border** | `rgba(99, 156, 197, 0.20)` | `rgba(44, 105, 154, 0.18)` | Hairline architectural precision borders |
-| **Ink / Primary Text** | `#FFFFFF` (16.5:1 AAA) | `#032035` | Benchmark prices, symbols, titles |
-| **Muted / Secondary** | `#94A3B8` (Slate Light) | `#475569` | Asset names, timestamps, market sessions |
-| **Accents** | `#D4AF37` (Imperial Gold) / `#10B981` (Bull) / `#EB2F33` (Bear) | Same | Directional triggers, delta badges, stream pulse |
+| **Canvas / Ground** | `#0B0C0F` (Carbon Obsidian) | `#F6F7F8` (Architectural Stone) | Clean matte backdrop with zero muddy hue cast |
+| **Surface / Card** | `#13151A` / `#1A1D24` | `#FFFFFF` / `#EDEEF1` | Flat-machined cards with 1px hairline separation |
+| **Line / Border** | `rgba(255,255,255,0.08)` / `0.22` | `rgba(17,19,23,0.09)` / `0.26` | Crisp full-perimeter containment |
+| **Ink / Primary** | `#F4F4F5` (16.2:1) / `#B4B8C2` / `#8E939E` | `#111317` (18.6:1) / `#434956` / `#5C6370` | Tabular prices, asset names, readable captions |
+| **Accent** | `#D2B47C` (Champagne Brass) / `#E08262` (Copper) | `#7D5D23` / `#B84A27` | Active indicators, vernier hair-rule, primary focus |
+| **Semantics** | `#36C982` (Sage Bull) / `#F06A64` (Coral Bear) | `#157F47` / `#C42B2B` | Directional delta badges paired with icons (`▲`/`▼`) |
 
 ### Typography
-* **Brand Wordmark:** `Plus Jakarta Sans`, 800 weight, `-0.025em` tracking.
-* **Display / Headings:** `Syne`, 700/800 weight, editorial geometry.
-* **Numerical Data / Telemetry:** `DM Mono`, 400/500 weight, tabular numbers.
-* **Interface Body & Metadata:** `Inter`, 400/500/600 weight, 1.5 leading.
+* **UI, Display & Wordmark:** `Plus Jakarta Sans`, 400–800 weight, zero italics, `text-wrap: balance` on headings.
+* **Numeric Telemetry & Metadata:** `JetBrains Mono`, 400–700 weight, `font-variant-numeric: tabular-nums lining-nums`.
 
-### Motion Language
-* **Easings:** `cubic-bezier(0.16, 1, 0.3, 1)` (fluid natural decel) and `cubic-bezier(0.4, 0, 0.2, 1)`.
-* **View Transitions:** Native `document.startViewTransition()` on SPA tab switches with cross-fade morphing.
-* **Micro-interactions:** 2px card lift, subtle border glow illumination, magnetic tab active indicator.
-* **Reduced Motion:** When `@media (prefers-reduced-motion: reduce)` is active, animations and transitions revert to instant updates.
-
----
-
-## 3. Modern Web Standards Applied
-* **`dark-mode` & `color`: `<meta name="color-scheme" content="light dark">` in `<head>`, `:root { color-scheme: light dark; }`, and `scrollbar-color: var(--border-mid) transparent;` to eliminate FOUC and provide native dark-mode scrollbars.
-* **`same-document-transitions`**: Wrapped tab navigations in `document.startViewTransition()` with graceful fallback for seamless view changes.
-* **`motion`**: Hardware-accelerated CSS properties (`transform`, `opacity`, `filter`), compositor-only animations, zero layout thrashing.
+### Modern Web Standards Applied
+* **`color` & `dark-mode`:** `<meta name="color-scheme" content="light dark">`, dual-mode `light-dark()` + explicit `[data-theme]` tokens, `scrollbar-color`, and `@media (forced-colors: active)` fallbacks.
+* **`accessibility` & `motion`:** Single `.visually-hidden` `<h1>`, skip-to-content link, `>= 24px` target sizing, `:focus-visible` outline rings, and compositor-only animations scoped under `@media (prefers-reduced-motion: no-preference)`.

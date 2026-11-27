@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { Check, Copy, Share2 } from 'lucide-react';
+import { sanitizeUrl } from '../utils/security';
 
 /* ─── Premium Official Vector Logos ─── */
 export const XLogo = ({ size = 15, color = 'currentColor' }) => (
@@ -86,19 +87,22 @@ export default function SocialShareBar({
   const [copied, setCopied] = useState(false);
   const [hoveredId, setHoveredId] = useState(null);
 
+  const safeShareUrl = sanitizeUrl(url, 'https://quidesk.github.io');
+
   const handleCopyLink = async () => {
     try {
-      await navigator.clipboard.writeText(url);
+      await navigator.clipboard.writeText(safeShareUrl);
       setCopied(true);
       setTimeout(() => setCopied(false), 2200);
     } catch {
       // Fallback prompt if clipboard API blocked
-      window.prompt('Copy URL to clipboard:', url);
+      window.prompt('Copy URL to clipboard:', safeShareUrl);
     }
   };
 
   const handleShareClick = (platform) => {
-    const shareHref = platform.getUrl(url, text);
+    const shareHref = platform.getUrl(safeShareUrl, text);
+    if (!shareHref.startsWith('https://')) return;
     window.open(shareHref, '_blank', 'noopener,noreferrer,width=600,height=520');
   };
 

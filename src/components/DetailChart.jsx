@@ -193,7 +193,7 @@ export default function DetailChart({ asset, onClose }) {
                   <stop offset="100%" stopColor={color} stopOpacity={0} />
                 </linearGradient>
               </defs>
-              <CartesianGrid stroke="rgba(255,255,255,0.04)" strokeDasharray="3 3" vertical={false} />
+              <CartesianGrid stroke="var(--sc-border)" strokeDasharray="3 3" vertical={false} />
               <XAxis dataKey="time" hide />
               <YAxis
                 domain={[series.min - pad, series.max + pad]}
@@ -231,7 +231,7 @@ export default function DetailChart({ asset, onClose }) {
             flexDirection: 'column',
             alignItems: 'center',
             justifyContent: 'center',
-            border: '1px dashed var(--border-subtle, rgba(255,255,255,0.1))',
+            border: '1px dashed var(--border-subtle)',
             borderRadius: '6px',
             color: 'var(--text-dim)',
             fontFamily: 'var(--font-mono)',

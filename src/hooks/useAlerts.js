@@ -2,21 +2,33 @@ import { useState, useEffect, useRef } from 'react'
 
 const STORAGE_KEY = 'quidesk-alerts'
 
+const VALID_ID_RE = /^[a-z0-9_-]{1,32}$/i
+
 export function useAlerts(liveAssets) {
   const [alerts, setAlerts] = useState(() => {
     try {
       const stored = localStorage.getItem(STORAGE_KEY)
       if (!stored) return []
       const parsed = JSON.parse(stored)
-      // Validate: must be an array of objects with required fields
       if (!Array.isArray(parsed)) return []
-      return parsed.filter(a =>
-        a && typeof a === 'object' &&
-        typeof a.id === 'string' &&
-        typeof a.assetId === 'string' &&
-        typeof a.type === 'string' &&
-        typeof a.price === 'number'
-      )
+      const valid = []
+      for (const a of parsed.slice(0, 100)) {
+        if (!a || typeof a !== 'object' || Array.isArray(a)) continue
+        if (typeof a.id !== 'string' || !VALID_ID_RE.test(a.id)) continue
+        if (typeof a.assetId !== 'string' || !VALID_ID_RE.test(a.assetId)) continue
+        if (a.type !== 'above' && a.type !== 'below') continue
+        if (!Number.isFinite(a.price) || a.price <= 0 || a.price > 1e12) continue
+        valid.push({
+          id: a.id,
+          assetId: a.assetId,
+          symbol: typeof a.symbol === 'string' ? a.symbol.slice(0, 20) : undefined,
+          type: a.type,
+          price: a.price,
+          triggered: Boolean(a.triggered),
+          createdAt: typeof a.createdAt === 'string' ? a.createdAt.slice(0, 40) : new Date().toISOString(),
+        })
+      }
+      return valid
     } catch {
       return []
     }
@@ -25,7 +37,9 @@ export function useAlerts(liveAssets) {
   const prevPrices = useRef({})
 
   useEffect(() => {
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(alerts))
+    try {
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(alerts))
+    } catch {}
   }, [alerts])
 
   // Check alerts on every price tick

@@ -13,10 +13,10 @@ import { useAlerts } from './hooks/useAlerts'
 import { useCurrencyRates } from './hooks/useCurrencyRates'
 import { useTheme } from './hooks/useTheme'
 import { useNewsSignals } from './hooks/useNewsSignals'
-import OSINTMap from './components/OSINTMap'
+import { useScrollCraft } from './lib/scrollcraft'
 import Logo from './components/Logo'
 import SocialShareBar from './components/SocialShareBar'
-import { Share2 } from 'lucide-react'
+import { Share2, AlertTriangle } from 'lucide-react'
 import { mergeAssetState, renderAllCardCanvases } from './utils/marketEngine'
 
 const VALID_TABS = ['map', 'equities', 'crypto', 'metals', 'energy', 'forex', 'compare', 'watchlist', 'portfolio'];
@@ -109,6 +109,7 @@ const SEO_META = {
 };
 
 export default function App() {
+  useScrollCraft();
   const [activeTab, setActiveTab] = useState(() => {
     if (typeof window !== 'undefined') {
       const hash = window.location.hash.replace('#', '').toLowerCase();
@@ -303,6 +304,7 @@ export default function App() {
 
   return (
     <div style={{ minHeight:'100vh', display:'flex', flexDirection:'column' }}>
+      <a href="#main-content" className="skip-link visually-hidden">Skip to content</a>
       <Navbar
         active={activeTab}
         setActive={handleTabChange}
@@ -323,8 +325,8 @@ export default function App() {
         connectionStatus={connectionStatus}
       />
       {!isWorkerOnline && (
-        <div style={{
-          background: 'rgba(239, 68, 68, 0.15)',
+        <div role="status" style={{
+          background: 'var(--sc-loss-bg)',
           borderBottom: '1px solid var(--bear)',
           color: 'var(--bear)',
           padding: '8px 16px',
@@ -336,26 +338,21 @@ export default function App() {
           gap: '8px',
           zIndex: 100,
         }}>
-          <span>⚠</span>
+          <AlertTriangle size={14} aria-hidden="true" />
           <span>
             <strong>Edge Feed Offline:</strong> Live market data aggregator unreachable ({workerError || 'Connection refused'}). Showing unavailable indicators. Reconnecting automatically...
           </span>
         </div>
       )}
       <TickerTape allAssets={allAssets} formatLocalPrice={formatLocalPrice} isStale={isStale} />
-      <main style={{ flex:1 }}>
+      <main id="main-content" tabIndex={-1} style={{ flex:1, outline:'none' }}>
         {renderPage()}
       </main>
-
-      {/* ── Act 5: Geopolitical OSINT Intelligence Radar ── */}
-      <section className="sc-reveal" aria-label="Geopolitical OSINT intelligence radar">
-        <OSINTMap news={newsSignals.news} />
-      </section>
 
       {/* Disclaimer */}
       <div style={fS.disclaimer}>
         <div style={fS.disclaimerInner}>
-          <span style={fS.disclaimerIcon}>⚠</span>
+          <span style={fS.disclaimerIcon} aria-hidden="true"><AlertTriangle size={14} /></span>
           <span style={fS.disclaimerText}>
             <strong style={{ color:'var(--text-secondary)', fontWeight:600 }}>Disclaimer:</strong>{' '}
             Quidesk is for informational purposes only. Data displayed may be delayed or subject to change without notice.
@@ -379,7 +376,7 @@ export default function App() {
             </div>
             <SocialShareBar
               url="https://quidesk.github.io"
-              text="Quidesk — Live Market Intelligence Terminal | Equities, Crypto, Metals, Energy & Forex"
+              text="Quidesk: Live Market Intelligence Terminal | Equities, Crypto, Metals, Energy and Forex"
               showLabels={true}
             />
           </div>
@@ -456,7 +453,7 @@ export default function App() {
 const fS = {
   shareSection: {
     borderBottom: '1px solid var(--border-subtle)',
-    background: 'rgba(255, 255, 255, 0.015)',
+    background: 'var(--sc-surface-elevated)',
   },
   shareInner: {
     display: 'flex',
@@ -478,8 +475,8 @@ const fS = {
     display: 'inline-flex',
     alignItems: 'center',
     gap: '6px',
-    background: 'rgba(77, 158, 255, 0.08)',
-    border: '1px solid rgba(77, 158, 255, 0.2)',
+    background: 'var(--accent-dim)',
+    border: '1px solid var(--border-accent)',
     borderRadius: '4px',
     padding: '4px 8px',
   },
@@ -493,13 +490,13 @@ const fS = {
   shareSub: {
     fontFamily: 'var(--font-body)',
     fontSize: '12px',
-    color: 'var(--text-dim)',
+    color: 'var(--text-secondary)',
   },
   disclaimer: {
-    background: 'rgba(244, 176, 17, 0.03)',
-    borderTop: '1px solid rgba(244, 176, 17, 0.08)',
-    borderBottom: '1px solid rgba(244, 176, 17, 0.08)',
-    marginTop: '60px',
+    background: 'var(--bg-surface)',
+    borderTop: '1px solid var(--border-subtle)',
+    borderBottom: '1px solid var(--border-subtle)',
+    marginTop: '48px',
   },
   disclaimerInner: {
     display: 'flex', alignItems: 'flex-start', gap: '12px',
@@ -507,6 +504,7 @@ const fS = {
   },
   disclaimerIcon: {
     fontSize: '14px', color: 'var(--amber)', flexShrink: 0, marginTop: '2px',
+    display: 'inline-flex', alignItems: 'center',
   },
   disclaimerText: {
     fontFamily: 'var(--font-body)', fontSize: '12px',

@@ -2,7 +2,7 @@ import React, { useState, useRef, useEffect } from 'react'
 import { Search, X } from 'lucide-react'
 import { formatPrice, formatChange, SECTOR_META } from '../data/markets'
 
-export default function SearchBar({ allAssets, onSelect }) {
+export default function SearchBar({ allAssets, onSelect, fullWidth = false }) {
   const [query, setQuery]     = useState('')
   const [open, setOpen]       = useState(false)
   const [focused, setFocused] = useState(false)
@@ -34,7 +34,7 @@ export default function SearchBar({ allAssets, onSelect }) {
   }
 
   return (
-    <div ref={wrapRef} style={s.wrap}>
+    <div ref={wrapRef} style={{ ...s.wrap, ...(fullWidth ? { width: '100%', flex: '1 1 auto', minWidth: 0 } : {}) }}>
       <div style={{ ...s.inputWrap, borderColor: focused ? 'var(--border-accent)' : 'var(--border-subtle)' }}>
         <Search size={13} color="var(--text-dim)" style={{ flexShrink:0 }} />
         <input
@@ -53,7 +53,7 @@ export default function SearchBar({ allAssets, onSelect }) {
       </div>
 
       {open && results.length > 0 && (
-        <div style={s.dropdown}>
+        <div style={{ ...s.dropdown, ...(fullWidth ? { minWidth: '100%', width: '100%' } : {}) }}>
           {results.map(asset => {
             const meta = SECTOR_META[asset.sector] || {}
             const chg = asset.status === 'unavailable' ? null : (typeof asset.change === 'number' && Number.isFinite(asset.change) ? asset.change : null)
@@ -72,7 +72,7 @@ export default function SearchBar({ allAssets, onSelect }) {
                     {asset.symbol}
                   </span>
                   <span style={s.resultName}>{asset.name}</span>
-                  <span style={{ ...s.resultSector, color: meta.color, background: (meta.color||'#f0a500') + '15', border: '1px solid ' + (meta.color||'#f0a500') + '30' }}>
+                  <span style={{ ...s.resultSector, color: meta.color, background: (meta.color||'#D2B47C') + '16', border: '1px solid ' + (meta.color||'#D2B47C') + '38' }}>
                     {meta.label}
                   </span>
                 </div>

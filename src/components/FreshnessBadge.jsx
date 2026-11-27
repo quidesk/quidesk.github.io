@@ -35,9 +35,9 @@ export function FreshnessBadge({ level, status, timestamp, source, compact = fal
           fontFamily: 'var(--font-mono, monospace)',
           fontSize: '8px',
           fontWeight: 600,
-          color: 'var(--text-dim, #8b949e)',
-          background: 'rgba(139, 148, 158, 0.12)',
-          border: '1px solid rgba(139, 148, 158, 0.25)',
+          color: 'var(--text-dim, #8E939E)',
+          background: 'rgba(142, 147, 158, 0.12)',
+          border: '1px solid rgba(142, 147, 158, 0.25)',
           borderRadius: '3px',
           padding: '0 5px',
           lineHeight: '14px',
@@ -47,7 +47,7 @@ export function FreshnessBadge({ level, status, timestamp, source, compact = fal
           gap: '4px',
         }}
       >
-        <span style={{ width: '4px', height: '4px', borderRadius: '50%', background: 'var(--text-dim, #8b949e)' }} />
+        <span style={{ width: '4px', height: '4px', borderRadius: '50%', background: 'var(--text-dim, #8E939E)' }} />
         {closeLabel}
         {!compact && ageText && (
           <span style={{ opacity: 0.75, fontSize: '7.5px' }}>
@@ -67,9 +67,9 @@ export function FreshnessBadge({ level, status, timestamp, source, compact = fal
           fontFamily: 'var(--font-mono, monospace)',
           fontSize: '8px',
           fontWeight: 600,
-          color: 'var(--amber, #f59e0b)',
-          background: 'rgba(245, 158, 11, 0.12)',
-          border: '1px solid rgba(245, 158, 11, 0.3)',
+          color: 'var(--amber, #D2B47C)',
+          background: 'var(--amber-dim)',
+          border: '1px solid var(--border-accent)',
           borderRadius: '3px',
           padding: '0 5px',
           lineHeight: '14px',
@@ -79,7 +79,7 @@ export function FreshnessBadge({ level, status, timestamp, source, compact = fal
           gap: '4px',
         }}
       >
-        <span style={{ width: '4px', height: '4px', borderRadius: '50%', background: 'var(--amber, #f59e0b)' }} />
+        <span style={{ width: '4px', height: '4px', borderRadius: '50%', background: 'var(--amber, #D2B47C)' }} />
         ECB daily
         {!compact && ageText && (
           <span style={{ opacity: 0.8, fontSize: '7.5px' }}>
@@ -99,9 +99,9 @@ export function FreshnessBadge({ level, status, timestamp, source, compact = fal
           fontFamily: 'var(--font-mono, monospace)',
           fontSize: '8px',
           fontWeight: 600,
-          color: 'var(--text-dim, #8b949e)',
-          background: 'rgba(139, 148, 158, 0.08)',
-          border: '1px solid rgba(139, 148, 158, 0.2)',
+          color: 'var(--text-dim, #8E939E)',
+          background: 'rgba(142, 147, 158, 0.08)',
+          border: '1px solid rgba(142, 147, 158, 0.22)',
           borderRadius: '3px',
           padding: '0 4px',
           lineHeight: '14px',
@@ -121,9 +121,9 @@ export function FreshnessBadge({ level, status, timestamp, source, compact = fal
         style={{
           fontFamily: 'var(--font-mono, monospace)',
           fontSize: '8px',
-          color: 'var(--bull, #22d47a)',
-          background: 'rgba(34, 212, 122, 0.1)',
-          border: '1px solid rgba(34, 212, 122, 0.25)',
+          color: 'var(--bull, #36C982)',
+          background: 'var(--bull-dim)',
+          border: '1px solid rgba(54, 201, 130, 0.28)',
           borderRadius: '3px',
           padding: '0 4px',
           lineHeight: '14px',
@@ -132,7 +132,7 @@ export function FreshnessBadge({ level, status, timestamp, source, compact = fal
           gap: '3px',
         }}
       >
-        <span style={{ width: '4px', height: '4px', borderRadius: '50%', background: 'var(--bull, #22d47a)' }} />
+        <span style={{ width: '4px', height: '4px', borderRadius: '50%', background: 'var(--bull, #36C982)' }} />
         {source === 'websocket' ? 'WS' : 'LIVE'}
         {!compact && ageText && (
           <span style={{ opacity: 0.75, fontSize: '7.5px' }}>
@@ -145,9 +145,9 @@ export function FreshnessBadge({ level, status, timestamp, source, compact = fal
 
   const isFallback = source === 'fallback';
   const label = isFallback ? 'FALLBACK' : 'STALE';
-  const color = isFallback ? 'var(--neon-pink, #ff2d6b)' : 'var(--amber, #f59e0b)';
-  const bg = isFallback ? 'rgba(255, 45, 107, 0.12)' : 'rgba(245, 158, 11, 0.12)';
-  const border = isFallback ? 'rgba(255, 45, 107, 0.3)' : 'rgba(245, 158, 11, 0.3)';
+  const color = isFallback ? 'var(--bear, #F06A64)' : 'var(--amber, #D2B47C)';
+  const bg = isFallback ? 'var(--bear-dim)' : 'var(--amber-dim)';
+  const border = isFallback ? 'rgba(240, 106, 100, 0.32)' : 'var(--border-accent)';
 
   return (
     <span
@@ -187,9 +187,9 @@ export function FallbackNotice({ source }) {
       style={{
         fontFamily: 'var(--font-mono, monospace)',
         fontSize: '9px',
-        color: 'var(--amber, #f59e0b)',
-        background: 'rgba(245, 158, 11, 0.08)',
-        border: '1px solid rgba(245, 158, 11, 0.25)',
+        color: 'var(--amber, #D2B47C)',
+        background: 'var(--amber-dim)',
+        border: '1px solid var(--border-accent)',
         borderRadius: '4px',
         padding: '2px 6px',
         marginTop: '4px',
@@ -198,7 +198,7 @@ export function FallbackNotice({ source }) {
         gap: '4px',
       }}
     >
-      <span>⚠️ Fallback: {source || 'secondary'}</span>
+      <span>Fallback: {source || 'secondary'}</span>
     </div>
   );
 }

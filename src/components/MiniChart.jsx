@@ -227,10 +227,10 @@ export default function MiniChart({
           style={{
             fontFamily: 'var(--font-mono, monospace)',
             fontSize: '9px',
-            color: 'var(--text-dim, #8b949e)',
+            color: 'var(--text-dim, #8E939E)',
             position: 'relative',
             zIndex: 1,
-            background: 'var(--bg-card, #0f172a)',
+            background: 'var(--bg-card, #13151A)',
             padding: '0 4px',
           }}
         >
@@ -248,7 +248,7 @@ export default function MiniChart({
   const isFlat = hasChange && Math.abs(change) < 0.005;
   const color = (!hasChange || isFlat)
     ? 'var(--text-dim, #8b949e)'
-    : (change > 0 ? 'var(--bull, #22d47a)' : 'var(--bear, #f04060)');
+    : (change > 0 ? 'var(--bull, #36C982)' : 'var(--bear, #F06A64)');
 
   const chartEl = (
     <AreaChart

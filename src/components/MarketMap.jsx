@@ -41,11 +41,11 @@ export const INITIAL_POSITIONS = {
 };
 
 export const ZONES = [
-  { id:'equities', label:'EQUITIES', cx:0.19, cy:0.31, r:135, rx:0.22, ry:0.27, color:'#4d9eff' },
-  { id:'crypto',   label:'CRYPTO',   cx:0.81, cy:0.31, r:135, rx:0.22, ry:0.27, color:'#a78bfa' },
-  { id:'metals',   label:'METALS',   cx:0.19, cy:0.79, r:90,  rx:0.20, ry:0.18, color:'#f0a500' },
-  { id:'energy',   label:'ENERGY',   cx:0.81, cy:0.79, r:95,  rx:0.22, ry:0.19, color:'#f97316' },
-  { id:'forex',    label:'FOREX',    cx:0.50, cy:0.50, r:155, rx:0.22, ry:0.31, color:'#22d3ee' },
+  { id:'equities', label:'EQUITIES', cx:0.19, cy:0.31, r:135, rx:0.22, ry:0.27, color:'#7AA2F7' },
+  { id:'crypto',   label:'CRYPTO',   cx:0.81, cy:0.31, r:135, rx:0.22, ry:0.27, color:'#D2B47C' },
+  { id:'metals',   label:'METALS',   cx:0.19, cy:0.79, r:90,  rx:0.20, ry:0.18, color:'#DEC38A' },
+  { id:'energy',   label:'ENERGY',   cx:0.81, cy:0.79, r:95,  rx:0.22, ry:0.19, color:'#E08262' },
+  { id:'forex',    label:'FOREX',    cx:0.50, cy:0.50, r:155, rx:0.22, ry:0.31, color:'#4DB6AC' },
 ];
 
 export const ZONE_HOME = {
@@ -576,10 +576,10 @@ export default function MarketMap({ allAssets, hotspots = [], onSelectAsset, con
           if (!pa || !pb) return null;
           const isActive = activeId && (c.a === activeId || c.b === activeId);
           const color = c.r > 0.6
-            ? 'rgba(34,212,122,0.5)'
+            ? 'rgba(54,201,130,0.45)'
             : c.r < 0
-            ? 'rgba(240,64,96,0.5)'
-            : 'rgba(100,116,139,0.25)';
+            ? 'rgba(240,106,100,0.45)'
+            : 'rgba(142,147,158,0.22)';
           return (
             <line key={`corr-${i}`}
               ref={el => {
@@ -637,25 +637,26 @@ export default function MarketMap({ allAssets, hotspots = [], onSelectAsset, con
           const intensity = Math.min(1, absChg / 8);
 
           const ringColor = (!hasChg || isFlat)
-            ? 'rgba(139,148,158,0.45)'
+            ? 'rgba(142,147,158,0.45)'
             : isUp
-            ? `rgba(52,211,153,${0.5 + intensity * 0.5})`
-            : `rgba(248,113,113,${0.5 + intensity * 0.5})`;
+            ? `rgba(54,201,130,${0.48 + intensity * 0.45})`
+            : `rgba(240,106,100,${0.48 + intensity * 0.45})`;
           const waveBright = (!hasChg || isFlat)
-            ? 'rgba(139,148,158,0.35)'
-            : (isUp ? 'rgba(52,211,153,0.55)' : 'rgba(248,113,113,0.55)');
+            ? 'rgba(142,147,158,0.30)'
+            : (isUp ? 'rgba(54,201,130,0.48)' : 'rgba(240,106,100,0.48)');
           const waveSoft = (!hasChg || isFlat)
-            ? 'rgba(139,148,158,0.18)'
-            : (isUp ? 'rgba(52,211,153,0.3)' : 'rgba(248,113,113,0.3)');
+            ? 'rgba(142,147,158,0.16)'
+            : (isUp ? 'rgba(54,201,130,0.24)' : 'rgba(240,106,100,0.24)');
           const ringWidth = (!hasChg || isFlat) ? 1.2 : (1.5 + intensity * 2.5);
-          const sectorColor = meta.color || '#6b7280';
+          const sectorColor = meta.color || '#8E939E';
 
           const isForexNode = (asset.sector || '').toLowerCase() === 'forex';
           const dSym = getMapNodeLabel(asset);
           const tipMeta = formatAssetTooltipMeta(asset);
 
-          const stale = (isStale && isStale(asset.id, asset.sector)) || asset.status === 'stale' || asset.status === 'unavailable';
-          const staleOpacity = stale ? 0.35 : 1;
+          const isUnavailable = asset.status === 'unavailable' || asset.price === null || asset.price === undefined;
+          const stale = (isStale && isStale(asset.id, asset.sector)) || asset.status === 'stale' || isUnavailable;
+          const staleOpacity = isUnavailable ? 0.35 : (stale ? 0.72 : 1);
 
           return (
             <g key={asset.id}
@@ -700,9 +701,9 @@ export default function MarketMap({ allAssets, hotspots = [], onSelectAsset, con
               </clipPath>
 
               <circle r={nr}
-                fill={`color-mix(in srgb, ${sectorColor} 20%, #1a1d23 80%)`}
-                stroke="rgba(255,255,255,0.08)"
-                strokeWidth="0.5"
+                fill={`color-mix(in srgb, ${sectorColor} 18%, var(--sc-surface-elevated) 82%)`}
+                stroke="var(--sc-border)"
+                strokeWidth="0.6"
               />
 
               <g clipPath={`url(#clip-${asset.id})`}>
@@ -736,7 +737,7 @@ export default function MarketMap({ allAssets, hotspots = [], onSelectAsset, con
               <text textAnchor="middle" dominantBaseline="central" y={-nr * 0.2}
                 fontSize={isForexNode ? 8.5 : (dSym.length > 4 ? Math.max(7, nr / 3.4) : Math.max(9, nr / 2.6))}
                 fontFamily="var(--font-mono)" fontWeight="700"
-                fill="rgba(255,255,255,0.95)"
+                fill="var(--text-primary)"
                 letterSpacing={isForexNode ? '-0.02em' : '0.02em'}
               >
                 {dSym}

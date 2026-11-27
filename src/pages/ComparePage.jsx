@@ -6,7 +6,7 @@ import {
 import { SECTOR_META, formatPrice, formatChange } from '../data/markets'
 import { fetchCachedRangeHistory } from '../components/MiniChart'
 
-const COMPARE_COLORS = ['#f0a500','#4d9eff','#22d47a','#a78bfa'];
+const COMPARE_COLORS = ['#D2B47C', '#7AA2F7', '#36C982', '#E08262'];
 
 function extractSeriesPoints(asset, fetchedMap) {
   if (!asset) return [];
@@ -209,7 +209,7 @@ export default function ComparePage({ data }) {
                 <div style={{ height:280 }}>
                   <ResponsiveContainer width="100%" height="100%">
                     <LineChart data={overlayData} margin={{top:8,right:8,left:0,bottom:0}}>
-                      <CartesianGrid stroke="rgba(255,255,255,0.03)" strokeDasharray="4 4"/>
+                      <CartesianGrid stroke="var(--sc-border)" strokeDasharray="4 4"/>
                       <XAxis dataKey="time"
                         tick={{ fill:'var(--text-dim)', fontSize:9, fontFamily:'var(--font-mono)' }}
                         axisLine={{ stroke:'var(--border-subtle)' }} tickLine={false}
@@ -223,7 +223,7 @@ export default function ComparePage({ data }) {
                         width={52}
                       />
                       <Tooltip content={<CustomTip/>}/>
-                      <ReferenceLine y={0} stroke="rgba(255,255,255,0.1)" strokeDasharray="3 2"/>
+                      <ReferenceLine y={0} stroke="var(--border-mid)" strokeDasharray="3 2"/>
                       {selectedAssets.map((a, i) => (
                         <Line key={a.id} type="monotone" dataKey={a.id}
                           name={a.symbol}
@@ -375,7 +375,7 @@ const s = {
   },
   insightCard: {
     display:'flex', gap:'12px', alignItems:'flex-start',
-    background:'rgba(240,165,0,0.05)', border:'1px solid rgba(240,165,0,0.2)',
+    background:'var(--accent-subtle)', border:'1px solid var(--border-accent)',
     borderRadius:'8px', padding:'14px 16px',
   },
   insightEye: {

@@ -6,10 +6,18 @@
  */
 
 import { ASSET_DEFINITIONS } from '../config.js';
-import { fetchYahooChart, fetchFinnhubQuote, determineSessionState } from '../providers/yahoo.js';
+import { fetchYahooChart, fetchFrontMonthBrent, fetchFinnhubQuote, determineSessionState } from '../providers/yahoo.js';
 import { fetchMultiTierCrypto } from '../providers/crypto.js';
 import { fetchSpotMetals, checkMetalsBasis } from '../providers/metals.js';
 import { fetchFrankfurterFallback } from '../providers/forex.js';
+
+const REGIONAL_FX_IDS = new Set(['usdinr', 'eurinr']);
+
+export function getStalenessThresholdMs(def) {
+  if (def?.sector === 'crypto') return 120000;        // 2 min
+  if (REGIONAL_FX_IDS.has(def?.id)) return 3600000;   // 60 min (off-peak INR interbank cadence)
+  return 900000;                                      // 15 min (Equities, G10 FX, Metals, Energy)
+}
 
 /**
  * Normalizes an asset into the strict canonical schema.
@@ -32,26 +40,23 @@ export function buildAssetQuote(def, rawData, now = Date.now()) {
   const flags = Array.isArray(rawData?.flags) ? [...rawData.flags] : [];
   const spark1d = Array.isArray(rawData?.spark1d) ? rawData.spark1d : [];
 
-  // Strictly compute change in the Worker; missing prevClose => change: null, changeStatus: 'unavailable'
   const change = (price !== null && prevClose !== null && prevClose > 0)
     ? parseFloat((((price - prevClose) / prevClose) * 100).toFixed(2))
     : null;
   const changeStatus = change === null ? 'unavailable' : 'available';
 
-  // Status determination
   let status = 'live';
   if (price === null) {
     status = 'unavailable';
   } else if (isEcb) {
     status = 'delayed';
   } else if (quoteTs === null) {
-    // Provider gave no timestamp: never synthesize now; mark stale
     status = 'stale';
   } else if (session === 'closed' || session === 'post' || session === 'pre') {
     status = 'closed';
   } else {
     const ageMs = now - quoteTs;
-    const threshold = def.sector === 'crypto' ? 120000 : 900000; // 120s crypto, 15m others
+    const threshold = getStalenessThresholdMs(def);
     if (ageMs > threshold) {
       status = 'stale';
     }
@@ -90,9 +95,6 @@ export function buildAssetQuote(def, rawData, now = Date.now()) {
 
 /**
  * Handles GET /v1/quotes request.
- * @param {Request} request
- * @param {object} env
- * @returns {Promise<Response>}
  */
 export async function handleQuotes(request, env) {
   const now = Date.now();
@@ -107,7 +109,7 @@ export async function handleQuotes(request, env) {
     },
   };
 
-  // 1. Fetch Multi-Tier Crypto (Binance -> Kraken -> CryptoCompare -> CoinGecko)
+  // 1. Fetch Multi-Tier Crypto (Binance -> Kraken -> CryptoCompare -> Yahoo -> CoinGecko)
   const { quotes: cryptoQuotes, health: cryptoHealth } = await fetchMultiTierCrypto(env, now);
   health.perSource.binance = cryptoHealth.binance;
   health.perSource.kraken = cryptoHealth.kraken;
@@ -116,7 +118,7 @@ export async function handleQuotes(request, env) {
     health.perSource.coingecko = cryptoHealth.coingecko;
   }
 
-  // 2. Fetch Spot Metals Cross-Check (3 subrequests)
+  // 2. Fetch Spot Metals Cross-Check
   let spotMetals = {};
   const t0Metals = Date.now();
   try {
@@ -126,8 +128,8 @@ export async function handleQuotes(request, env) {
     health.perSource['gold-api'] = { ok: false, lastOk: null, latencyMs: Date.now() - t0Metals };
   }
 
-  // 3. Fetch Yahoo Chart Assets (Equities, Energy, Metals, FX) with Finnhub Failover + SGD=X
-  const yahooDefs = Object.values(ASSET_DEFINITIONS).filter(d => d.yahooSymbol);
+  // 3. Fetch Non-Crypto Yahoo Assets (Equities, Energy, Metals, FX) + SGD=X
+  const yahooDefs = Object.values(ASSET_DEFINITIONS).filter(d => d.sector !== 'crypto' && d.yahooSymbol);
   const yahooResults = {};
   let usdsgd = null;
   const t0Yahoo = Date.now();
@@ -135,7 +137,10 @@ export async function handleQuotes(request, env) {
   await Promise.allSettled([
     ...yahooDefs.map(async (def) => {
       try {
-        const chart = await fetchYahooChart(def.yahooSymbol, { range: '1d', interval: '5m' });
+        const chart = def.id === 'brent'
+          ? await fetchFrontMonthBrent({ range: '1d', interval: '5m' }, now)
+          : await fetchYahooChart(def.yahooSymbol, { range: '1d', interval: '5m' });
+
         if (chart) {
           const session = determineSessionState(
             chart.currentTradingPeriod,
@@ -143,11 +148,11 @@ export async function handleQuotes(request, env) {
             def.sector,
             chart.marketState
           );
-          let flags = [];
+          let flags = Array.isArray(chart.flags) ? [...chart.flags] : [];
           let spotPrice = null;
           if (def.sector === 'metals' && def.spotSymbol && spotMetals[def.id]) {
             const basis = checkMetalsBasis(chart.price, spotMetals[def.id]);
-            flags = basis.flags;
+            flags = [...flags, ...basis.flags];
             spotPrice = basis.spotPrice;
           }
 
@@ -237,18 +242,20 @@ export async function handleQuotes(request, env) {
     }
   }
 
-  // 5. Assemble All 32 Canonical Quotes + FX Extras (SGD=X + AED 3.6725 peg) + Enforce EUR/INR Triangular Parity
+  // 5. Assemble All 32 Canonical Quotes + Enforce EUR/INR Triangular Parity + Brent-WTI Sanity Check
   const assets = {};
   for (const [id, def] of Object.entries(ASSET_DEFINITIONS)) {
     const raw = def.sector === 'crypto' ? cryptoQuotes[id] : yahooResults[id];
     assets[id] = buildAssetQuote(def, raw, now);
   }
 
-  if (
-    assets.eurusd?.price > 0 &&
-    assets.usdinr?.price > 0 &&
-    assets.eurinr
-  ) {
+  if (assets.brent?.price > 0 && assets.wti?.price > 0 && assets.brent.price < assets.wti.price) {
+    if (!assets.brent.flags.includes('brent_below_wti')) {
+      assets.brent.flags.push('brent_below_wti');
+    }
+  }
+
+  if (assets.eurusd?.price > 0 && assets.usdinr?.price > 0 && assets.eurinr) {
     const exactEurInr = parseFloat((assets.eurusd.price * assets.usdinr.price).toFixed(2));
     const prevEurInr = (assets.eurusd.prevClose > 0 && assets.usdinr.prevClose > 0)
       ? parseFloat((assets.eurusd.prevClose * assets.usdinr.prevClose).toFixed(2))
@@ -257,11 +264,19 @@ export async function handleQuotes(request, env) {
     if (prevEurInr && prevEurInr > 0) {
       assets.eurinr.prevClose = prevEurInr;
       assets.eurinr.change = parseFloat((((exactEurInr - prevEurInr) / prevEurInr) * 100).toFixed(2));
+      assets.eurinr.changePercent = assets.eurinr.change;
       assets.eurinr.changeStatus = 'available';
+    }
+    const derivedTs = Math.max(assets.eurusd.quoteTs || 0, assets.usdinr.quoteTs || 0);
+    if (derivedTs > 0) {
+      assets.eurinr.quoteTs = derivedTs;
+      if (assets.eurinr.status === 'stale' && (now - derivedTs) <= getStalenessThresholdMs(ASSET_DEFINITIONS.eurinr)) {
+        assets.eurinr.status = 'live';
+      }
     }
   }
 
-  const payload = {
+  return {
     schemaVersion: '1.0.0',
     generatedAt: new Date(now).toISOString(),
     assets,
@@ -271,8 +286,6 @@ export async function handleQuotes(request, env) {
     },
     health,
   };
-
-  return payload;
 }
 
 /**

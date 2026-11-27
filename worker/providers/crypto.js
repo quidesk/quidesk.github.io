@@ -1,25 +1,27 @@
 /**
  * Quidesk Market Engine — Multi-Tier Resilient Crypto Provider
- * 
+ *
  * Tiers (tried in strict priority order, taking first valid price per symbol):
- * 1. Binance Vision REST (data-api.binance.vision)
- * 2. Kraken Public Ticker (XBT, ETH, SOL, XRP, ADA)
+ * 1. Binance Vision REST (data-api.binance.vision) + 30m klines spark1d
+ * 2. Kraken Public Ticker (XBT, ETH, SOL, XRP, ADA) + 30m OHLC spark1d
  * 3. CryptoCompare Multi-Symbol Full Price (covers BNB and rest)
- * 4. CoinGecko Simple Price (ONLY when COINGECKO_API_KEY / CG_API_KEY is configured in Worker env)
+ * 4. Yahoo Finance v8 Chart (BTC-USD, ETH-USD, SOL-USD, BNB-USD, XRP-USD, ADA-USD) — covers BNB & spark1d backfill
+ * 5. CoinGecko Simple Price (ONLY when COINGECKO_API_KEY / CG_API_KEY is configured in Worker env)
  *
  * Per-provider timeout: 4s
  * Strictly validates: Number.isFinite(price) && price > 0
  * changeBasis: 'rolling_24h', change = (price - open24h) / open24h * 100
- * quoteTs freshness: 'live' <= 120s, else 'stale', never 'live' if price is null
  */
 
+import { fetchYahooChart } from './yahoo.js';
+
 export const CRYPTO_DEFINITIONS = {
-  btc: { id: 'btc', symbol: 'BTC', binance: 'BTCUSDT', kraken: 'XXBTZUSD', krakenAlt: 'XBT', cc: 'BTC', cg: 'bitcoin' },
-  eth: { id: 'eth', symbol: 'ETH', binance: 'ETHUSDT', kraken: 'XETHZUSD', krakenAlt: 'ETH', cc: 'ETH', cg: 'ethereum' },
-  sol: { id: 'sol', symbol: 'SOL', binance: 'SOLUSDT', kraken: 'SOLUSD', krakenAlt: 'SOL', cc: 'SOL', cg: 'solana' },
-  bnb: { id: 'bnb', symbol: 'BNB', binance: 'BNBUSDT', kraken: null, krakenAlt: null, cc: 'BNB', cg: 'binancecoin' },
-  xrp: { id: 'xrp', symbol: 'XRP', binance: 'XRPUSDT', kraken: 'XXRPZUSD', krakenAlt: 'XRP', cc: 'XRP', cg: 'ripple' },
-  ada: { id: 'ada', symbol: 'ADA', binance: 'ADAUSDT', kraken: 'ADAUSD', krakenAlt: 'ADA', cc: 'ADA', cg: 'cardano' },
+  btc: { id: 'btc', symbol: 'BTC', binance: 'BTCUSDT', kraken: 'XXBTZUSD', krakenAlt: 'XBT', cc: 'BTC', yahoo: 'BTC-USD', cg: 'bitcoin' },
+  eth: { id: 'eth', symbol: 'ETH', binance: 'ETHUSDT', kraken: 'XETHZUSD', krakenAlt: 'ETH', cc: 'ETH', yahoo: 'ETH-USD', cg: 'ethereum' },
+  sol: { id: 'sol', symbol: 'SOL', binance: 'SOLUSDT', kraken: 'SOLUSD', krakenAlt: 'SOL', cc: 'SOL', yahoo: 'SOL-USD', cg: 'solana' },
+  bnb: { id: 'bnb', symbol: 'BNB', binance: 'BNBUSDT', kraken: null, krakenAlt: null, cc: 'BNB', yahoo: 'BNB-USD', cg: 'binancecoin' },
+  xrp: { id: 'xrp', symbol: 'XRP', binance: 'XRPUSDT', kraken: 'XXRPZUSD', krakenAlt: 'XRP', cc: 'XRP', yahoo: 'XRP-USD', cg: 'ripple' },
+  ada: { id: 'ada', symbol: 'ADA', binance: 'ADAUSDT', kraken: 'ADAUSD', krakenAlt: 'ADA', cc: 'ADA', yahoo: 'ADA-USD', cg: 'cardano' },
 };
 
 async function fetchBinanceSparkline(binanceSymbol, timeoutMs = 4500) {
@@ -36,6 +38,35 @@ async function fetchBinanceSparkline(binanceSymbol, timeoutMs = 4500) {
     for (const k of klines) {
       const ts = Number(k?.[0]);
       const close = parseFloat(k?.[4]);
+      if (Number.isFinite(ts) && ts > 0 && Number.isFinite(close) && close > 0) {
+        points.push([ts, close]);
+      }
+    }
+    return points;
+  } catch {
+    return [];
+  }
+}
+
+async function fetchKrakenSparkline(krakenPair, krakenAlt, timeoutMs = 3500) {
+  try {
+    const since = Math.floor((Date.now() - 24 * 3600 * 1000) / 1000);
+    const url = `https://api.kraken.com/0/public/OHLC?pair=${encodeURIComponent(krakenPair)}&interval=30&since=${since}`;
+    const res = await fetch(url, {
+      headers: { 'Accept': 'application/json' },
+      signal: AbortSignal.timeout(timeoutMs),
+    });
+    if (!res.ok) return [];
+    const json = await res.json();
+    const rawResult = json?.result;
+    if (!rawResult || typeof rawResult !== 'object') return [];
+    const rows = rawResult[krakenPair] ||
+      Object.entries(rawResult).find(([k]) => k !== 'last' && (!krakenAlt || k.includes(krakenAlt)))?.[1];
+    if (!Array.isArray(rows)) return [];
+    const points = [];
+    for (const row of rows.slice(-48)) {
+      const ts = Number(row?.[0]) * 1000;
+      const close = parseFloat(row?.[4]);
       if (Number.isFinite(ts) && ts > 0 && Number.isFinite(close) && close > 0) {
         points.push([ts, close]);
       }
@@ -98,7 +129,7 @@ export async function fetchBinanceTier(neededSymbols, timeoutMs = 4000) {
 }
 
 /**
- * Fetch from Kraken Public Ticker (Tier 2)
+ * Fetch from Kraken Public Ticker + OHLC Sparklines (Tier 2)
  */
 export async function fetchKrakenTier(neededSymbols, timeoutMs = 4000) {
   const eligible = neededSymbols.filter(s => CRYPTO_DEFINITIONS[s]?.kraken);
@@ -116,6 +147,14 @@ export async function fetchKrakenTier(neededSymbols, timeoutMs = 4000) {
   const json = await res.json();
   const rawResult = json?.result;
   if (!rawResult || typeof rawResult !== 'object') throw new Error('Invalid Kraken payload');
+
+  const sparkEntries = await Promise.all(
+    eligible.map(async (sym) => {
+      const cfg = CRYPTO_DEFINITIONS[sym];
+      return [cfg.id, await fetchKrakenSparkline(cfg.kraken, cfg.krakenAlt, 3500)];
+    })
+  );
+  const sparkMap = Object.fromEntries(sparkEntries);
 
   const results = {};
   for (const sym of eligible) {
@@ -136,6 +175,7 @@ export async function fetchKrakenTier(neededSymbols, timeoutMs = 4000) {
           source: 'kraken',
           changeBasis: 'rolling_24h',
           session: '24x7',
+          spark1d: sparkMap[cfg.id] || [],
         };
       }
     }
@@ -182,6 +222,7 @@ export async function fetchCryptoCompareTier(neededSymbols, timeoutMs = 4000) {
           source: 'cryptocompare',
           changeBasis: 'rolling_24h',
           session: '24x7',
+          spark1d: [],
         };
       }
     }
@@ -190,7 +231,38 @@ export async function fetchCryptoCompareTier(neededSymbols, timeoutMs = 4000) {
 }
 
 /**
- * Fetch from CoinGecko Simple Price (Tier 4, only when API key is configured)
+ * Fetch from Yahoo Finance v8 Chart (Tier 4 — guarantees BNB & 24H sparklines on US Cloudflare colos)
+ */
+export async function fetchYahooCryptoTier(neededSymbols, timeoutMs = 5000) {
+  const eligible = neededSymbols.filter(s => CRYPTO_DEFINITIONS[s]?.yahoo);
+  if (eligible.length === 0) return {};
+
+  const results = {};
+  await Promise.allSettled(
+    eligible.map(async (sym) => {
+      const cfg = CRYPTO_DEFINITIONS[sym];
+      const chart = await fetchYahooChart(cfg.yahoo, { range: '1d', interval: '30m', timeoutMs });
+      if (chart && Number.isFinite(chart.price) && chart.price > 0) {
+        results[cfg.id] = {
+          id: cfg.id,
+          symbol: cfg.symbol,
+          price: chart.price,
+          prevClose: chart.prevClose,
+          quoteTs: chart.quoteTs || Date.now(),
+          source: 'yahoo',
+          changeBasis: 'rolling_24h',
+          session: '24x7',
+          spark1d: Array.isArray(chart.spark1d) ? chart.spark1d : [],
+        };
+      }
+    })
+  );
+
+  return results;
+}
+
+/**
+ * Fetch from CoinGecko Simple Price (Tier 5, only when API key is configured)
  */
 export async function fetchCoinGeckoTier(neededSymbols, apiKey, timeoutMs = 4000) {
   if (!apiKey || neededSymbols.length === 0) return {};
@@ -231,6 +303,7 @@ export async function fetchCoinGeckoTier(neededSymbols, apiKey, timeoutMs = 4000
         source: 'coingecko',
         changeBasis: 'rolling_24h',
         session: '24x7',
+        spark1d: [],
       };
     }
   }
@@ -238,7 +311,7 @@ export async function fetchCoinGeckoTier(neededSymbols, apiKey, timeoutMs = 4000
 }
 
 /**
- * Multi-Tier Crypto Orchestrator
+ * Multi-Tier Crypto Orchestrator with guaranteed intraday sparkline backfill
  */
 export async function fetchMultiTierCrypto(env = {}, now = Date.now()) {
   const allIds = Object.keys(CRYPTO_DEFINITIONS);
@@ -271,7 +344,7 @@ export async function fetchMultiTierCrypto(env = {}, now = Date.now()) {
     }
   }
 
-  // Tier 2: Kraken
+  // Tier 2: Kraken (with OHLC sparklines)
   if (remaining.length > 0) {
     const t0 = Date.now();
     try {
@@ -303,7 +376,20 @@ export async function fetchMultiTierCrypto(env = {}, now = Date.now()) {
     }
   }
 
-  // Tier 4: CoinGecko (key required)
+  // Tier 4: Yahoo Finance Crypto (covers BNB + any remaining assets with full spark1d)
+  if (remaining.length > 0) {
+    try {
+      const res = await fetchYahooCryptoTier(remaining, 5000);
+      for (const [id, q] of Object.entries(res)) {
+        quotes[id] = q;
+      }
+      remaining = remaining.filter(id => !quotes[id]);
+    } catch {
+      // continue to Tier 5
+    }
+  }
+
+  // Tier 5: CoinGecko (key required)
   if (remaining.length > 0 && cgKey) {
     const t0 = Date.now();
     try {
@@ -317,6 +403,23 @@ export async function fetchMultiTierCrypto(env = {}, now = Date.now()) {
     } catch {
       health.coingecko = { ok: false, lastOk: null, latencyMs: Date.now() - t0 };
     }
+  }
+
+  // Sparkline Backfill Pass: guarantee >= 10 intraday points for any active crypto quote
+  const needsSpark = Object.keys(quotes).filter(
+    (id) => !Array.isArray(quotes[id].spark1d) || quotes[id].spark1d.length < 10
+  );
+  if (needsSpark.length > 0) {
+    await Promise.allSettled(
+      needsSpark.map(async (id) => {
+        const cfg = CRYPTO_DEFINITIONS[id];
+        if (!cfg?.yahoo) return;
+        const chart = await fetchYahooChart(cfg.yahoo, { range: '1d', interval: '30m', timeoutMs: 4500 });
+        if (chart && Array.isArray(chart.spark1d) && chart.spark1d.length >= 10) {
+          quotes[id].spark1d = chart.spark1d;
+        }
+      })
+    );
   }
 
   return { quotes, health };

@@ -1,9 +1,9 @@
 import React, { useState } from 'react'
 import { PieChart, Pie, Cell, ResponsiveContainer, Tooltip, BarChart, Bar, XAxis, YAxis, CartesianGrid } from 'recharts'
-import { Plus, Trash2 } from 'lucide-react'
+import { Plus, Trash2, Briefcase } from 'lucide-react'
 import { formatPrice, formatChange, SECTOR_META } from '../data/markets'
 
-const SLICE_COLORS = ['#f0a500','#4d9eff','#22d47a','#a78bfa','#f97316','#e2e8f0','#f04060','#64748b']
+const SLICE_COLORS = ['#D2B47C', '#7AA2F7', '#36C982', '#E08262', '#4DB6AC', '#B4B8C2', '#F06A64', '#8E939E']
 
 const TipStyle = {
   background:'var(--bg-panel)', border:'1px solid var(--border-mid)',
@@ -28,7 +28,7 @@ export default function PortfolioPage({ portfolio, allAssets }) {
 
   const barData = valuedHoldings.map((h) => ({
     symbol: h.symbol, pnl: parseFloat(h.pnl.toFixed(2)),
-    fill: h.pnl >= 0 ? '#22d47a' : '#f04060',
+    fill: h.pnl >= 0 ? '#36C982' : '#F06A64',
   }))
 
   const handleAdd = () => {
@@ -96,10 +96,10 @@ export default function PortfolioPage({ portfolio, allAssets }) {
       )}
 
       {holdings.length === 0 ? (
-        <div className="fade-up-1" style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', padding: '60px', gap: '8px', border: '1px solid var(--border-subtle)', borderRadius: '12px', background: 'var(--bg-card)', marginTop: '20px' }}>
-          <div style={{ fontSize:'32px', color:'var(--text-dim)' }}>💼</div>
-          <div style={{ fontFamily:'var(--font-display)', fontSize:'14px', color:'var(--text-secondary)', letterSpacing:'0.04em' }}>Your portfolio is empty</div>
-          <div style={{ fontFamily:'var(--font-body)', fontSize:'12px', color:'var(--text-dim)' }}>Click "Add Position" to track your assets manually</div>
+        <div className="fade-up-1" style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', padding: '60px', gap: '10px', border: '1px solid var(--border-subtle)', borderRadius: '12px', background: 'var(--bg-card)', marginTop: '20px' }}>
+          <Briefcase size={28} color="var(--text-dim)" aria-hidden="true" />
+          <div style={{ fontFamily:'var(--font-display)', fontSize:'15px', fontWeight: 600, color:'var(--text-secondary)' }}>Your portfolio is empty</div>
+          <div style={{ fontFamily:'var(--font-body)', fontSize:'12px', color:'var(--text-dim)' }}>Click Add Position to track your holdings manually</div>
           
           <a
             href="https://www.binance.com/register?ref=1067434967"
@@ -309,9 +309,9 @@ const s = {
   sub: { fontFamily:'var(--font-body)', fontSize:'12px', color:'var(--text-secondary)', marginTop:'3px' },
   addBtn: {
     display:'flex', alignItems:'center', gap:'6px',
-    background:'rgba(34,212,122,0.08)', border:'1px solid rgba(34,212,122,0.25)',
+    background:'var(--sc-gain-bg)', border:'1px solid rgba(54, 201, 130, 0.30)',
     borderRadius:'6px', color:'var(--bull)', fontFamily:'var(--font-body)',
-    fontSize:'12px', fontWeight:500, padding:'8px 16px', cursor:'pointer',
+    fontSize:'12px', fontWeight:600, padding:'8px 16px', cursor:'pointer',
   },
   addForm: {
     background:'var(--bg-card)', border:'1px solid var(--border-mid)',

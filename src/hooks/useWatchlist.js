@@ -10,7 +10,9 @@ export function useWatchlist() {
       if (!stored) return DEFAULT
       const parsed = JSON.parse(stored)
       if (!Array.isArray(parsed)) return DEFAULT
-      const valid = parsed.filter(x => typeof x === 'string' && x.length > 0 && x.length < 50)
+      const valid = parsed
+        .slice(0, 100)
+        .filter(x => typeof x === 'string' && /^[a-z0-9_-]{1,32}$/i.test(x))
       return valid.length > 0 ? valid : DEFAULT
     } catch {
       return DEFAULT

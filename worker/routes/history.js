@@ -3,22 +3,76 @@
  * 
  * Supplies authentic historical OHLCV chart series for 1H, 24H (1D), 1M, 1Y.
  * Endpoints: GET /v1/history?id=&range=1H|24H|1D|5D|1M|1Y
- * 
- * Phase 2 Requirements:
- * - Crypto: CryptoCompare histohour (limit 24) or Binance klines 1h.
- * - Equities / energy / metals / forex intraday: Yahoo chart interval 15m range 2d (or 5d for forex),
- *   taking close values where non-null and > 0.
- * - Forex daily fallback: Frankfurter timeseries, labelled "ECB daily" in the response.
- * - Return format: { points: [{t, v}], granularity: '15m'|'1h'|'1d', source }
  */
 
 import { ASSET_DEFINITIONS } from '../config.js';
 
+async function fetchYahooSeries(yahooSymbol, rangeParam, sector) {
+  let interval = '15m';
+  let yahooRange = sector === 'forex' ? '5d' : '2d';
+  let granularity = '15m';
+
+  if (rangeParam === '1H') {
+    interval = '2m';
+    yahooRange = '1d';
+    granularity = '2m';
+  } else if (rangeParam === '1M') {
+    interval = '1d';
+    yahooRange = '1mo';
+    granularity = '1d';
+  } else if (rangeParam === '1Y') {
+    interval = '1wk';
+    yahooRange = '1y';
+    granularity = '1d';
+  }
+
+  const yahooUrl = `https://query1.finance.yahoo.com/v8/finance/chart/${encodeURIComponent(yahooSymbol)}?interval=${interval}&range=${yahooRange}`;
+  const res = await fetch(yahooUrl, {
+    headers: {
+      'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
+      'Accept': 'application/json',
+    },
+    signal: AbortSignal.timeout(6000),
+  });
+
+  if (!res.ok) return null;
+  const json = await res.json();
+  const result = json?.chart?.result?.[0];
+  if (!result || !result.meta) return null;
+
+  const timestamps = result.timestamp || [];
+  const closes = result.indicators?.quote?.[0]?.close || [];
+  let points = [];
+  for (let i = 0; i < timestamps.length; i++) {
+    const c = closes[i];
+    if (typeof c === 'number' && Number.isFinite(c) && c > 0) {
+      const t = timestamps[i] * 1000;
+      points.push({ t, v: c, time: t, value: c, close: c });
+    }
+  }
+
+  if (rangeParam === '1H' && points.length > 0) {
+    const latestT = points[points.length - 1].t;
+    const cutoff = latestT - 3600000;
+    const sliced = points.filter(p => p.t >= cutoff);
+    if (sliced.length >= 2) points = sliced;
+  }
+
+  const rawPrev = result.meta?.chartPreviousClose ?? result.meta?.previousClose ?? null;
+  const prevClose = (typeof rawPrev === 'number' && Number.isFinite(rawPrev) && rawPrev > 0) ? rawPrev : null;
+  const minRequired = rangeParam === '1H' ? 2 : 10;
+  if (points.length < minRequired) return null;
+
+  return {
+    points,
+    granularity,
+    source: 'yahoo',
+    previousClose: prevClose ?? points[0].v,
+  };
+}
+
 /**
- * Fetches real crypto candles using CryptoCompare with Binance fallback.
- * @param {object} def - Asset definition
- * @param {string} range - '1H' | '24H' | '1D' | '1M' | '1Y'
- * @returns {Promise<{ points: Array<{t: number, v: number}>, granularity: string, source: string, previousClose: number|null }|null>}
+ * Fetches real crypto candles using CryptoCompare -> Binance -> Yahoo Finance fallback.
  */
 async function fetchCryptoHistory(def, range) {
   const sym = def.symbol;
@@ -65,12 +119,11 @@ async function fetchCryptoHistory(def, range) {
           }
         }
         if (points.length >= 10) {
-          const first = points[0].v;
           return {
             points,
             granularity,
             source: 'cryptocompare',
-            previousClose: first,
+            previousClose: points[0].v,
           };
         }
       }
@@ -95,7 +148,7 @@ async function fetchCryptoHistory(def, range) {
           const points = [];
           for (const item of list) {
             const t = Number(item[0]);
-            const v = Number(item[4]); // close
+            const v = Number(item[4]);
             if (Number.isFinite(t) && Number.isFinite(v) && v > 0) {
               points.push({ t, v, time: t, value: v, close: v });
             }
@@ -111,7 +164,16 @@ async function fetchCryptoHistory(def, range) {
         }
       }
     } catch {
-      // Both providers failed
+      // Fallback to Yahoo
+    }
+  }
+
+  // Tier 3: Yahoo Finance Crypto Fallback (BTC-USD, BNB-USD, etc.)
+  if (def.yahooSymbol) {
+    try {
+      return await fetchYahooSeries(def.yahooSymbol, range, 'crypto');
+    } catch {
+      // All tiers failed
     }
   }
 
@@ -120,8 +182,6 @@ async function fetchCryptoHistory(def, range) {
 
 /**
  * Fetches Frankfurter ECB daily timeseries as forex fallback.
- * @param {object} def
- * @returns {Promise<{ points: Array<{t: number, v: number}>, granularity: string, source: string, previousClose: number|null }|null>}
  */
 async function fetchFrankfurterForexHistory(def) {
   if (!def.base || !def.quote) return null;
@@ -168,22 +228,22 @@ async function fetchFrankfurterForexHistory(def) {
   return null;
 }
 
+const ALLOWED_HISTORY_RANGES = new Set(['1H', '24H', '1D', '5D', '1M', '1Y']);
+const VALID_HISTORY_ID_RE = /^[a-z0-9_-]{1,20}$/;
+
 /**
  * Handles GET /v1/history?id=&range=
- * @param {Request} request
- * @param {object} env
- * @returns {Promise<object>}
  */
 export async function handleHistory(request, env) {
   const url = new URL(request.url);
-  const id = url.searchParams.get('id')?.toLowerCase() || 'spx';
-  const rangeParam = (url.searchParams.get('range') || '24H').toUpperCase();
+  const rawId = url.searchParams.get('id');
+  const id = (rawId ? rawId.trim().toLowerCase() : 'spx');
+  const rangeParam = (url.searchParams.get('range') || '24H').trim().toUpperCase();
 
-  const def = ASSET_DEFINITIONS[id];
-  if (!def) {
+  if (!VALID_HISTORY_ID_RE.test(id)) {
     return {
-      statusCode: 404,
-      error: `Unknown asset id: ${id}`,
+      statusCode: 400,
+      error: 'Invalid asset id',
       points: [],
       granularity: null,
       source: null,
@@ -192,10 +252,34 @@ export async function handleHistory(request, env) {
     };
   }
 
-  // 1. Sector Crypto: CryptoCompare with Binance fallback
+  if (!ALLOWED_HISTORY_RANGES.has(rangeParam)) {
+    return {
+      statusCode: 400,
+      error: 'Invalid range parameter',
+      points: [],
+      granularity: null,
+      source: null,
+      previousClose: null,
+      pointCount: 0,
+    };
+  }
+
+  const def = ASSET_DEFINITIONS[id];
+  if (!def) {
+    return {
+      statusCode: 404,
+      error: 'Unknown asset id',
+      points: [],
+      granularity: null,
+      source: null,
+      previousClose: null,
+      pointCount: 0,
+    };
+  }
+
   if (def.sector === 'crypto') {
     const cryptoRes = await fetchCryptoHistory(def, rangeParam);
-    if (cryptoRes && cryptoRes.points.length >= 10) {
+    if (cryptoRes && cryptoRes.points.length >= 2) {
       return {
         id: def.id,
         symbol: def.symbol,
@@ -219,93 +303,24 @@ export async function handleHistory(request, env) {
     };
   }
 
-  // 2. Equities, Energy, Metals, Forex: Yahoo Finance Chart
-  let interval = '15m';
-  let yahooRange = def.sector === 'forex' ? '5d' : '2d';
-  let granularity = '15m';
-
-  if (rangeParam === '1H') {
-    interval = '2m';
-    yahooRange = '1d';
-    granularity = '2m';
-  } else if (rangeParam === '1M') {
-    interval = '1d';
-    yahooRange = '1mo';
-    granularity = '1d';
-  } else if (rangeParam === '1Y') {
-    interval = '1wk';
-    yahooRange = '1y';
-    granularity = '1d';
-  }
-
-  const yahooSymbol = def.yahooSymbol || def.symbol;
-  const yahooUrl = `https://query1.finance.yahoo.com/v8/finance/chart/${encodeURIComponent(yahooSymbol)}?interval=${interval}&range=${yahooRange}`;
-
   try {
-    const res = await fetch(yahooUrl, {
-      headers: {
-        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
-        'Accept': 'application/json',
-      },
-      signal: AbortSignal.timeout(6000),
-    });
-
-    if (res.ok) {
-      const json = await res.json();
-      const result = json?.chart?.result?.[0];
-      if (result && result.meta) {
-        const timestamps = result.timestamp || [];
-        const quote = result.indicators?.quote?.[0] || {};
-        const closes = quote.close || [];
-
-        let points = [];
-        for (let i = 0; i < timestamps.length; i++) {
-          const c = closes[i];
-          if (typeof c === 'number' && Number.isFinite(c) && c > 0) {
-            const t = timestamps[i] * 1000;
-            points.push({
-              t,
-              v: c,
-              time: t,
-              value: c,
-              close: c,
-            });
-          }
-        }
-
-        // For 1H range, filter down to the trailing 60 minutes
-        if (rangeParam === '1H' && points.length > 0) {
-          const latestT = points[points.length - 1].t;
-          const cutoff = latestT - 3600000;
-          const sliced = points.filter(p => p.t >= cutoff);
-          if (sliced.length >= 2) {
-            points = sliced;
-          }
-        }
-
-        const rawPrev = result.meta?.chartPreviousClose ?? result.meta?.previousClose ?? null;
-        const prevClose = (typeof rawPrev === 'number' && Number.isFinite(rawPrev) && rawPrev > 0) ? rawPrev : null;
-
-        const minRequired = rangeParam === '1H' ? 2 : 10;
-        if (points.length >= minRequired) {
-          return {
-            id: def.id,
-            symbol: def.symbol,
-            range: rangeParam,
-            granularity,
-            source: 'yahoo',
-            previousClose: prevClose,
-            pointCount: points.length,
-            points,
-          };
-        }
-      }
+    const yahooRes = await fetchYahooSeries(def.yahooSymbol || def.symbol, rangeParam, def.sector);
+    if (yahooRes) {
+      return {
+        id: def.id,
+        symbol: def.symbol,
+        range: rangeParam,
+        granularity: yahooRes.granularity,
+        source: yahooRes.source,
+        previousClose: yahooRes.previousClose,
+        pointCount: yahooRes.points.length,
+        points: yahooRes.points,
+      };
     }
   } catch {
     // Yahoo failed or timed out
   }
 
-  // 3. Forex Fallback: Frankfurter Timeseries (ECB daily)
   if (def.sector === 'forex') {
     const frankfurterRes = await fetchFrankfurterForexHistory(def);
     if (frankfurterRes && frankfurterRes.points.length >= 10) {

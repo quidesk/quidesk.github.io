@@ -4,7 +4,7 @@
  * - Decimal.js arbitrary-precision math (with safe fallback)
  * - Strict Runtime Schema Validation (rejects NaN, Infinity, <= 0)
  * - Triangular cross-rate parity (EUR/INR === EUR/USD * USD/INR)
- * - High-DPI HTML5 Canvas chart engine (supports tuples, objects, and numbers)
+ * - Honest High-DPI HTML5 Canvas chart engine (no synthetic prevClose spikes)
  * - DST-safe America/New_York session helper
  */
 
@@ -16,9 +16,6 @@ if (typeof window === 'undefined' && typeof globalThis !== 'undefined') {
 }
 root.marketState = root.marketState || {};
 
-/**
- * Arbitrary precision wrapper using Decimal.js if loaded, or safe precision fallback.
- */
 export function D(val) {
   let n;
   if (val && typeof val === 'object') {
@@ -79,9 +76,6 @@ function extractPointNumber(pt) {
   return NaN;
 }
 
-/**
- * Strict Runtime Schema Validator (rejects NaN, Infinity, <= 0 prices, or malformed payloads)
- */
 export function validateMarketPayload(raw) {
   if (!raw || typeof raw.symbol !== 'string' || !raw.symbol.trim()) return null;
   const price = Number(raw.price);
@@ -107,9 +101,6 @@ export function validateMarketPayload(raw) {
   };
 }
 
-/**
- * Atomic state merge with locked 24h prevClose protection and triangular parity enforcement.
- */
 export function mergeAssetState(symbol, rawIncoming = {}) {
   const valid = validateMarketPayload({ ...rawIncoming, symbol });
   const state = typeof window !== 'undefined' ? window.marketState : {};
@@ -140,10 +131,8 @@ export function mergeAssetState(symbol, rawIncoming = {}) {
     change24h = valid.change24h ?? existing.change24h ?? 0;
   }
 
-  let history = valid.history.length >= 2 ? valid.history : (existing.history || []);
-  if (history.length >= 2) {
-    history = [...history];
-    if (prevClose && prevClose > 0) history[0] = prevClose;
+  let history = valid.history.length >= 2 ? [...valid.history] : (existing.history ? [...existing.history] : []);
+  if (history.length >= 2 && Math.abs(history[history.length - 1] - price) > 1e-8) {
     history[history.length - 1] = price;
   }
 
@@ -157,8 +146,6 @@ export function mergeAssetState(symbol, rawIncoming = {}) {
   };
   state[symbol] = updated;
 
-  // Enforce exact triangular cross-rate parity regardless of arrival order:
-  // EUR/INR === Decimal(EUR/USD) * Decimal(USD/INR)
   if (symbol === 'EUR/USD' || symbol === 'USD/INR' || symbol === 'EUR/INR') {
     const eurUsd = state['EUR/USD']?.price;
     const usdInr = state['USD/INR']?.price;
@@ -200,9 +187,6 @@ function resolveCanonicalPrice(state, sym, fallback) {
   return fallback;
 }
 
-/**
- * Format asset price display matching exact Module 3 conventions
- */
 export function formatAssetPriceDisplay(asset, state = (typeof window !== 'undefined' ? window.marketState : {})) {
   const usdInr = D(resolveCanonicalPrice(state, 'USD/INR', 94.03));
   const hasValidPrice = asset && asset.status !== 'unavailable' && typeof asset.price === 'number' && Number.isFinite(asset.price) && asset.price > 0;
@@ -251,9 +235,6 @@ export function formatAssetPriceDisplay(asset, state = (typeof window !== 'undef
   return { primary, unit, secondary: `(₹${inrFormatted})`, chgStr };
 }
 
-/**
- * 8-Currency conversion according to Module 3 (Forex base currency normalization)
- */
 export function computeEightCurrencies(asset, state = (typeof window !== 'undefined' ? window.marketState : {})) {
   const usdInr = D(resolveCanonicalPrice(state, 'USD/INR', 94.03));
   const eurUsd = D(resolveCanonicalPrice(state, 'EUR/USD', 1.1062));
@@ -315,20 +296,11 @@ function getNewYorkMinutes(nowUtc) {
   }
 }
 
-/**
- * Uniform DST-Safe Session Status Helper
- * - Crypto: LIVE 24/7
- * - Equities: LIVE during NYSE regular session (09:30 - 16:00 America/New_York, Mon-Fri)
- * - Forex / Metals / Energy: LIVE Sun 18:00 ET - Fri 17:00 ET
- */
 export function getSessionStatus(category, nowUtc = Date.now()) {
   const cat = String(category || '').toLowerCase();
-  if (cat === 'crypto') {
-    return 'LIVE';
-  }
+  if (cat === 'crypto') return 'LIVE';
 
   const { weekday, minutesOfDay } = getNewYorkMinutes(nowUtc);
-
   if (cat === 'equities') {
     if (weekday === 'Sat' || weekday === 'Sun') return 'CLOSED';
     const isNyseOpen = minutesOfDay >= (9 * 60 + 30) && minutesOfDay < (16 * 60);
@@ -342,11 +314,9 @@ export function getSessionStatus(category, nowUtc = Date.now()) {
 }
 
 /**
- * Honest High-DPI HTML5 Canvas Chart Engine
- * - Supports raw numbers, { time, value } objects, and [timestamp, close] tuples
- * - Honest 2-point prevClose -> price linear vector only when < 2 historical points exist
- * - High price = top, low price = bottom
- * - Dashed prevClose baseline
+ * Honest High-DPI HTML5 Canvas Chart Engine (Warm Editorial Palette Calibrated)
+ * - Never prepends prevClose into real history arrays (prevents artificial left-edge spikes)
+ * - Renders a clean dashed baseline + "No 24H history" notice when < 2 real points exist
  */
 export function drawCardCanvasChart(canvas, asset) {
   if (!canvas || !asset) return;
@@ -369,15 +339,9 @@ export function drawCardCanvasChart(canvas, asset) {
     rawSeries = asset.spark1d;
   }
 
-  let series = rawSeries
+  const series = rawSeries
     .map(extractPointNumber)
     .filter(v => Number.isFinite(v) && v > 0);
-
-  if (series.length < 2) {
-    series = [prevClose, price];
-  } else {
-    series = [prevClose, ...series, price];
-  }
 
   const dpr = (typeof window !== 'undefined' && window.devicePixelRatio) || 1;
   const width = Math.max(canvas.clientWidth || 260, 200);
@@ -390,47 +354,70 @@ export function drawCardCanvasChart(canvas, asset) {
   ctx.scale(dpr, dpr);
   ctx.clearRect(0, 0, width, height);
 
-  const minVal = Math.min(...series);
-  const maxVal = Math.max(...series);
+  if (series.length < 2) {
+    ctx.save();
+    ctx.strokeStyle = 'rgba(142, 147, 158, 0.30)';
+    ctx.lineWidth = 1;
+    ctx.setLineDash([4, 4]);
+    ctx.beginPath();
+    ctx.moveTo(0, height / 2);
+    ctx.lineTo(width, height / 2);
+    ctx.stroke();
+    ctx.fillStyle = 'rgba(142, 147, 158, 0.85)';
+    ctx.font = '10px monospace';
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'middle';
+    ctx.fillText('No 24H history', width / 2, height / 2 - 8);
+    ctx.restore();
+    return;
+  }
+
+  const tf = canvas.getAttribute?.('data-tf') || '24H';
+  const plotSeries = [...series];
+  if ((tf === '24H' || tf === '1H') && Math.abs(plotSeries[plotSeries.length - 1] - price) > 1e-8) {
+    plotSeries.push(price);
+  }
+
+  const showBaseline = tf === '24H' && Number.isFinite(prevClose) && prevClose > 0;
+  const minVal = Math.min(...plotSeries);
+  const maxVal = Math.max(...plotSeries);
   const span = (maxVal - minVal) || Math.abs(price * 0.001) || 1;
   const padY = 6;
   const plotH = height - padY * 2;
 
-  const pts = series.map((v, i) => ({
-    x: (i / (series.length - 1)) * width,
+  const pts = plotSeries.map((v, i) => ({
+    x: (i / (plotSeries.length - 1)) * width,
     y: (height - padY) - ((v - minVal) / span) * plotH
   }));
 
   const isFlat = Math.abs(chg) < 0.005;
   const isUp = chg >= 0;
-  const color = isFlat ? '#8b949e' : (isUp ? '#10B981' : '#EF4444');
+  const color = isFlat ? '#8E939E' : (isUp ? '#36C982' : '#F06A64');
   const grad = ctx.createLinearGradient(0, 0, 0, height);
-  grad.addColorStop(0, isFlat ? 'rgba(139, 148, 158, 0.16)' : (isUp ? 'rgba(16, 185, 129, 0.24)' : 'rgba(239, 68, 68, 0.24)'));
-  grad.addColorStop(1, 'rgba(8, 12, 20, 0.0)');
+  grad.addColorStop(0, isFlat ? 'rgba(142, 147, 158, 0.16)' : (isUp ? 'rgba(54, 201, 130, 0.22)' : 'rgba(240, 106, 100, 0.22)'));
+  grad.addColorStop(1, 'rgba(11, 12, 15, 0.0)');
 
-  const baseY = (height - padY) - ((prevClose - minVal) / span) * plotH;
-  ctx.save();
-  ctx.strokeStyle = 'rgba(148, 163, 184, 0.22)';
-  ctx.lineWidth = 1;
-  ctx.setLineDash([3, 3]);
-  ctx.beginPath();
-  ctx.moveTo(0, baseY);
-  ctx.lineTo(width, baseY);
-  ctx.stroke();
-  ctx.restore();
+  if (showBaseline && prevClose >= minVal && prevClose <= maxVal) {
+    const baseY = (height - padY) - ((prevClose - minVal) / span) * plotH;
+    ctx.save();
+    ctx.strokeStyle = 'rgba(142, 147, 158, 0.26)';
+    ctx.lineWidth = 1;
+    ctx.setLineDash([3, 3]);
+    ctx.beginPath();
+    ctx.moveTo(0, baseY);
+    ctx.lineTo(width, baseY);
+    ctx.stroke();
+    ctx.restore();
+  }
 
   ctx.beginPath();
   ctx.moveTo(pts[0].x, pts[0].y);
-  if (pts.length === 2) {
-    ctx.lineTo(pts[1].x, pts[1].y);
-  } else {
-    for (let i = 1; i < pts.length; i++) {
-      const mx = (pts[i - 1].x + pts[i].x) / 2;
-      const my = (pts[i - 1].y + pts[i].y) / 2;
-      ctx.quadraticCurveTo(pts[i - 1].x, pts[i - 1].y, mx, my);
-    }
-    ctx.lineTo(pts[pts.length - 1].x, pts[pts.length - 1].y);
+  for (let i = 1; i < pts.length; i++) {
+    const mx = (pts[i - 1].x + pts[i].x) / 2;
+    const my = (pts[i - 1].y + pts[i].y) / 2;
+    ctx.quadraticCurveTo(pts[i - 1].x, pts[i - 1].y, mx, my);
   }
+  ctx.lineTo(pts[pts.length - 1].x, pts[pts.length - 1].y);
   ctx.strokeStyle = color;
   ctx.lineWidth = 1.85;
   ctx.stroke();
@@ -448,9 +435,6 @@ export function drawCardCanvasChart(canvas, asset) {
   ctx.fill();
 }
 
-/**
- * Re-render 24H card canvases in the DOM (skips cards currently viewing 1H/1M/1Y)
- */
 export function renderAllCardCanvases() {
   if (typeof document === 'undefined') return;
   document.querySelectorAll('canvas.qd-card-canvas[data-symbol]').forEach(canvas => {

@@ -36,7 +36,7 @@ export function normalizeWorkerNewsItem(item = {}, index = 0) {
     desc,
     source: item.source || 'OSINT Feed',
     sector,
-    color: item.color || SECTOR_META[sector]?.color || '#4d9eff',
+    color: item.color || SECTOR_META[sector]?.color || '#7AA2F7',
     published,
     mentionedAssets: assetTags,
     isSponsored,

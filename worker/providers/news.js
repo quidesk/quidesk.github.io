@@ -86,11 +86,11 @@ export function extractStrictAssetTags(text) {
 }
 
 const SECTOR_COLORS = {
-  equities: '#4d9eff',
-  crypto:   '#00d4ff',
-  metals:   '#ffd700',
-  energy:   '#f97316',
-  forex:    '#22d3ee',
+  equities: '#7AA2F7',
+  crypto:   '#D2B47C',
+  metals:   '#DEC38A',
+  energy:   '#E08262',
+  forex:    '#4DB6AC',
 };
 
 /**
@@ -113,8 +113,33 @@ function cleanXmlText(str) {
     .trim();
 }
 
+const MAX_RSS_XML_CHARS = 524288;
+const MAX_RSS_ITEMS_PER_FEED = 50;
+const CONTROL_CHARS_RE = /[\u0000-\u001f\u007f]/;
+
+/**
+ * Validates parsed RSS article links at the Worker ingestion boundary.
+ * Strips tracking query parameters and rejects non-HTTP(S) schemes.
+ * @param {string} rawLink
+ * @returns {string|null}
+ */
+function sanitizeRssLink(rawLink) {
+  if (!rawLink || typeof rawLink !== 'string') return null;
+  const trimmed = rawLink.trim();
+  if (!trimmed || CONTROL_CHARS_RE.test(trimmed)) return null;
+  const cleanUrl = trimmed.replace(/\?.*$/, '');
+  try {
+    const parsed = new URL(cleanUrl);
+    if (parsed.protocol !== 'https:' && parsed.protocol !== 'http:') return null;
+    return parsed.href;
+  } catch {
+    return null;
+  }
+}
+
 /**
  * Parses RSS / Atom XML string into article objects.
+ * Bounded against oversized feeds and strips unsafe URL schemes.
  * @param {string} xml
  * @param {string} sourceName
  * @param {string} sector
@@ -122,26 +147,24 @@ function cleanXmlText(str) {
  */
 export function parseRssXml(xml, sourceName, sector) {
   if (!xml || typeof xml !== 'string') return [];
+  const boundedXml = xml.length > MAX_RSS_XML_CHARS ? xml.slice(0, MAX_RSS_XML_CHARS) : xml;
   const articles = [];
 
   // Match <item>...</item> or <entry>...</entry>
-  const itemMatches = xml.match(/<(?:item|entry)[\s\S]*?<\/(?:item|entry)>/gi) || [];
+  const itemMatches = boundedXml.match(/<(?:item|entry)[\s\S]*?<\/(?:item|entry)>/gi) || [];
 
-  for (const block of itemMatches) {
+  for (const block of itemMatches.slice(0, MAX_RSS_ITEMS_PER_FEED)) {
     const titleMatch = block.match(/<title[\s\S]*?>([\s\S]*?)<\/title>/i);
     const linkMatch = block.match(/<link[\s\S]*?href=["']([^"']+)["']/i) || block.match(/<link[\s\S]*?>([\s\S]*?)<\/link>/i);
     const dateMatch = block.match(/<(?:pubDate|published|updated)[\s\S]*?>([\s\S]*?)<\/(?:pubDate|published|updated)>/i);
     const descMatch = block.match(/<(?:description|summary|content)[\s\S]*?>([\s\S]*?)<\/(?:description|summary|content)>/i);
 
     const title = cleanXmlText(titleMatch ? titleMatch[1] : '');
-    let link = linkMatch ? cleanXmlText(linkMatch[1]) : '';
+    const link = sanitizeRssLink(linkMatch ? cleanXmlText(linkMatch[1]) : '');
     const rawDate = dateMatch ? cleanXmlText(dateMatch[1]) : '';
     const desc = cleanXmlText(descMatch ? descMatch[1] : '');
 
     if (!title || !link) continue;
-
-    // Normalize link
-    link = link.replace(/\?.*$/, ''); // strip tracking query params
 
     if (!rawDate) continue;
     const parsed = Date.parse(rawDate);
@@ -164,7 +187,7 @@ export function parseRssXml(xml, sourceName, sector) {
       published: publishedAt,
       source: sourceName,
       sector: resolvedSector,
-      color: SECTOR_COLORS[resolvedSector] || '#4d9eff',
+      color: SECTOR_COLORS[resolvedSector] || '#7AA2F7',
       summary: desc.slice(0, 280),
       assetTags,
       isSponsored: false,

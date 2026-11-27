@@ -6,7 +6,7 @@ const TYPE_LABELS = {
   breakdown:          { label:'BREAKDOWN',  color:'var(--bear)' },
   bullish_breakout:   { label:'BREAKOUT',   color:'var(--bull)' },
   bearish_reversal:   { label:'BREAKDOWN',  color:'var(--bear)' },
-  divergence:         { label:'DIVERGENCE', color:'#a78bfa' },
+  divergence:         { label:'DIVERGENCE', color:'var(--sc-accent)' },
 };
 
 const SEV_COLORS = { high:'var(--bear)', medium:'var(--amber)', low:'var(--text-secondary)' };
