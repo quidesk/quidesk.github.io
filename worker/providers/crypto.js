@@ -167,6 +167,11 @@ export async function fetchKrakenTier(neededSymbols, timeoutMs = 4000) {
       const price = parseFloat(row.c[0]);
       const open24h = parseFloat(row.o);
       const prevClose = (Number.isFinite(open24h) && open24h > 0) ? open24h : null;
+      const vol24hBase = Array.isArray(row.v) ? parseFloat(row.v[1]) : NaN;
+      const vwap24h = Array.isArray(row.p) ? parseFloat(row.p[1]) : NaN;
+      const volUsd = Number.isFinite(vol24hBase) && vol24hBase > 0
+        ? vol24hBase * (Number.isFinite(vwap24h) && vwap24h > 0 ? vwap24h : price)
+        : null;
 
       if (Number.isFinite(price) && price > 0) {
         results[cfg.id] = {
@@ -174,6 +179,8 @@ export async function fetchKrakenTier(neededSymbols, timeoutMs = 4000) {
           symbol: cfg.symbol,
           price,
           prevClose,
+          volume: volUsd,
+          volumeUnit: 'USD',
           quoteTs: Date.now(),
           source: 'kraken',
           changeBasis: 'rolling_24h',
@@ -254,6 +261,8 @@ export async function fetchYahooCryptoTier(neededSymbols, timeoutMs = 5000) {
           symbol: cfg.symbol,
           price: chart.price,
           prevClose: chart.prevClose,
+          volume: typeof chart.volume === 'number' && Number.isFinite(chart.volume) && chart.volume > 0 ? chart.volume : null,
+          volumeUnit: 'USD',
           quoteTs: chart.quoteTs || Date.now(),
           source: 'yahoo',
           changeBasis: 'rolling_24h',

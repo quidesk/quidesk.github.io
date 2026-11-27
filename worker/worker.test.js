@@ -5,7 +5,7 @@ import { handleHistory } from './routes/history.js';
 import { extractStrictAssetTags, parseRssXml } from './providers/news.js';
 import { checkMetalsBasis } from './providers/metals.js';
 import { determineSessionState, fetchFrontMonthBrent } from './providers/yahoo.js';
-import { fetchMultiTierCrypto } from './providers/crypto.js';
+import { fetchMultiTierCrypto, fetchKrakenTier } from './providers/crypto.js';
 import { fetchFrankfurterFallback } from './providers/forex.js';
 import { ASSET_DEFINITIONS } from './config.js';
 import quotesFixture from './fixtures/quotes.fixture.json';
@@ -1066,5 +1066,102 @@ describe('Remediation Regression Tests — Standby Health, Volume & Basis Diverg
     }, now);
 
     expect(cryptoQuote.volume).toBe('$1.80B');
+  });
+
+  it('fetchFrontMonthBrent directional guard ignores lower-priced backwardated deferred contracts and overrides early roll only', async () => {
+    const nowMs = Date.UTC(2026, 10, 26, 23, 15, 0);
+    const nowSec = Math.floor(nowMs / 1000);
+
+    // Case 1: Live prompt BZ=F ($97.45) vs backwardated deferred contract ($92.44) -> keep $97.45
+    const fetchSpy = vi.spyOn(globalThis, 'fetch').mockImplementation(async (input) => {
+      const urlStr = typeof input === 'string' ? input : input.url;
+      if (urlStr.includes('BZ=F') || urlStr.includes('BZ%3DF')) {
+        return new Response(JSON.stringify({
+          chart: {
+            result: [{
+              meta: { regularMarketPrice: 97.45, chartPreviousClose: 96.50, regularMarketTime: nowSec, regularMarketVolume: 35000 },
+              timestamp: [nowSec],
+              indicators: { quote: [{ close: [97.45] }] },
+            }],
+          },
+        }), { status: 200 });
+      }
+      if (urlStr.includes('BZG27')) {
+        return new Response(JSON.stringify({
+          chart: {
+            result: [{
+              meta: { regularMarketPrice: 92.44, chartPreviousClose: 91.80, regularMarketTime: nowSec, regularMarketVolume: 42000 },
+              timestamp: [nowSec],
+              indicators: { quote: [{ close: [92.44] }] },
+            }],
+          },
+        }), { status: 200 });
+      }
+      return new Response('Not Found', { status: 404 });
+    });
+
+    const promptHold = await fetchFrontMonthBrent({}, nowMs);
+    expect(promptHold.price).toBe(97.45);
+    expect(promptHold.flags || []).not.toContain('brent_front_month_override');
+
+    // Case 2: Early BZ=F roll onto cheaper deferred month ($92.44) while active prompt trades at $97.45 -> override to $97.45
+    fetchSpy.mockImplementation(async (input) => {
+      const urlStr = typeof input === 'string' ? input : input.url;
+      if (urlStr.includes('BZ=F') || urlStr.includes('BZ%3DF')) {
+        return new Response(JSON.stringify({
+          chart: {
+            result: [{
+              meta: { regularMarketPrice: 92.44, chartPreviousClose: 91.80, regularMarketTime: nowSec, regularMarketVolume: 20000 },
+              timestamp: [nowSec],
+              indicators: { quote: [{ close: [92.44] }] },
+            }],
+          },
+        }), { status: 200 });
+      }
+      if (urlStr.includes('BZF27')) {
+        return new Response(JSON.stringify({
+          chart: {
+            result: [{
+              meta: { regularMarketPrice: 97.45, chartPreviousClose: 96.50, regularMarketTime: nowSec, regularMarketVolume: 55000 },
+              timestamp: [nowSec],
+              indicators: { quote: [{ close: [97.45] }] },
+            }],
+          },
+        }), { status: 200 });
+      }
+      return new Response('Not Found', { status: 404 });
+    });
+
+    const earlyRollOverride = await fetchFrontMonthBrent({}, nowMs);
+    expect(earlyRollOverride.price).toBe(97.45);
+    expect(earlyRollOverride.flags).toContain('brent_front_month_override');
+  });
+
+  it('fetchKrakenTier computes 24h USD volume from base volume * 24h VWAP', async () => {
+    vi.spyOn(globalThis, 'fetch').mockImplementation(async (input) => {
+      const urlStr = typeof input === 'string' ? input : input.url;
+      if (urlStr.includes('/0/public/Ticker')) {
+        return new Response(JSON.stringify({
+          result: {
+            XXBTZUSD: {
+              c: ['61700.0'],
+              o: '60500.0',
+              v: ['100', '2500'],
+              p: ['61500', '61200'],
+            },
+          },
+        }), { status: 200 });
+      }
+      if (urlStr.includes('/0/public/OHLC')) {
+        return new Response(JSON.stringify({ result: {} }), { status: 200 });
+      }
+      throw new Error(`Unexpected fetch in Kraken unit test: ${urlStr}`);
+    });
+
+    const res = await fetchKrakenTier(['btc']);
+    expect(res.btc).toBeDefined();
+    expect(res.btc.price).toBe(61700);
+    expect(res.btc.volume).toBe(153000000);
+    expect(res.btc.volumeUnit).toBe('USD');
   });
 });

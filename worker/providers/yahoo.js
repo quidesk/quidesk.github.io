@@ -193,15 +193,15 @@ export async function fetchYahooChart(symbol, options = {}) {
 }
 
 /**
- * Generates candidate front-month NYMEX Brent contract symbols (M+1, M+2)
- * because Brent settles at the end of M-1 (e.g., in November 2026, Jan 2027 = BZF27.NYM is front-month).
+ * Generates candidate front-month NYMEX Brent contract symbols ordered by
+ * earliest active delivery month (M+1, M+2, M+3).
  */
 export function getFrontMonthBrentSymbols(nowMs = Date.now()) {
   const d = new Date(nowMs);
   const year = d.getUTCFullYear();
-  const month = d.getUTCMonth(); // 0-indexed (Nov = 10)
+  const month = d.getUTCMonth();
   const candidates = [];
-  for (const offset of [2, 1, 3]) {
+  for (const offset of [1, 2, 3]) {
     const target = new Date(Date.UTC(year, month + offset, 1));
     const code = FUTURES_MONTH_CODES[target.getUTCMonth()];
     const yy = String(target.getUTCFullYear()).slice(-2);
@@ -211,10 +211,14 @@ export function getFrontMonthBrentSymbols(nowMs = Date.now()) {
 }
 
 /**
- * Fetches front-month Brent Crude futures with early-rollover and expired-contract guards.
- * Cross-checks continuous BZ=F against active NYMEX contract months (M+2, M+1, M+3).
- * Never lets an expired/stale contract override a fresher live continuous BZ=F quote,
- * while still overriding when BZ=F rolls early onto a deferred backwardated month (>1.5% divergence).
+ * Fetches front-month Brent Crude futures with directional early-rollover
+ * and stale-contract guards.
+ *
+ * Only overrides continuous BZ=F when:
+ * 1. An active prompt contract is fresher (not lagging/stale), AND
+ * 2. activeFront.price is HIGHER than continuous.price by > 1.5%
+ *    (indicating BZ=F rolled early onto a lower-priced backwardated deferred month).
+ * Never lets a lower-priced deferred contract overwrite a live prompt BZ=F quote.
  */
 export async function fetchFrontMonthBrent(options = {}, nowMs = Date.now()) {
   const contractCandidates = getFrontMonthBrentSymbols(nowMs);
@@ -229,9 +233,10 @@ export async function fetchFrontMonthBrent(options = {}, nowMs = Date.now()) {
     .map((r) => r.value)
     .filter((c) => c.quoteTs && (nowMs - c.quoteTs) < 24 * 3600 * 1000)
     .sort((a, b) => {
-      const tsDiff = (b.quoteTs || 0) - (a.quoteTs || 0);
-      if (Math.abs(tsDiff) > 60000) return tsDiff;
-      return 0;
+      // Prefer highest-volume / prompt active contract among fresh candidates
+      const volDiff = (b.volume || 0) - (a.volume || 0);
+      if (volDiff !== 0) return volDiff;
+      return (b.quoteTs || 0) - (a.quoteTs || 0);
     });
 
   const activeFront = freshContracts[0] || null;
@@ -246,8 +251,9 @@ export async function fetchFrontMonthBrent(options = {}, nowMs = Date.now()) {
       return continuous;
     }
 
-    const diffPct = Math.abs((continuous.price - activeFront.price) / activeFront.price) * 100;
-    if (diffPct > 1.5) {
+    // Directional guard: only override when BZ=F is >1.5% BELOW activeFront (early roll into backwardation)
+    const backwardationLagPct = ((activeFront.price - continuous.price) / continuous.price) * 100;
+    if (backwardationLagPct > 1.5) {
       return {
         ...activeFront,
         flags: ['brent_front_month_override'],
